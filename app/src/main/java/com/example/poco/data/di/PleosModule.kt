@@ -17,7 +17,6 @@ import javax.inject.Singleton
 /**
  * Pleos SDK 객체 제공 모듈.
  * 객체를 앱 전체에서 하나만 사용하도록 싱글톤으로 제공
- * initialize()는 PocoApplication에서 호출
  */
 @Module
 @InstallIn(SingletonComponent::class)
