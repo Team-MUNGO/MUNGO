@@ -3,10 +3,10 @@ package com.example.poco.data.repositoryimpl
 import ai.pleos.playground.vehicle.api.model.area.WindowArea
 import ai.pleos.playground.vehicle.constant.area.WindowValue
 import com.example.poco.core.util.suspendRunCatching
+import com.example.poco.data.model.CarWindow
+import com.example.poco.data.model.WindowPositionRange
 import com.example.poco.data.pleos.datasource.WindowDataSource
-import com.example.poco.domain.model.CarWindow
-import com.example.poco.domain.model.WindowPositionRange
-import com.example.poco.domain.repository.WindowRepository
+import com.example.poco.data.repository.WindowRepository
 import javax.inject.Inject
 import kotlinx.coroutines.flow.Flow
 

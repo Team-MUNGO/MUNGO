@@ -1,7 +1,7 @@
 package com.example.poco.presentation.home
 
-import com.example.poco.domain.model.CarWindow
-import com.example.poco.domain.model.WindowPositionRange
+import com.example.poco.data.model.CarWindow
+import com.example.poco.data.model.WindowPositionRange
 import kotlinx.collections.immutable.ImmutableMap
 import kotlinx.collections.immutable.persistentMapOf
 

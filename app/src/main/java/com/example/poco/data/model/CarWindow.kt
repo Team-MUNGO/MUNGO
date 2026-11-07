@@ -1,6 +1,6 @@
-package com.example.poco.domain.model
+package com.example.poco.data.model
 
-/** 도메인에서 사용하는 창문 위치  (SDK 타입과 분리) */
+/** 앱에서 사용하는 창문 위치  (SDK 타입과 분리) */
 enum class CarWindow {
     DRIVER,
     PASSENGER,

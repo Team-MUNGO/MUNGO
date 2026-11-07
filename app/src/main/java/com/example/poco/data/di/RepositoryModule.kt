@@ -1,13 +1,13 @@
 package com.example.poco.data.di
 
+import com.example.poco.data.repository.HvacRepository
+import com.example.poco.data.repository.SttRepository
+import com.example.poco.data.repository.TtsRepository
+import com.example.poco.data.repository.WindowRepository
 import com.example.poco.data.repositoryimpl.HvacRepositoryImpl
 import com.example.poco.data.repositoryimpl.SttRepositoryImpl
 import com.example.poco.data.repositoryimpl.TtsRepositoryImpl
 import com.example.poco.data.repositoryimpl.WindowRepositoryImpl
-import com.example.poco.domain.repository.HvacRepository
-import com.example.poco.domain.repository.SttRepository
-import com.example.poco.domain.repository.TtsRepository
-import com.example.poco.domain.repository.WindowRepository
 import dagger.Binds
 import dagger.Module
 import dagger.hilt.InstallIn

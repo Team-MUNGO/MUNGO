@@ -2,8 +2,8 @@ package com.example.poco.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.poco.domain.model.CarWindow
-import com.example.poco.domain.repository.WindowRepository
+import com.example.poco.data.model.CarWindow
+import com.example.poco.data.repository.WindowRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.collections.immutable.toImmutableMap

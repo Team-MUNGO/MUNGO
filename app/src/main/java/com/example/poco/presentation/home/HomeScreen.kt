@@ -17,13 +17,9 @@ fun HomeRoute(viewModel: HomeViewModel = hiltViewModel()) {
 }
 
 @Composable
-private fun HomeScreen(
-    uiState: HomeUiState,
-    modifier: Modifier = Modifier
-) {
+private fun HomeScreen(uiState: HomeUiState, modifier: Modifier = Modifier) {
     Column(
         modifier = modifier
     ) {
-
     }
 }

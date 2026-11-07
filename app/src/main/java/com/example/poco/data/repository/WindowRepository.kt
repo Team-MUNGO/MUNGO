@@ -1,7 +1,7 @@
-package com.example.poco.domain.repository
+package com.example.poco.data.repository
 
-import com.example.poco.domain.model.CarWindow
-import com.example.poco.domain.model.WindowPositionRange
+import com.example.poco.data.model.CarWindow
+import com.example.poco.data.model.WindowPositionRange
 import kotlinx.coroutines.flow.Flow
 
 interface WindowRepository {
