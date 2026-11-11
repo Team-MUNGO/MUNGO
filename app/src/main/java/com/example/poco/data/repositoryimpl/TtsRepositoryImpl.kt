@@ -1,8 +1,12 @@
 package com.example.poco.data.repositoryimpl
 
+import com.example.poco.core.util.suspendRunCatching
 import com.example.poco.data.pleos.datasource.TtsDataSource
 import com.example.poco.data.repository.TtsRepository
 import javax.inject.Inject
 
 class TtsRepositoryImpl @Inject constructor(private val ttsDataSource: TtsDataSource) :
-    TtsRepository
+    TtsRepository {
+    override suspend fun speak(text: String): Result<Unit> =
+        suspendRunCatching { ttsDataSource.speak(text) }
+}
