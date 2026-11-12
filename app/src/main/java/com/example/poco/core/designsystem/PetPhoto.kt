@@ -2,6 +2,7 @@ package com.example.poco.core.designsystem
 
 import android.graphics.BitmapFactory
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.shape.CircleShape
@@ -15,11 +16,12 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
+import com.example.poco.core.theme.POCOTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 /**
- * 반려견 얼굴. 우선순위: 등록한 사진 → 품종 아바타(종류 입력값) → 기본 강아지 마크.
+ * 반려견 얼굴. 우선순위: 등록한 사진 → 품종 아바타(품종 입력값) → mungo 발바닥.
  * 사진은 앱이 512px로 줄여 저장해 두므로 바로 읽어도 가볍다.
  */
 @Composable
@@ -54,7 +56,18 @@ fun PetPhoto(photoPath: String?, modifier: Modifier = Modifier, breed: String? =
                     modifier = circle
                 )
 
-            else -> PocoMark(modifier = Modifier.fillMaxSize())
+            // 사진도 품종 아바타도 없으면 mungo 발바닥
+            else ->
+                Box(
+                    modifier = circle.background(POCOTheme.colors.bgAccentSubtle),
+                    contentAlignment = Alignment.Center
+                ) {
+                    MungoIconView(
+                        MungoIcon.PAW_FILLED,
+                        tint = POCOTheme.colors.textAccent,
+                        modifier = Modifier.fillMaxSize(0.45f)
+                    )
+                }
         }
     }
 }

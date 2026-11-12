@@ -5,173 +5,240 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
 /*
- * 디자인 시스템 DS-01 Color (Light 기본 + Night)
- * 이름 옆 주석 = 피그마 토큰 이름
+ * mungo 디자인 시스템 · Foundations / Color
+ * - 포인트 컬러는 망고 1가지 (블랙 5 : 그레이 4 : 망고 1)
+ * - 민트 · 앰버 · 빨강 · 파랑은 상태 칩과 경고에만 쓴다
+ * - 망고 위 글자는 진한 회색(#111111)만. 흰 글자 금지 (2.5:1)
+ * - 모든 글자색은 4.5:1 이상 (WCAG AA)
  */
 
-// region Brand
-val brandNavy = Color(0xFF121F3D) // brand/navy: 기본 버튼 · 제목 · 로고
-val brandLime = Color(0xFFA9FF65) // brand/lime: 점수 링 · 체크 · 토글 노브
-val brandLimeSoft = Color(0xFFE6FBD3) // brand/lime-soft: 칩 · 성공 배경 · 선택 자리
-val brandTangerine = Color(0xFFFF8A00) // brand/tangerine: 경고 아이콘 · 이벤트 막대 · 로고 코 (면·아이콘 전용, 글자 금지)
-// endregion
+/** 원색 팔레트 (피그마 Color Palette) */
+object MungoPalette {
+    // Mango · 포인트 (1)
+    val mango50 = Color(0xFFFFF4E5)
+    val mango100 = Color(0xFFFFE6C7)
+    val mango200 = Color(0xFFFFCC8F)
+    val mango300 = Color(0xFFFFB257)
+    val mango400 = Color(0xFFFF9B26)
+    val mango500 = Color(0xFFFF8400) // mungo Mango · primary/main
+    val mango600 = Color(0xFFE06F00)
+    val mango700 = Color(0xFFA85200)
+    val mango800 = Color(0xFF7A3B00)
+    val mango900 = Color(0xFF4A2400)
 
-// region Neutral
-val bgDefault = Color(0xFFEEF3F8) // bg/default: 앱 배경 · 입력칸 · 기본 세그먼트
-val bgCard = Color(0xFFFFFFFF) // bg/card: 카드 · 상태 바
-val borderDefaultColor = Color(0xFFE1E8F0) // border/default: 카드 구분선 · 칩 테두리
-val borderInputColor = Color(0xFFD6E0EA) // border/input: 입력 · 비선택 칩
-val borderStrongColor = Color(0xFFB9C7D6) // border/strong: 보조 버튼 · 점선 버튼
-val textPrimaryColor = Color(0xFF121F3D) // text/primary: 본문 · 제목
-val textSecondaryColor = Color(0xFF587083) // text/secondary: 라벨 · 설명
-val textDisabledColor = Color(0xFF9AA7B3) // text/disabled: 비활성 · 빈 상태 제목
-// endregion
+    // Neutral · 정보 · 면 (4)
+    val neutral50 = Color(0xFFFAFAFA)
+    val neutral100 = Color(0xFFF5F5F5)
+    val neutral150 = Color(0xFFF0F0F0)
+    val neutral200 = Color(0xFFE6E6E6)
+    val neutral300 = Color(0xFFD9D9D9)
+    val neutral400 = Color(0xFFC5C5C5)
+    val neutral500 = Color(0xFF929292)
+    val neutral600 = Color(0xFF808080)
+    val neutral700 = Color(0xFF666666)
+    val neutral800 = Color(0xFF4D4D4D)
+    val neutral900 = Color(0xFF111111) // mungo Black · text/primary
 
-// region Status (주행 중 알림 상태 · 글자색은 4.5:1 통과값)
-val warnText = Color(0xFFA3472A) // warn/text: 더움 · 감점 글자
-val warnBg = Color(0xFFFFF1E0) // warn/bg: 더움 알림 · 보통 칩
-val warnBorder = Color(0xFFF2A06A) // warn/border: 경고 카드 테두리
-val coldText = Color(0xFF1D4ED8) // cold/text: 추움 글자
-val coldBg = Color(0xFFEAF2FE) // cold/bg: 추움 알림 배경
-val coldAccent = Color(0xFF2563EB) // cold/accent: 추움 아이콘 원
-val successText = Color(0xFF276A39) // success/text: 가산 점수 · 완료 문구
-val successAccent = Color(0xFF7BC943) // success/accent: 탑승 자리 · 창문 OK 표시
-// endregion
+    // Dark · 다크 면 (5)
+    val dark700 = Color(0xFF56585D)
+    val dark750 = Color(0xFF303237)
+    val dark800 = Color(0xFF2E2F34)
+    val dark850 = Color(0xFF2A2A2A)
+    val dark900 = Color(0xFF212121)
+    val dark950 = Color(0xFF18191B)
 
-// region Night (야간 테마 · Pleos 가이드 필수)
-val nightBg = Color(0xFF121F3D) // night/bg
-val nightCard = Color(0xFF1B2B4F) // night/card
-val nightBorder = Color(0xFF2E4372) // night/border
-val nightText = Color(0xFFF5F8FF) // night/text
-val nightText2 = Color(0xFF9AA7B3) // night/text-2
-val nightAccent = Color(0xFFA9FF65) // night/accent
+    // Mint · 상태: 편안함
+    val mint50 = Color(0xFFE6FAF5)
+    val mint400 = Color(0xFF2CC4A3)
+    val mint500 = Color(0xFF14A88A)
+    val mint700 = Color(0xFF08705D)
+    val mint900 = Color(0xFF053B33)
 
-// 시안에 야간 값이 없는 토큰 → 야간 배경에서 보이도록 임시로 정한 값 (디자이너 확인 필요)
-private val nightField = Color(0xFF233660)
-private val nightLimeSoft = Color(0xFF2C4A3C)
-private val nightWarnText = Color(0xFFFFB38A)
-private val nightWarnBg = Color(0xFF3A2C2A)
-private val nightColdText = Color(0xFF8DB4FF)
-private val nightColdBg = Color(0xFF1E2F5C)
-private val nightSuccessText = Color(0xFF9BE07A)
-// endregion
+    // Amber · 상태: 휴식 필요
+    val amber50 = Color(0xFFFFF5E0)
+    val amber400 = Color(0xFFFFC247)
+    val amber500 = Color(0xFFF2A20C)
+    val amber700 = Color(0xFF8C5300)
+    val amber900 = Color(0xFF3D2A00)
 
-// 예전 이름 (팀 코드 호환용)
-val primaryMain = Color(0xFF043B78)
-val primaryLight = Color(0xFFE8F1FA)
-val primaryPressed = Color(0xFF092E55)
-val textPrimary = textPrimaryColor
-val textSecondary = textSecondaryColor
-val textOnPrimary = Color(0xFFFFFFFF)
-val backgroundDefault = bgDefault
-val backgroundCard = bgCard
-val statusSuccess = successText
-val statusWarning = warnBorder
-val statusError = Color(0xFFE35D5D) // 시안에 없음
-val statusInfo = coldAccent
-val borderDefault = borderDefaultColor
-val logoColor = brandLime
-val logoBackground = brandNavy
+    // Red · 상태: 주의
+    val red50 = Color(0xFFFDECEC)
+    val red400 = Color(0xFFFF6B6B)
+    val red500 = Color(0xFFEB4747)
+    val red700 = Color(0xFFB02828)
+    val red900 = Color(0xFF401516)
 
+    // Blue · 상태: 정보
+    val blue50 = Color(0xFFE5F4FB)
+    val blue400 = Color(0xFF5CB8FF)
+    val blue500 = Color(0xFF1FA0E6)
+    val blue700 = Color(0xFF006A94)
+    val blue900 = Color(0xFF0A2E40)
+
+    val white = Color(0xFFFFFFFF)
+}
+
+/**
+ * 화면 색 토큰.
+ * - 앞쪽(Semantic Color): 새 화면 · 컴포넌트는 이 이름을 쓴다
+ * - 뒤쪽(예전 이름): 기존 화면 호환용. 값은 mungo 팔레트로 옮겨 두었다
+ */
 @Immutable
 data class POCOColors(
-    val primaryMain: Color,
-    val primaryLight: Color,
-    val primaryPressed: Color,
+    // region bg
+    /** 화면 바탕 */
+    val bgCanvas: Color,
+    /** 카드 · 패널 기본 면 */
+    val bgSurface: Color,
+    /** 떠 있는 카드 · 팝업 (다크는 그림자 대신 한 단계 밝게) */
+    val bgSurfaceRaised: Color,
+    /** 입력칸 · 눌린 영역 */
+    val bgSurfaceSunken: Color,
+    /** 주요 버튼 · 활성 상태 */
+    val bgAccent: Color,
+    /** 선택된 항목 배경 */
+    val bgAccentSubtle: Color,
+    /** 중립 강조 버튼 (Pleos 저장 버튼 톤) */
+    val bgNeutralStrong: Color,
+    /** 보조 버튼 */
+    val bgNeutral: Color,
+    /** 팝업 뒤 딤 */
+    val bgScrim: Color,
+    // endregion
+    // region text
     val textPrimary: Color,
     val textSecondary: Color,
-    val textOnPrimary: Color,
-    val backgroundDefault: Color,
-    val backgroundCard: Color,
-    val statusSuccess: Color,
-    val statusWarning: Color,
-    val statusError: Color,
-    val statusInfo: Color,
+    val textTertiary: Color,
+    val textDisabled: Color,
+    /** 강조 텍스트 · 링크 */
+    val textAccent: Color,
+    /** accent 배경 위 글자 */
+    val textOnAccent: Color,
+    /** neutral-strong 배경 위 글자 */
+    val textOnNeutralStrong: Color,
+    // endregion
+    // region border
     val borderDefault: Color,
-    /** brand/lime (두 모드 공통) */
-    val logoColor: Color,
-    /** brand/navy (두 모드 공통) */
-    val logoBackground: Color,
-    /** 주 버튼 · 선택된 세그먼트 · 켜진 토글 트랙. 라이트 = 남색, 다크 = 라임 */
-    val accentFill: Color = brandNavy,
-    /** [accentFill] 위의 글자 · 아이콘. 라이트 = 흰색, 다크 = 남색 */
-    val onAccentFill: Color = Color.White,
-    /** 켜진 토글의 원. 라이트 = 라임, 다크 = 남색 */
-    val toggleThumb: Color = brandLime,
-    /** 입력칸 · 비선택 세그먼트 배경 (= bg/default) */
-    val fieldBackground: Color = bgDefault,
-    /** 안심 · 확인 의미의 초록 (= success/text) */
-    val safe: Color = com.example.poco.core.theme.successText,
-    /** 로고 글자 · 강아지 몸. 라이트 = 남색, 다크 = 라임 */
-    val logoInk: Color = brandNavy,
-    /** 로고 강아지 얼굴 · 핸들 안쪽. 라이트 = 흰색, 다크 = 남색 */
-    val logoPaper: Color = Color.White,
-    val limeSoft: Color = brandLimeSoft,
-    val tangerine: Color = brandTangerine,
-    val borderInput: Color = borderInputColor,
-    val borderStrong: Color = borderStrongColor,
-    val textDisabled: Color = textDisabledColor,
-    val warnText: Color = com.example.poco.core.theme.warnText,
-    val warnBg: Color = com.example.poco.core.theme.warnBg,
-    val warnBorder: Color = com.example.poco.core.theme.warnBorder,
-    val coldText: Color = com.example.poco.core.theme.coldText,
-    val coldBg: Color = com.example.poco.core.theme.coldBg,
-    val coldAccent: Color = com.example.poco.core.theme.coldAccent,
-    val successText: Color = com.example.poco.core.theme.successText,
-    val successAccent: Color = com.example.poco.core.theme.successAccent,
-    val isDark: Boolean = false
+    val borderStrong: Color,
+    /** 선택 · 포커스 테두리 */
+    val borderAccent: Color,
+    // endregion
+    // region status
+    /** 반려동물 편안함 (Positive) */
+    val statusCalm: Color,
+    val statusCalmSubtle: Color,
+    /** 휴식 필요 (Warning) */
+    val statusRest: Color,
+    val statusRestSubtle: Color,
+    /** 주의 필요 (Negative) */
+    val statusAlert: Color,
+    val statusAlertSubtle: Color,
+    /** 정보 (Link) */
+    val statusInfo: Color,
+    val statusInfoSubtle: Color,
+    // endregion
+    /** 눌림 오버레이 (Hover는 차량에 없음) */
+    val statePressed: Color,
+    /** 그림자 (라이트 모드만) */
+    val shadow: Color,
+    val isDark: Boolean,
+
+    // region 예전 이름 (기존 화면 호환용 → 위 토큰으로 연결)
+    val primaryMain: Color = bgAccent,
+    val primaryLight: Color = bgAccentSubtle,
+    val primaryPressed: Color = MungoPalette.mango600,
+    val textOnPrimary: Color = textOnAccent,
+    val backgroundDefault: Color = bgCanvas,
+    val backgroundCard: Color = bgSurface,
+    val statusSuccess: Color = statusCalm,
+    val statusWarning: Color = statusRest,
+    val statusError: Color = statusAlert,
+    /** 점수 링 · 확인 원 (예전 라임) → 망고 */
+    val logoColor: Color = bgAccent,
+    /** 진한 태그 · 상태 칩 바탕 (예전 남색) → 진회색 */
+    val logoBackground: Color = MungoPalette.dark750,
+    val accentFill: Color = bgAccent,
+    val onAccentFill: Color = textOnAccent,
+    val toggleThumb: Color = MungoPalette.white,
+    val fieldBackground: Color = bgSurfaceSunken,
+    val safe: Color = statusCalm,
+    val limeSoft: Color = bgAccentSubtle,
+    val tangerine: Color = bgAccent,
+    val borderInput: Color = borderDefault,
+    val warnText: Color = statusRest,
+    val warnBg: Color = statusRestSubtle,
+    val warnBorder: Color = if (isDark) MungoPalette.amber700 else MungoPalette.amber400,
+    val coldText: Color = statusInfo,
+    val coldBg: Color = statusInfoSubtle,
+    val coldAccent: Color = if (isDark) MungoPalette.blue400 else MungoPalette.blue500,
+    val successText: Color = statusCalm,
+    val successAccent: Color = if (isDark) MungoPalette.mint400 else MungoPalette.mint500
+    // endregion
 )
 
 val defaultPOCOColors = POCOColors(
-    primaryMain = primaryMain,
-    primaryLight = primaryLight,
-    primaryPressed = primaryPressed,
-    textPrimary = textPrimary,
-    textSecondary = textSecondary,
-    textOnPrimary = textOnPrimary,
-    backgroundDefault = backgroundDefault,
-    backgroundCard = backgroundCard,
-    statusSuccess = statusSuccess,
-    statusWarning = statusWarning,
-    statusError = statusError,
-    statusInfo = statusInfo,
-    borderDefault = borderDefault,
-    logoColor = logoColor,
-    logoBackground = logoBackground
+    bgCanvas = MungoPalette.neutral100,
+    bgSurface = MungoPalette.white,
+    bgSurfaceRaised = MungoPalette.white,
+    bgSurfaceSunken = MungoPalette.neutral150,
+    bgAccent = MungoPalette.mango500,
+    bgAccentSubtle = MungoPalette.mango50,
+    bgNeutralStrong = MungoPalette.dark750,
+    bgNeutral = MungoPalette.neutral150,
+    bgScrim = Color(0x80000000),
+    textPrimary = MungoPalette.neutral900,
+    textSecondary = MungoPalette.neutral800,
+    textTertiary = MungoPalette.neutral700,
+    textDisabled = MungoPalette.neutral400,
+    textAccent = MungoPalette.mango700,
+    textOnAccent = MungoPalette.neutral900,
+    textOnNeutralStrong = MungoPalette.white,
+    borderDefault = MungoPalette.neutral200,
+    borderStrong = MungoPalette.neutral400,
+    borderAccent = MungoPalette.mango700,
+    statusCalm = MungoPalette.mint700,
+    statusCalmSubtle = MungoPalette.mint50,
+    statusRest = MungoPalette.amber700,
+    statusRestSubtle = MungoPalette.amber50,
+    statusAlert = MungoPalette.red700,
+    statusAlertSubtle = MungoPalette.red50,
+    statusInfo = MungoPalette.blue700,
+    statusInfoSubtle = MungoPalette.blue50,
+    statePressed = Color(0x14000000), // 검정 8%
+    shadow = Color(0x1A000000),
+    isDark = false
 )
 
 val darkPOCOColors = POCOColors(
-    primaryMain = nightAccent,
-    primaryLight = nightField,
-    primaryPressed = Color(0xFF8FE04C),
-    textPrimary = nightText,
-    textSecondary = nightText2,
-    textOnPrimary = brandNavy,
-    backgroundDefault = nightBg,
-    backgroundCard = nightCard,
-    statusSuccess = nightSuccessText,
-    statusWarning = warnBorder,
-    statusError = Color(0xFFFF7A7A),
-    statusInfo = nightColdText,
-    borderDefault = nightBorder,
-    logoColor = brandLime,
-    logoBackground = brandNavy,
-    accentFill = nightAccent,
-    onAccentFill = brandNavy,
-    toggleThumb = brandNavy,
-    fieldBackground = nightField,
-    safe = nightSuccessText,
-    logoInk = nightAccent,
-    logoPaper = nightBg,
-    limeSoft = nightLimeSoft,
-    borderInput = nightBorder,
-    borderStrong = Color(0xFF4A6197),
-    textDisabled = Color(0xFF6B7A95),
-    warnText = nightWarnText,
-    warnBg = nightWarnBg,
-    coldText = nightColdText,
-    coldBg = nightColdBg,
-    successText = nightSuccessText,
+    bgCanvas = MungoPalette.dark950,
+    bgSurface = MungoPalette.dark900,
+    bgSurfaceRaised = MungoPalette.dark850,
+    bgSurfaceSunken = MungoPalette.dark950,
+    bgAccent = MungoPalette.mango400,
+    bgAccentSubtle = MungoPalette.mango900,
+    bgNeutralStrong = MungoPalette.neutral200,
+    bgNeutral = MungoPalette.dark750,
+    bgScrim = Color(0x99000000),
+    textPrimary = MungoPalette.white,
+    textSecondary = MungoPalette.neutral400,
+    textTertiary = MungoPalette.neutral500,
+    textDisabled = MungoPalette.neutral800,
+    textAccent = MungoPalette.mango400,
+    textOnAccent = MungoPalette.neutral900,
+    textOnNeutralStrong = MungoPalette.neutral900,
+    borderDefault = MungoPalette.dark800,
+    borderStrong = MungoPalette.dark700,
+    borderAccent = MungoPalette.mango400,
+    statusCalm = MungoPalette.mint400,
+    statusCalmSubtle = MungoPalette.mint900,
+    statusRest = MungoPalette.amber400,
+    statusRestSubtle = MungoPalette.amber900,
+    statusAlert = MungoPalette.red400,
+    statusAlertSubtle = MungoPalette.red900,
+    statusInfo = MungoPalette.blue400,
+    statusInfoSubtle = MungoPalette.blue900,
+    statePressed = Color(0x1FFFFFFF), // 흰색 12%
+    shadow = Color.Transparent,
     isDark = true
 )
 

@@ -94,3 +94,49 @@ object PocoLayout {
     val drivingColumnGap = 24.dp
     val drivingCardGap = 16.dp // 상태 줄은 12
 }
+
+/*
+ * mungo 디자인 시스템 · Spacing / Radius / Touch & Icon Size
+ * - 간격: LINE 규칙(4 배수 + 최소 2). 차량 화면에서는 24 이상을 주로 쓴다 → 기존 PocoSpacing 값 그대로 사용
+ * - 모서리: LINE 3~12px는 차량에서 각져 보여 Pleos 카드 톤에 맞춰 키웠다
+ */
+
+object MungoRadius {
+    val sm = 8.dp
+    val md = 16.dp // 버튼 · 입력칸 · 작은 카드
+    val lg = 24.dp // 카드
+    val xl = 32.dp // 큰 패널
+}
+
+object MungoSize {
+    /** 주행 중 주요 버튼 (L) */
+    val buttonLarge = 88.dp
+
+    /** 정차 화면 버튼 (M) */
+    val buttonMedium = 64.dp
+    val touchMin = 64.dp
+    val touchComfortable = 88.dp
+    val iconSm = 20.dp
+    val iconMd = 24.dp
+    val iconLg = 32.dp
+    val iconXl = 40.dp
+    val iconButton = 88.dp
+    val input = 88.dp
+    val segment = 88.dp
+    val chipMedium = 64.dp
+    val chipSmall = 40.dp
+    val checkRow = 100.dp
+    val listItem = 112.dp
+    val selectionTile = 220.dp
+    val toggleWidth = 96.dp
+    val toggleHeight = 56.dp
+    val avatarLarge = 88.dp
+    val avatarMedium = 56.dp
+}
+
+/** 공모전 앱 화면 (Pleos 앱 영역 1700×1184) */
+object MungoLayout {
+    val screenPadding = 24.dp
+    val panelPadding = 48.dp
+    val panelGap = 24.dp
+}

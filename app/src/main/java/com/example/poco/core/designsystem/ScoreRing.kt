@@ -22,13 +22,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.poco.core.theme.POCOTheme
 
-val RingTrack = Color(0xFFDDE3DC)
-private val RingStart = Color(0xFFF6C08A)
-private val RingEnd = Color(0xFFE8734A)
+val RingTrack = Color(0xFFE6E6E6) // neutral/200
+private val RingStart = Color(0xFFFFB257) // mango/300
+private val RingEnd = Color(0xFFFF8400) // mango/500
 
 /**
  * 컴포트 점수 링. 애니메이션 없음 (주행 중 시선 분산 방지)
- * @param progressColor 지정하면 단색(홈 시안: 라임), 없으면 주황 그라데이션
+ * @param progressColor 지정하면 단색(예: 망고), 없으면 주황 그라데이션
  */
 @Composable
 fun ScoreRing(

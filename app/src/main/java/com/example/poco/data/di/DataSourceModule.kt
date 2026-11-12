@@ -8,6 +8,7 @@ import com.example.poco.data.local.datasource.TripLocalDataSource
 import com.example.poco.data.local.datasourceimpl.PetLocalDataSourceImpl
 import com.example.poco.data.local.datasourceimpl.PetPhotoDataSourceImpl
 import com.example.poco.data.local.datasourceimpl.TripLocalDataSourceImpl
+import com.example.poco.data.pleos.datasource.BatteryDataSource
 import com.example.poco.data.pleos.datasource.BrakeDataSource
 import com.example.poco.data.pleos.datasource.GearDataSource
 import com.example.poco.data.pleos.datasource.HvacDataSource
@@ -17,6 +18,7 @@ import com.example.poco.data.pleos.datasource.SteeringDataSource
 import com.example.poco.data.pleos.datasource.SttDataSource
 import com.example.poco.data.pleos.datasource.TtsDataSource
 import com.example.poco.data.pleos.datasource.WindowDataSource
+import com.example.poco.data.pleos.datasourceimpl.BatteryDataSourceImpl
 import com.example.poco.data.pleos.datasourceimpl.BrakeDataSourceImpl
 import com.example.poco.data.pleos.datasourceimpl.GearDataSourceImpl
 import com.example.poco.data.pleos.datasourceimpl.HvacDataSourceImpl
@@ -42,6 +44,10 @@ abstract class DataSourceModule {
     @Binds
     @Singleton
     abstract fun bindHvacDataSource(impl: HvacDataSourceImpl): HvacDataSource
+
+    @Binds
+    @Singleton
+    abstract fun bindBatteryDataSource(impl: BatteryDataSourceImpl): BatteryDataSource
 
     @Binds
     @Singleton

@@ -18,4 +18,6 @@ class PetLocalDataSourceImpl @Inject constructor(private val petDao: PetDao) : P
         // Upsert가 update로 처리되면 -1을 돌려준다
         return if (rowId == -1L) pet.id else rowId
     }
+
+    override suspend fun deletePet(id: Long) = petDao.deleteById(id)
 }

@@ -7,6 +7,7 @@ import ai.pleos.playground.tts.TextToSpeech
 import ai.pleos.playground.tts.constant.Mode
 import ai.pleos.playground.vehicle.Vehicle
 import ai.pleos.playground.vehicle.api.Brake
+import ai.pleos.playground.vehicle.api.EvBattery
 import ai.pleos.playground.vehicle.api.Gear
 import ai.pleos.playground.vehicle.api.HVAC
 import ai.pleos.playground.vehicle.api.SteeringWheel
@@ -58,6 +59,10 @@ object PleosModule {
     @Provides
     @Singleton
     fun provideHvac(vehicle: Vehicle): HVAC = vehicle.getHVAC()
+
+    @Provides
+    @Singleton
+    fun provideEvBattery(vehicle: Vehicle): EvBattery = vehicle.getEvBattery()
 
     @Provides
     @Singleton

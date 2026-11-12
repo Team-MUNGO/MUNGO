@@ -1,5 +1,6 @@
 package com.example.poco.data.di
 
+import com.example.poco.data.repository.BatteryRepository
 import com.example.poco.data.repository.DepartureRepository
 import com.example.poco.data.repository.GearRepository
 import com.example.poco.data.repository.HvacRepository
@@ -11,6 +12,7 @@ import com.example.poco.data.repository.TripRepository
 import com.example.poco.data.repository.TtsRepository
 import com.example.poco.data.repository.VehicleMotionRepository
 import com.example.poco.data.repository.WindowRepository
+import com.example.poco.data.repositoryimpl.BatteryRepositoryImpl
 import com.example.poco.data.repositoryimpl.DepartureRepositoryImpl
 import com.example.poco.data.repositoryimpl.GearRepositoryImpl
 import com.example.poco.data.repositoryimpl.HvacRepositoryImpl
@@ -38,6 +40,10 @@ abstract class RepositoryModule {
     @Binds
     @Singleton
     abstract fun bindHvacRepository(impl: HvacRepositoryImpl): HvacRepository
+
+    @Binds
+    @Singleton
+    abstract fun bindBatteryRepository(impl: BatteryRepositoryImpl): BatteryRepository
 
     @Binds
     @Singleton

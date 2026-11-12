@@ -228,7 +228,7 @@ fun VoiceCard(
             Spacer(Modifier.width(PocoSpacing.space16))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = "POCO 음성 안내",
+                    text = "mungo 음성 안내",
                     style = POCOTheme.typography.caption,
                     color = colors.textSecondary
                 )
@@ -353,7 +353,7 @@ fun PermissionBanner(
 
 /** 예) ✓ 보리를 동승자로 등록했어요 */
 @Composable
-fun PocoToast(text: String, modifier: Modifier = Modifier) {
+fun PocoToast(text: String, modifier: Modifier = Modifier, detail: String? = null) {
     val colors = POCOTheme.colors
     Row(
         modifier = modifier
@@ -365,6 +365,14 @@ fun PocoToast(text: String, modifier: Modifier = Modifier) {
         StatusCircle(tone = StatusTone.OK)
         Spacer(Modifier.width(PocoSpacing.space16))
         Text(text = text, style = POCOTheme.typography.titleM, color = Color.White)
+        detail?.let {
+            Spacer(Modifier.width(PocoSpacing.space32))
+            Text(
+                text = it,
+                style = POCOTheme.typography.bodyM,
+                color = Color.White.copy(alpha = 0.6f)
+            )
+        }
     }
 }
 

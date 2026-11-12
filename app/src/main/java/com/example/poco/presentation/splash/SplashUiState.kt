@@ -15,6 +15,7 @@ enum class ConnectionStatus {
 }
 
 enum class SplashDestination {
-    PERMISSION,
+    /** 첫 실행: 온보딩 소개 → 권한 → 펫 프로필 */
+    ONBOARDING,
     HOME
 }

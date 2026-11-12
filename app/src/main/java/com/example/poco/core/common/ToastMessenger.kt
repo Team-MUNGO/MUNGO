@@ -13,13 +13,16 @@ import kotlinx.coroutines.flow.asSharedFlow
  */
 @Singleton
 class ToastMessenger @Inject constructor() {
-    private val _messages = MutableSharedFlow<String>(
+    private val _messages = MutableSharedFlow<ToastMessage>(
         extraBufferCapacity = 1,
         onBufferOverflow = BufferOverflow.DROP_OLDEST
     )
-    val messages: SharedFlow<String> = _messages.asSharedFlow()
+    val messages: SharedFlow<ToastMessage> = _messages.asSharedFlow()
 
-    fun show(message: String) {
-        _messages.tryEmit(message)
+    /** [detail]: 오른쪽에 회색으로 붙는 보조 문구 (예: "다음 이동부터 반영돼요") */
+    fun show(message: String, detail: String? = null) {
+        _messages.tryEmit(ToastMessage(message, detail))
     }
 }
+
+data class ToastMessage(val text: String, val detail: String? = null)

@@ -29,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -38,11 +39,15 @@ import androidx.compose.ui.text.intl.LocaleList
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import com.example.poco.core.designsystem.MungoIcon
+import com.example.poco.core.designsystem.MungoIconView
 import com.example.poco.core.designsystem.PetPhoto
 import com.example.poco.core.designsystem.PocoIcon
 import com.example.poco.core.designsystem.PocoIconView
 import com.example.poco.core.designsystem.hasFullPetImage
+import com.example.poco.core.theme.MungoPalette
+import com.example.poco.core.theme.MungoRadius
+import com.example.poco.core.theme.MungoSize
 import com.example.poco.core.theme.POCOTheme
 import com.example.poco.core.theme.PocoRadius
 import com.example.poco.core.theme.PocoSize
@@ -50,13 +55,16 @@ import com.example.poco.core.theme.PocoSpacing
 import com.example.poco.core.theme.PocoStroke
 
 /*
- * POCO 기본 컴포넌트 · DS-04 Controls
- * 색은 모두 POCOTheme.colors 토큰 → 라이트/야간 자동 대응
+ * POCO 기본 컴포넌트 (mungo 디자인 시스템으로 교체)
+ * 색은 모두 POCOTheme.colors 토큰 → 라이트/다크 자동 대응. 새 컴포넌트는 MungoComponents.kt
  */
 
-// region Toggle (96×56 · 노브 44)
+// region Toggle (96×56 · 터치 영역은 줄 전체 88 이상)
 
-/** 켜짐: 남색 트랙 + 라임 노브 (야간: 라임 트랙 + 남색 노브) / 꺼짐: 회색 트랙 + 흰 노브. 애니메이션 없음 */
+/**
+ * 켜짐: 망고 트랙 + 진한 망고 테두리 + 노브 안 체크 / 꺼짐: 진회색 트랙 (다크: 밝은 회색).
+ * 색만으로 구분하지 않도록 켜짐에 체크를 넣는다. 애니메이션 없음
+ */
 @Composable
 fun PocoToggle(
     checked: Boolean,
@@ -65,42 +73,69 @@ fun PocoToggle(
     enabled: Boolean = true
 ) {
     val colors = POCOTheme.colors
-    val inset = (PocoSize.toggleHeight - PocoSize.toggleKnob) / 2
+    val knob = PocoSize.toggleKnob
+    val inset = (PocoSize.toggleHeight - knob) / 2
+    val track = when {
+        !enabled && checked -> MungoPalette.mango200
+        !enabled -> colors.borderStrong
+        checked -> colors.bgAccent
+        else -> colors.bgNeutralStrong
+    }
     Box(
         modifier = modifier
             .size(PocoSize.toggleWidth, PocoSize.toggleHeight)
-            .background(if (checked) colors.accentFill else colors.borderInput, CircleShape)
+            .background(track, CircleShape)
+            .then(
+                if (checked && enabled) {
+                    Modifier.border(PocoStroke.control, colors.borderAccent, CircleShape)
+                } else {
+                    Modifier
+                }
+            )
             .clickable(enabled = enabled) { onCheckedChange(!checked) },
         contentAlignment = Alignment.CenterStart
     ) {
         Box(
             modifier = Modifier
-                .offset(
-                    x = if (checked) PocoSize.toggleWidth - PocoSize.toggleKnob - inset else inset
+                .offset(x = if (checked) PocoSize.toggleWidth - knob - inset else inset)
+                .size(knob)
+                .background(colors.bgSurface, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            if (checked) {
+                MungoIconView(
+                    MungoIcon.CHECK,
+                    tint = if (enabled) colors.textPrimary else colors.textDisabled,
+                    size = 26.dp
                 )
-                .size(PocoSize.toggleKnob)
-                .background(if (checked) colors.toggleThumb else Color.White, CircleShape)
-        )
+            }
+        }
     }
 }
 
 // endregion
 
-// region Button (높이 76 / 96 · 라운드 22 / 24 · 글자 title/m, 큰 버튼 32)
+// region Button (L 88 = 주행 중 주요 동작 · M 64 = 정차 화면 · 라운드 16)
 
 enum class PocoButtonStyle {
-    /** 남색 채움 (야간: 라임) */
+    /** 망고 채움 + 진회색 글자 (한 화면에 1개) */
     PRIMARY,
 
-    /** 흰 바탕 + border/strong 테두리 */
-    SECONDARY
+    /** 회색 면 (보조) */
+    SECONDARY,
+
+    /** 진회색 면 + 흰 글자 (Pleos 저장 버튼 톤. 다크: 밝은 회색 + 검정 글자) */
+    NEUTRAL_STRONG,
+
+    /** 흰 면 + 테두리 */
+    OUTLINE
 }
 
 enum class PocoButtonSize {
-    /** 높이 76 · 라운드 22 */
+    /** M · 높이 64 · 글자 title3(24) */
     NORMAL,
 
-    /** 높이 96 · 라운드 24 · 글자 32 (저장하고 홈으로 등) */
+    /** L · 높이 88 · 글자 title2(28) */
     LARGE
 }
 
@@ -112,33 +147,49 @@ fun PocoButton(
     style: PocoButtonStyle = PocoButtonStyle.PRIMARY,
     size: PocoButtonSize = PocoButtonSize.NORMAL,
     enabled: Boolean = true,
-    icon: PocoIcon? = null
+    icon: PocoIcon? = null,
+    mungoIcon: MungoIcon? = null,
+    shape: Shape = RoundedCornerShape(MungoRadius.md)
 ) {
     val colors = POCOTheme.colors
     val isLarge = size == PocoButtonSize.LARGE
-    val shape = RoundedCornerShape(if (isLarge) PocoRadius.r24 else PocoRadius.r22)
     val (container, content, border) = when {
-        !enabled -> Triple(colors.borderInput, colors.textDisabled, colors.borderInput)
-        style == PocoButtonStyle.PRIMARY ->
-            Triple(colors.accentFill, colors.onAccentFill, colors.accentFill)
-        else -> Triple(colors.backgroundCard, colors.textPrimary, colors.borderStrong)
+        !enabled && style == PocoButtonStyle.OUTLINE ->
+            Triple(colors.bgSurface, colors.textDisabled, colors.borderDefault)
+        !enabled -> Triple(colors.bgNeutral, colors.textDisabled, null)
+        style == PocoButtonStyle.PRIMARY -> Triple(colors.bgAccent, colors.textOnAccent, null)
+        style == PocoButtonStyle.SECONDARY -> Triple(colors.bgNeutral, colors.textPrimary, null)
+        style == PocoButtonStyle.NEUTRAL_STRONG ->
+            Triple(colors.bgNeutralStrong, colors.textOnNeutralStrong, null)
+        else -> Triple(colors.bgSurface, colors.textPrimary, colors.borderDefault)
     }
-    val textStyle = POCOTheme.typography.titleM.let {
-        if (isLarge) it.copy(fontSize = 32.sp, lineHeight = 44.sp) else it
-    }
+    val textStyle = if (isLarge) POCOTheme.typography.title2 else POCOTheme.typography.title3
+    val iconSize = if (isLarge) 32.dp else 28.dp
     Row(
         modifier = modifier
-            .height(if (isLarge) PocoSize.buttonHeightLarge else PocoSize.buttonHeight)
+            .height(if (isLarge) MungoSize.buttonLarge else MungoSize.buttonMedium)
             .background(container, shape)
-            .border(PocoStroke.control, border, shape)
-            .clickable(enabled = enabled, onClick = onClick)
-            .padding(horizontal = PocoSpacing.space32),
+            .then(
+                if (border !=
+                    null
+                ) {
+                    Modifier.border(PocoStroke.control, border, shape)
+                } else {
+                    Modifier
+                }
+            )
+            .pressable(shape, enabled, onClick)
+            .padding(horizontal = if (isLarge) PocoSpacing.space32 else PocoSpacing.space24),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
         icon?.let {
-            PocoIconView(it, tint = content, modifier = Modifier.size(PocoSize.icon28))
-            Spacer(Modifier.width(PocoSpacing.space8))
+            PocoIconView(it, tint = content, modifier = Modifier.size(iconSize))
+            Spacer(Modifier.width(PocoSpacing.space12))
+        }
+        mungoIcon?.let {
+            MungoIconView(it, tint = content, size = iconSize)
+            Spacer(Modifier.width(PocoSpacing.space12))
         }
         Text(text = text, style = textStyle, color = content, textAlign = TextAlign.Center)
     }
@@ -174,7 +225,7 @@ fun PocoChip(
     }
 }
 
-/** lime-soft 칩. 예) 멀미 민감도 보통 · ▲ 지난번보다 18점 올랐어요 */
+/** 망고 옅은 칩 (accent-subtle). 예) 멀미 민감도 보통 · ▲ 지난번보다 18점 올랐어요 */
 @Composable
 fun PocoSoftChip(text: String, modifier: Modifier = Modifier) {
     Text(
@@ -187,14 +238,14 @@ fun PocoSoftChip(text: String, modifier: Modifier = Modifier) {
     )
 }
 
-/** 남색 상태 칩 + 초록 점. 예) ● 주행 중 */
+/** 진회색 상태 칩 + 민트 점. 예) ● 주행 중 */
 @Composable
 fun PocoStatusChip(text: String, modifier: Modifier = Modifier) {
     val colors = POCOTheme.colors
     Row(
         modifier = modifier
             .heightIn(min = PocoSize.chipHeight)
-            .background(colors.logoBackground, CircleShape)
+            .background(colors.bgNeutralStrong, CircleShape)
             .padding(horizontal = PocoSpacing.space16),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -204,7 +255,7 @@ fun PocoStatusChip(text: String, modifier: Modifier = Modifier) {
                 .background(colors.successAccent, CircleShape)
         )
         Spacer(Modifier.width(PocoSpacing.space8))
-        Text(text = text, style = POCOTheme.typography.micro, color = Color.White)
+        Text(text = text, style = POCOTheme.typography.micro, color = colors.textOnNeutralStrong)
     }
 }
 
@@ -215,7 +266,7 @@ enum class PocoTagStyle {
     /** 선택 권한 · 소형 (success) */
     SUCCESS,
 
-    /** 대형 (네이비) */
+    /** 대형 (진회색) */
     NAVY,
 
     /** NEW 뱃지 */
@@ -227,10 +278,10 @@ enum class PocoTagStyle {
 fun PocoTag(text: String, style: PocoTagStyle, modifier: Modifier = Modifier) {
     val colors = POCOTheme.colors
     val (background, content) = when (style) {
-        PocoTagStyle.WARN -> colors.warnBg to colors.warnText
-        PocoTagStyle.SUCCESS -> colors.limeSoft to colors.successText
-        PocoTagStyle.NAVY -> colors.logoBackground to Color.White
-        PocoTagStyle.NEW -> colors.limeSoft to colors.textPrimary
+        PocoTagStyle.WARN -> colors.statusRestSubtle to colors.statusRest
+        PocoTagStyle.SUCCESS -> colors.statusCalmSubtle to colors.statusCalm
+        PocoTagStyle.NAVY -> colors.bgNeutralStrong to colors.textOnNeutralStrong
+        PocoTagStyle.NEW -> colors.bgAccentSubtle to colors.textAccent
     }
     Text(
         text = text,
@@ -249,10 +300,10 @@ fun PocoTag(text: String, style: PocoTagStyle, modifier: Modifier = Modifier) {
 }
 
 enum class StatusTone {
-    /** 라임 원 + 체크 */
+    /** 민트 원 + 체크 (편안함) */
     OK,
 
-    /** 탠저린 원 + ! (더움 · 경고) */
+    /** 빨강 원 + ! (더움 · 경고) */
     HOT,
 
     /** 파랑 원 + ! (추움) */
@@ -271,10 +322,10 @@ fun StatusCircle(
 ) {
     val colors = POCOTheme.colors
     val background = when (tone) {
-        StatusTone.OK -> colors.logoColor
-        StatusTone.HOT -> colors.tangerine
-        StatusTone.COLD -> colors.coldAccent
-        StatusTone.UNKNOWN -> colors.fieldBackground
+        StatusTone.OK -> colors.statusCalmSubtle
+        StatusTone.HOT -> colors.statusAlertSubtle
+        StatusTone.COLD -> colors.statusInfoSubtle
+        StatusTone.UNKNOWN -> colors.bgNeutral
     }
     Box(
         modifier = modifier
@@ -284,15 +335,11 @@ fun StatusCircle(
     ) {
         when (tone) {
             StatusTone.OK ->
-                PocoIconView(
-                    PocoIcon.CHECK,
-                    tint = colors.logoBackground,
-                    modifier = Modifier.size(
-                        size * 0.5f
-                    )
-                )
-            StatusTone.HOT, StatusTone.COLD ->
-                Text(text = "!", style = POCOTheme.typography.titleM, color = Color.White)
+                MungoIconView(MungoIcon.CHECK, tint = colors.statusCalm, size = size * 0.55f)
+            StatusTone.HOT ->
+                Text(text = "!", style = POCOTheme.typography.titleM, color = colors.statusAlert)
+            StatusTone.COLD ->
+                Text(text = "!", style = POCOTheme.typography.titleM, color = colors.statusInfo)
             StatusTone.UNKNOWN ->
                 Text(text = "·", style = POCOTheme.typography.titleM, color = colors.textSecondary)
         }
@@ -303,7 +350,7 @@ fun StatusCircle(
 
 // region PermissionCard
 
-/** 라임 아이콘 타일 + 제목/설명 + 토글. [tag]에 필수/선택 태그 */
+/** 망고 아이콘 타일 + 제목/설명 + 토글. [tag]에 필수/선택 태그 */
 @Composable
 fun PermissionCard(
     icon: PocoIcon,
@@ -318,12 +365,12 @@ fun PermissionCard(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .background(colors.backgroundCard, RoundedCornerShape(PocoRadius.r24))
-            .clickable { onCheckedChange(!checked) }
+            .background(colors.bgSurface, RoundedCornerShape(MungoRadius.lg))
+            .pressable(RoundedCornerShape(MungoRadius.lg)) { onCheckedChange(!checked) }
             .padding(horizontal = PocoSpacing.space24, vertical = PocoSpacing.space16),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        IconBox(icon = icon, background = colors.logoColor)
+        IconBox(icon = icon, background = colors.bgAccentSubtle, tint = colors.bgAccent)
         Spacer(Modifier.width(PocoSpacing.space20))
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -351,9 +398,9 @@ fun IconBox(
     background: Color,
     modifier: Modifier = Modifier,
     size: Dp = PocoSize.iconTile,
-    tint: Color = POCOTheme.colors.logoBackground
+    tint: Color = POCOTheme.colors.textPrimary
 ) {
-    val radius = if (size >= PocoSize.iconTileLarge) PocoRadius.r18 else PocoRadius.r16
+    val radius = if (size >= PocoSize.iconTileLarge) MungoRadius.lg else MungoRadius.md
     Box(
         modifier = modifier
             .size(size)
@@ -366,8 +413,12 @@ fun IconBox(
 
 // endregion
 
-// region Segment (높이 80 · 라운드 18 · 선택 = 네이비)
+// region Segment (높이 88 · 회색 홈 안에서 선택 칸만 흰 면 + 테두리)
 
+/**
+ * 세그먼트 한 칸. 여러 칸을 Row로 나란히 둔다.
+ * 선택: 흰 면(다크: surface) + border/strong + text/primary / 비선택: 회색 면 + text/secondary
+ */
 @Composable
 fun PocoSegment(
     title: String,
@@ -378,35 +429,41 @@ fun PocoSegment(
     enabled: Boolean = true
 ) {
     val colors = POCOTheme.colors
-    val shape = RoundedCornerShape(PocoRadius.r18)
-    val content = if (selected) colors.onAccentFill else colors.textPrimary
+    val shape = RoundedCornerShape(MungoRadius.md)
+    val content = when {
+        !enabled -> colors.textDisabled
+        selected -> colors.textPrimary
+        else -> colors.textSecondary
+    }
     Column(
         modifier = modifier
-            .height(PocoSize.segmentHeight)
-            .background(if (selected) colors.accentFill else colors.fieldBackground, shape)
+            .height(MungoSize.segment)
+            .background(if (selected) colors.bgSurface else colors.bgNeutral, shape)
             .border(
                 PocoStroke.control,
-                if (selected) colors.accentFill else colors.borderDefault,
+                if (selected) colors.borderStrong else colors.bgNeutral,
                 shape
             )
-            .clickable(enabled = enabled, onClick = onClick),
+            .pressable(shape, enabled, onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text(text = title, style = POCOTheme.typography.bodyL, color = content)
+        Text(
+            text = title,
+            style = POCOTheme.typography.title2.copy(
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+            ),
+            color = content
+        )
         subtitle?.let {
-            Text(
-                text = it,
-                style = POCOTheme.typography.nano.copy(fontWeight = FontWeight.Normal),
-                color = content.copy(alpha = 0.75f)
-            )
+            Text(text = it, style = POCOTheme.typography.caption1, color = content)
         }
     }
 }
 
 // endregion
 
-// region Input (높이 76 · 라운드 16 · 포커스 테두리 3 + 링 6)
+// region Input (높이 88 · 라운드 16 · 포커스 = 망고 테두리 3 · 오류 = 빨강 테두리 + 빨강 안내)
 
 private val KoreanLocales = LocaleList(Locale("ko-KR"))
 
@@ -415,7 +472,8 @@ private val KoreanLocales = LocaleList(Locale("ko-KR"))
  * - 비어 있으면 "예: …" [placeholder]를 회색(text/secondary) Regular로, 입력하면 네이비 Medium
  * - [unit]: 단위(살, kg). [inlineUnit]이면 값 바로 뒤(4.2kg · 예시도 "56kg"처럼 단위 포함), 아니면 오른쪽 끝
  * - [trailing]: 오른쪽 끝 내용 (몸무게 크기 뱃지 등)
- * - 포커스되면 흰 바탕 + 남색 테두리 3 + lime-soft 링 6
+ * - 포커스되면 border/accent 3 · [error]가 있으면 빨강 테두리 + 도움말 대신 빨강 안내
+ * - [onMicClick]이 있으면 오른쪽 끝에 마이크 (차량에서는 음성 입력을 먼저 권한다)
  * - 글자 칸은 키보드가 한국어로 먼저 열리도록 요청(hintLocales). 키보드에 한국어가 설치돼 있어야 한다
  */
 @Composable
@@ -430,17 +488,22 @@ fun PocoInput(
     inlineUnit: Boolean = false,
     trailing: (@Composable () -> Unit)? = null,
     keyboardType: KeyboardType = KeyboardType.Text,
-    enabled: Boolean = true
+    enabled: Boolean = true,
+    error: String? = null,
+    onMicClick: (() -> Unit)? = null
 ) {
     val colors = POCOTheme.colors
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val shape = RoundedCornerShape(PocoRadius.r16)
-    val ringShape = RoundedCornerShape(PocoRadius.r16 + PocoStroke.focusRing)
-    val valueStyle = POCOTheme.typography.bodyL
-    val placeholderStyle = valueStyle.copy(fontWeight = FontWeight.Normal)
+    val valueStyle = POCOTheme.typography.body1
+    val placeholderStyle = valueStyle
     Column(modifier = modifier) {
-        Text(text = label, style = POCOTheme.typography.bodyM, color = colors.textSecondary)
+        Text(
+            text = label,
+            style = POCOTheme.typography.body2,
+            color = if (enabled) colors.textSecondary else colors.textDisabled
+        )
         Spacer(Modifier.height(PocoSpacing.space8))
         BasicTextField(
             value = value,
@@ -448,46 +511,42 @@ fun PocoInput(
             enabled = enabled,
             singleLine = true,
             interactionSource = interaction,
-            textStyle = valueStyle.copy(color = colors.textPrimary),
-            cursorBrush = SolidColor(colors.accentFill),
+            textStyle = valueStyle.copy(
+                color = if (enabled) colors.textPrimary else colors.textDisabled
+            ),
+            cursorBrush = SolidColor(colors.bgAccent),
             keyboardOptions = KeyboardOptions(
                 keyboardType = keyboardType,
                 imeAction = ImeAction.Next,
                 hintLocales = if (keyboardType == KeyboardType.Text) KoreanLocales else null
             ),
             decorationBox = { innerTextField ->
-                // 포커스 링(6)은 칸 바깥에 그려 높이(76)가 변하지 않게 한다
-                Box(
-                    modifier = Modifier
-                        .then(
-                            if (focused) {
-                                Modifier.border(PocoStroke.focusRing, colors.limeSoft, ringShape)
-                            } else {
-                                Modifier
-                            }
-                        )
-                        .padding(PocoStroke.focusRing)
-                ) {
+                val borderColor = when {
+                    error != null -> colors.statusAlert
+                    focused -> colors.borderAccent
+                    else -> colors.borderDefault
+                }
+                Box {
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(PocoSize.inputHeight)
+                            .height(MungoSize.input)
                             .background(
-                                if (focused) colors.backgroundCard else colors.fieldBackground,
+                                if (enabled) colors.bgSurface else colors.bgSurfaceSunken,
                                 shape
                             )
-                            .then(
-                                if (focused) {
-                                    Modifier.border(
-                                        PocoStroke.focus,
-                                        colors.accentFill,
-                                        shape
-                                    )
+                            .border(
+                                if (focused ||
+                                    error != null
+                                ) {
+                                    PocoStroke.focus
                                 } else {
-                                    Modifier
-                                }
+                                    PocoStroke.control
+                                },
+                                borderColor,
+                                shape
                             )
-                            .padding(horizontal = PocoSpacing.space20),
+                            .padding(horizontal = PocoSpacing.space24),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Box(modifier = Modifier.weight(1f)) {
@@ -495,7 +554,7 @@ fun PocoInput(
                                 Text(
                                     text = placeholder,
                                     style = placeholderStyle,
-                                    color = colors.textSecondary
+                                    color = colors.textTertiary
                                 )
                             }
                             // 단위(살 · kg)는 숫자 바로 뒤에 붙이고, 칸이 좁아도 줄바꿈하지 않는다
@@ -532,16 +591,32 @@ fun PocoInput(
                             Spacer(Modifier.width(PocoSpacing.space12))
                             it()
                         }
+                        onMicClick?.let { onMic ->
+                            Spacer(Modifier.width(PocoSpacing.space12))
+                            Box(
+                                modifier = Modifier
+                                    .size(MungoSize.touchMin)
+                                    .pressable(CircleShape, enabled, onMic),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                MungoIconView(
+                                    MungoIcon.MIC,
+                                    tint = if (enabled) colors.textPrimary else colors.textDisabled,
+                                    size = 32.dp,
+                                    contentDescription = "음성으로 입력"
+                                )
+                            }
+                        }
                     }
                 }
             }
         )
-        helper?.let {
+        (error ?: helper)?.let {
+            Spacer(Modifier.height(PocoSpacing.space8))
             Text(
                 text = it,
-                style = POCOTheme.typography.caption,
-                color = colors.textSecondary,
-                modifier = Modifier.padding(start = PocoStroke.focusRing)
+                style = POCOTheme.typography.body2,
+                color = if (error != null) colors.statusAlert else colors.textSecondary
             )
         }
     }

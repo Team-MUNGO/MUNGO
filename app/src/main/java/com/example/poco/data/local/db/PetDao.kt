@@ -12,4 +12,7 @@ interface PetDao {
 
     @Upsert
     suspend fun upsert(pet: PetEntity): Long
+
+    @Query("DELETE FROM pets WHERE id = :id")
+    suspend fun deleteById(id: Long)
 }

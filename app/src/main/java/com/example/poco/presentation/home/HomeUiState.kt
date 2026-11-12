@@ -18,6 +18,8 @@ data class HomeUiState(
     /** 모든 창문이 닫혔는지. 못 읽으면 null */
     val isAllWindowsClosed: Boolean? = null,
     val lastTrip: TripSummary? = null,
+    /** 이번 주(월~일) 요일별 이동 횟수. 7칸 */
+    val weekTripCounts: List<Int> = List(7) { 0 },
     val isVoiceGuideEnabled: Boolean = true,
     val isRearTempWatchEnabled: Boolean = true,
     /** 기어 P → D 전환 감지 → 주행 화면으로 자동 이동 */
@@ -29,6 +31,8 @@ data class HomeUiState(
             minutesSinceMeal < MEAL_REST_MINUTES -> CheckStatus.WARNING
             else -> CheckStatus.OK
         }
+
+    val weekTripTotal: Int get() = weekTripCounts.sum()
 
     val temperatureStatus: CheckStatus
         get() {

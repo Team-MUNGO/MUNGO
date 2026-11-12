@@ -1,23 +1,19 @@
 package com.example.poco.presentation.splash
 
-import androidx.compose.animation.core.Animatable
-import androidx.compose.animation.core.LinearEasing
-import androidx.compose.animation.core.tween
-import androidx.compose.foundation.Canvas
+import android.media.AudioManager
+import android.media.MediaPlayer
+import android.net.Uri
+import android.widget.VideoView
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,21 +21,21 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.poco.core.designsystem.OnboardingColors
-import com.example.poco.core.designsystem.PetAvatar
+import com.example.poco.R
+import com.example.poco.core.designsystem.MungoLogo
 import com.example.poco.core.theme.POCOTheme
+import com.example.poco.core.theme.PocoSpacing
 
 @Composable
 fun SplashRoute(
-    navigateToPermission: () -> Unit,
+    navigateToOnboarding: () -> Unit,
     navigateToHome: () -> Unit,
     viewModel: SplashViewModel = hiltViewModel()
 ) {
@@ -47,124 +43,109 @@ fun SplashRoute(
 
     LaunchedEffect(uiState.destination) {
         when (uiState.destination) {
-            SplashDestination.PERMISSION -> navigateToPermission()
+            SplashDestination.ONBOARDING -> navigateToOnboarding()
             SplashDestination.HOME -> navigateToHome()
             null -> Unit
         }
     }
 
-    SplashScreen(uiState = uiState)
+    LaunchedEffect(Unit) { viewModel.onIntroShown() }
+    SplashIntro(onFinished = viewModel::onIntroFinished)
 }
 
+/**
+ * 인트로 영상 (res/raw/mungo_intro.mp4, 1700×1184 · 4.6초 · 소리 없음).
+ * 끝나면 [onFinished] → 온보딩/홈으로. 화면을 누르면 건너뛴다.
+ * 재생에 실패하면 바로 넘어가고, 미리보기(Preview)에서는 정지 화면 [SplashScreen]을 보여준다
+ */
 @Composable
-private fun SplashScreen(uiState: SplashUiState, modifier: Modifier = Modifier) {
-    val progress = remember { Animatable(0f) }
-    LaunchedEffect(Unit) {
-        progress.animateTo(
-            targetValue = 1f,
-            animationSpec = tween(
-                durationMillis = SplashViewModel.SPLASH_DURATION_MS.toInt(),
-                easing = LinearEasing
+private fun SplashIntro(onFinished: () -> Unit) {
+    if (LocalInspectionMode.current) {
+        SplashScreen()
+        return
+    }
+    val background = POCOTheme.colors.bgSurface.toArgb()
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(POCOTheme.colors.bgSurface)
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onFinished
             )
+    ) {
+        AndroidView(
+            modifier = Modifier.fillMaxSize(),
+            factory = { context ->
+                VideoView(context).apply {
+                    // 소리 없는 영상: 음악 · 내비 음성을 끊지 않도록 오디오 포커스를 가져가지 않는다
+                    setAudioFocusRequest(AudioManager.AUDIOFOCUS_NONE)
+                    // 첫 장면이 그려지기 전 검은 화면이 보이지 않게 바탕색으로 가려 둔다
+                    setBackgroundColor(background)
+                    setOnInfoListener { _, what, _ ->
+                        if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
+                            setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                        }
+                        false
+                    }
+                    setOnCompletionListener { onFinished() }
+                    setOnErrorListener { _, _, _ ->
+                        onFinished()
+                        true
+                    }
+                    setVideoURI(
+                        Uri.parse("android.resource://${context.packageName}/${R.raw.mungo_intro}")
+                    )
+                    start()
+                }
+            },
+            onRelease = { it.stopPlayback() }
         )
     }
+}
 
-    Row(
+/** 정지 화면 (미리보기용): 흰 바탕 가운데 로고 + 한 줄 소개, 아래에 Pleos Connect 표기 (피그마 스플래시) */
+@Composable
+private fun SplashScreen(modifier: Modifier = Modifier) {
+    val colors = POCOTheme.colors
+    Box(
         modifier = modifier
             .fillMaxSize()
-            .background(OnboardingColors.darkBackground)
+            .background(colors.bgSurface)
             .safeDrawingPadding()
-            .padding(horizontal = 64.dp, vertical = 48.dp),
-        verticalAlignment = Alignment.CenterVertically
     ) {
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "POCO",
-                style = POCOTheme.typography.hmiLabel,
-                color = OnboardingColors.accent
-            )
-            Spacer(Modifier.height(16.dp))
-            Text(
-                text = "안녕, ${uiState.petName}!\n오늘도 함께 달려요",
-                style = POCOTheme.typography.hmiHeading1,
-                color = Color.White
-            )
-            Spacer(Modifier.height(20.dp))
-            Text(
-                text = "${uiState.petName}의 컨디션은 POCO가 지켜볼게요.\n운전자님은 앞만 보세요.",
-                style = POCOTheme.typography.hmiBody,
-                color = OnboardingColors.onDarkSecondary
-            )
-            Spacer(Modifier.height(40.dp))
-            LinearProgressIndicator(
-                progress = { progress.value },
-                modifier = Modifier
-                    .width(320.dp)
-                    .height(6.dp)
-                    .clip(RoundedCornerShape(3.dp)),
-                color = OnboardingColors.accent,
-                trackColor = OnboardingColors.onDarkTrack,
-                strokeCap = StrokeCap.Round,
-                gapSize = 0.dp,
-                drawStopIndicator = {}
-            )
-            uiState.connectionStatus.label()?.let { label ->
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    text = label,
-                    style = POCOTheme.typography.hmiCaption,
-                    color = OnboardingColors.onDarkSecondary
-                )
-            }
-        }
-
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .fillMaxHeight(),
-            contentAlignment = Alignment.Center
+        Column(
+            modifier = Modifier.align(Alignment.Center),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            PetHalo(
-                modifier = Modifier
-                    .fillMaxHeight(0.9f)
-                    .aspectRatio(1f)
-            )
-            PetAvatar(
-                modifier = Modifier
-                    .fillMaxHeight(0.5f)
-                    .aspectRatio(1f)
+            MungoLogo(height = 140.dp)
+            Spacer(Modifier.height(PocoSpacing.space48))
+            Text(
+                text = "소중한 반려동물과 함께하는 안심 드라이브",
+                style = POCOTheme.typography.body1,
+                color = colors.textTertiary
             )
         }
+        Text(
+            text = "Pleos Connect ©",
+            style = POCOTheme.typography.body3,
+            color = colors.textTertiary,
+            modifier = Modifier
+                .align(Alignment.BottomCenter)
+                .padding(bottom = PocoSpacing.space48)
+        )
     }
 }
 
-/** 캐릭터 뒤의 동심원 */
-@Composable
-private fun PetHalo(modifier: Modifier = Modifier) {
-    Canvas(modifier = modifier) {
-        val radius = size.minDimension / 2
-        drawCircle(OnboardingColors.haloFill, radius = radius * 0.72f)
-        listOf(0.72f, 0.86f, 1f).forEachIndexed { index, ratio ->
-            drawCircle(
-                color = OnboardingColors.accent.copy(alpha = 0.35f - index * 0.1f),
-                radius = radius * ratio - 2f,
-                style = Stroke(width = 3f)
-            )
-        }
-    }
-}
-
-private fun ConnectionStatus.label(): String? = when (this) {
-    ConnectionStatus.PREPARING -> "POCO를 준비하고 있어요"
-    ConnectionStatus.CONNECTING -> "차량 데이터 연결 중…"
-    ConnectionStatus.CONNECTED -> "차량 데이터 연결 완료"
-    ConnectionStatus.DELAYED -> "차량 연결이 늦어지고 있어요 · 홈에서 계속 시도할게요"
-}
-
-@Preview(widthDp = 1280, heightDp = 720)
+@Preview(widthDp = 1700, heightDp = 1184)
 @Composable
 private fun SplashScreenPreview() {
-    POCOTheme {
-        SplashScreen(uiState = SplashUiState(connectionStatus = ConnectionStatus.CONNECTING))
-    }
+    POCOTheme(darkTheme = false) { SplashScreen() }
+}
+
+@Preview(widthDp = 1700, heightDp = 1184)
+@Composable
+private fun SplashScreenDarkPreview() {
+    POCOTheme(darkTheme = true) { SplashScreen() }
 }

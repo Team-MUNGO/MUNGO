@@ -14,6 +14,11 @@ import com.example.poco.data.repository.PetRepository
 import com.example.poco.data.repository.TripRepository
 import com.example.poco.data.repository.WindowRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import java.time.DayOfWeek
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.temporal.TemporalAdjusters
 import javax.inject.Inject
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.Flow
@@ -50,7 +55,27 @@ class HomeViewModel @Inject constructor(
         observeMeal()
         observeTripSettings()
         observeLastTrip()
+        observeWeekTrips()
         checkWindows()
+    }
+
+    /** 이번 주 월요일 0시부터 요일별 이동 횟수 */
+    private fun observeWeekTrips() {
+        val monday = LocalDate.now().with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY))
+        val zone = ZoneId.systemDefault()
+        val since = monday.atStartOfDay(zone).toInstant().toEpochMilli()
+        viewModelScope.launch {
+            tripRepository.observeTripStartsSince(since)
+                .catch { Timber.e(it, "이번 주 이동 조회 실패") }
+                .collect { starts ->
+                    val counts = IntArray(DAYS_IN_WEEK)
+                    starts.forEach { millis ->
+                        val day = Instant.ofEpochMilli(millis).atZone(zone).dayOfWeek
+                        counts[day.value - 1]++
+                    }
+                    _uiState.update { it.copy(weekTripCounts = counts.toList()) }
+                }
+        }
     }
 
     private fun observeLastTrip() {
@@ -190,5 +215,9 @@ class HomeViewModel @Inject constructor(
             emit(System.currentTimeMillis())
             delay(30_000L)
         }
+    }
+
+    private companion object {
+        const val DAYS_IN_WEEK = 7
     }
 }

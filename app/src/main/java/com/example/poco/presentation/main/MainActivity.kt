@@ -18,6 +18,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import com.example.poco.core.common.ToastMessage
 import com.example.poco.core.common.ToastMessenger
 import com.example.poco.core.designsystem.component.PocoToast
 import com.example.poco.core.theme.POCOTheme
@@ -54,7 +55,7 @@ class MainActivity : ComponentActivity() {
 /** 토스트를 2.5초 보여준다 */
 @Composable
 private fun ToastHost(toastMessenger: ToastMessenger, modifier: Modifier = Modifier) {
-    var message by remember { mutableStateOf<String?>(null) }
+    var message by remember { mutableStateOf<ToastMessage?>(null) }
     LaunchedEffect(toastMessenger) {
         toastMessenger.messages.collect { message = it }
     }
@@ -64,7 +65,7 @@ private fun ToastHost(toastMessenger: ToastMessenger, modifier: Modifier = Modif
             message = null
         }
     }
-    message?.let { PocoToast(text = it, modifier = modifier) }
+    message?.let { PocoToast(text = it.text, detail = it.detail, modifier = modifier) }
 }
 
 private const val TOAST_DURATION_MS = 2_500L

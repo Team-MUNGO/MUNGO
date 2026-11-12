@@ -23,12 +23,12 @@ import com.example.poco.core.theme.POCOTheme
 import com.example.poco.data.model.ShakeLevel
 import com.example.poco.data.model.TimelineBar
 
-/** 이벤트 막대 = brand/tangerine */
-val BrakeColor = com.example.poco.core.theme.brandTangerine
+/** 이벤트 막대 = mango/500 */
+val BrakeColor = com.example.poco.core.theme.MungoPalette.mango500
 
 fun ShakeLevel.color(): Color = when (this) {
     ShakeLevel.BRAKE -> BrakeColor
-    ShakeLevel.TURN -> com.example.poco.core.theme.warnBorder
+    ShakeLevel.TURN -> com.example.poco.core.theme.MungoPalette.amber400
     ShakeLevel.CALM -> RingTrack
 }
 
@@ -90,7 +90,7 @@ fun ShakeTimeline(
             Spacer(Modifier.height(8.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 LegendItem(BrakeColor, "급제동")
-                LegendItem(OnboardingColors.accent, "급회전")
+                LegendItem(com.example.poco.core.theme.MungoPalette.amber400, "급회전")
                 LegendItem(RingTrack, "평온")
             }
         }
@@ -109,7 +109,7 @@ private fun LegendItem(color: Color, label: String) {
         Text(
             text = label,
             style = POCOTheme.typography.hmiCaption,
-            color = OnboardingColors.textSecondary
+            color = POCOTheme.colors.textSecondary
         )
     }
 }

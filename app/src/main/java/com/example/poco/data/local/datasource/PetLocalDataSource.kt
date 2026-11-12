@@ -8,4 +8,6 @@ interface PetLocalDataSource {
 
     /** @return 저장된 펫 id */
     suspend fun upsertPet(pet: Pet): Long
+
+    suspend fun deletePet(id: Long)
 }

@@ -4,28 +4,10 @@ import com.example.poco.data.model.MotionSensitivity
 import com.example.poco.data.model.Pet
 import com.example.poco.data.model.PetSeat
 import com.example.poco.data.model.PetSize
+import com.example.poco.data.model.PetSpecies
+import com.example.poco.data.model.PetTrait
 import com.example.poco.data.model.Restraint
 import com.example.poco.data.model.VoiceFrequency
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-
-data class PetProfileUiState(
-    val pets: ImmutableList<Pet> = persistentListOf(),
-    val form: PetForm = PetForm(),
-    /** null = 기어 상태를 아직 모름 (연결 전) → 수정 허용 */
-    val isParked: Boolean? = null,
-    val isSaving: Boolean = false,
-    /** 마지막 변경까지 저장됨 (다시 바꾸면 false) */
-    val isSaved: Boolean = false,
-    /** 사진을 복사하는 중 */
-    val isImportingPhoto: Boolean = false,
-    val errorMessage: String? = null,
-    val isDone: Boolean = false
-) {
-    /** 자동 저장 조건: 이름이 있고 정차 중 */
-    val canSave: Boolean get() = form.name.isNotBlank() && isParked != false
-    val isNewPet: Boolean get() = form.id == 0L
-}
 
 /** 편집 중인 입력값. 숫자는 입력 그대로 문자열로 들고 있다가 저장할 때 변환 */
 data class PetForm(
@@ -41,7 +23,14 @@ data class PetForm(
     val voiceFrequency: VoiceFrequency = VoiceFrequency.NORMAL,
     /** 앱 내부에 복사된 사진 경로 */
     val photoPath: String? = null,
-    val restraint: Restraint = Restraint.NONE
+    val restraint: Restraint = Restraint.NONE,
+    // 아래는 펫 프로필 화면에선 안 바꾸지만 저장할 때 유지
+    val species: PetSpecies = PetSpecies.DOG,
+    val traits: Set<PetTrait> = emptySet(),
+    val voiceGuideEnabled: Boolean = true,
+    val temperatureAlertEnabled: Boolean = true,
+    val windowAlertEnabled: Boolean = true,
+    val restSuggestionEnabled: Boolean = true
 ) {
     val weightKg: Float? get() = weightText.toFloatOrNull()?.takeIf { it > 0f }
     val size: PetSize? get() = weightKg?.let(PetSize::fromWeight)
@@ -57,7 +46,13 @@ data class PetForm(
         voiceFrequency = voiceFrequency,
         windowAlertPercent = windowAlertPercent,
         photoPath = photoPath,
-        restraint = restraint
+        restraint = restraint,
+        species = species,
+        traits = traits,
+        voiceGuideEnabled = voiceGuideEnabled,
+        temperatureAlertEnabled = temperatureAlertEnabled,
+        windowAlertEnabled = windowAlertEnabled,
+        restSuggestionEnabled = restSuggestionEnabled
     )
 
     companion object {
@@ -76,7 +71,21 @@ data class PetForm(
             windowAlertPercent = pet.windowAlertPercent,
             voiceFrequency = pet.voiceFrequency,
             photoPath = pet.photoPath,
-            restraint = pet.restraint
+            restraint = pet.restraint,
+            species = pet.species,
+            traits = pet.traits,
+            voiceGuideEnabled = pet.voiceGuideEnabled,
+            temperatureAlertEnabled = pet.temperatureAlertEnabled,
+            windowAlertEnabled = pet.windowAlertEnabled,
+            restSuggestionEnabled = pet.restSuggestionEnabled
         )
     }
+}
+
+/** 몸무게: 숫자와 점 하나, 소수점 한 자리까지. 규칙에 안 맞으면 null(입력 무시) */
+fun String.toWeightInput(): String? {
+    val filtered = filter { it.isDigit() || it == '.' }
+    if (filtered.count { it == '.' } > 1) return null
+    if (filtered.substringAfter('.', "").length > 1) return null
+    return filtered.take(5)
 }

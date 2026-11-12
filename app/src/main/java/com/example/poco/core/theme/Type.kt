@@ -20,7 +20,7 @@ import com.example.poco.R
  * 디자인 시스템 DS-01 Font · DS-02 Typography
  * - 본문 글꼴: Noto Sans KR, 굵기 3단계만 (Regular 400 · Medium 500 · Bold 700)
  *   가변 글꼴(variable font) 한 파일로 세 굵기를 모두 쓴다
- * - 로고 글꼴: Fredoka Bold (로고 전용, 화면 글꼴로 쓰지 않음)
+ * - 로고 글꼴: Fredoka Bold (mungo 글자 로고 전용, 화면 글꼴로 쓰지 않음)
  * - Pleos 1920×1080 · 밀도 160 → 시안 px = sp 그대로
  */
 
@@ -106,31 +106,78 @@ private val nano = pocoTextStyle(FontWeight.Bold, 16.sp, 22.sp)
 
 // endregion
 
+// region mungo Typography (Car · 1920×1080 가정, 시안 px = sp)
+
+/** display/display1 · 144 Bold 100% · 온도 · 남은 시간 같은 큰 숫자 */
+private val display1 = pocoTextStyle(FontWeight.Bold, 144.sp, 144.sp)
+
+/** display/display2 · 96 Regular 115% · 정차 중 한 문장 메시지 */
+private val display2 = pocoTextStyle(FontWeight.Normal, 96.sp, 110.sp)
+
+/** heading/h1 · 64 Bold 120% · 정차 화면 대제목 */
+private val h1 = pocoTextStyle(FontWeight.Bold, 64.sp, 77.sp)
+
+/** heading/h2 · 48 Bold 125% · 주행 중 칸 핵심 정보 */
+private val h2 = pocoTextStyle(FontWeight.Bold, 48.sp, 60.sp)
+
+/** heading/h3 · 40 Bold 130% · 카드 제목 */
+private val h3 = pocoTextStyle(FontWeight.Bold, 40.sp, 52.sp)
+
+/** title/title1 · 32 Bold 130% · 섹션 제목 */
+private val title1 = pocoTextStyle(FontWeight.Bold, 32.sp, 42.sp)
+
+/** title/title2 · 28 Medium 135% · 리스트 제목 */
+private val title2 = pocoTextStyle(FontWeight.Medium, 28.sp, 38.sp)
+
+/** title/title3 · 24 Medium 140% · 작은 제목 · 버튼 라벨 */
+private val title3 = pocoTextStyle(FontWeight.Medium, 24.sp, 34.sp)
+
+/** body/body1 · 28 Regular 150% · 본문 큰 */
+private val body1 = pocoTextStyle(FontWeight.Normal, 28.sp, 42.sp)
+
+/** body/body2 · 24 Regular 150% · 본문 기본 */
+private val body2 = pocoTextStyle(FontWeight.Normal, 24.sp, 36.sp)
+
+/** body/body3 · 20 Regular 150% · 보조 설명 */
+private val body3 = pocoTextStyle(FontWeight.Normal, 20.sp, 30.sp)
+
+/** caption/caption1 · 18 Regular 150% · 캡션 (차량 최소 크기) */
+private val caption1 = pocoTextStyle(FontWeight.Normal, 18.sp, 27.sp)
+
+// endregion
+
 /**
+ * 글꼴 토큰.
+ * - 앞쪽(display1 ~ caption1): mungo 시안 토큰. 새 화면 · 컴포넌트는 이것을 쓴다
+ * - 뒤쪽(displayXl ~ nano, hmi*): 예전 DS-02 토큰. 기존 화면 호환용
  * 주행 중 최소 크기: 핵심 정보 32 이상 · 보조 24 이상 · 24 미만은 값 위의 짧은 라벨에만.
- * 한 문장 3줄 이하 · 주행 중 카드 문장은 2줄 이하.
  */
 @Immutable
 data class POCOTypography(
-    val displayXl: TextStyle,
-    val displayL: TextStyle,
-    val headingXl: TextStyle,
-    val headingL: TextStyle,
-    val headingM: TextStyle,
-    val titleM: TextStyle,
-    val bodyL: TextStyle,
-    val bodyM: TextStyle,
-    val caption: TextStyle,
-    val micro: TextStyle,
-    val nano: TextStyle,
-    // 예전 이름 (팀 코드 호환용) → 가장 가까운 DS-02 토큰
-    val heading1: TextStyle = headingM,
-    val heading2: TextStyle = titleM,
-    val title1: TextStyle = bodyL,
-    val body1: TextStyle = bodyL,
-    val body2: TextStyle = bodyM,
-    val body3: TextStyle = captionStyle,
-    val caption1: TextStyle = micro,
+    val display1: TextStyle = com.example.poco.core.theme.display1,
+    val display2: TextStyle = com.example.poco.core.theme.display2,
+    val h1: TextStyle = com.example.poco.core.theme.h1,
+    val h2: TextStyle = com.example.poco.core.theme.h2,
+    val h3: TextStyle = com.example.poco.core.theme.h3,
+    val title1: TextStyle = com.example.poco.core.theme.title1,
+    val title2: TextStyle = com.example.poco.core.theme.title2,
+    val title3: TextStyle = com.example.poco.core.theme.title3,
+    val body1: TextStyle = com.example.poco.core.theme.body1,
+    val body2: TextStyle = com.example.poco.core.theme.body2,
+    val body3: TextStyle = com.example.poco.core.theme.body3,
+    val caption1: TextStyle = com.example.poco.core.theme.caption1,
+    // 예전 DS-02 토큰
+    val displayXl: TextStyle = com.example.poco.core.theme.displayXl,
+    val displayL: TextStyle = com.example.poco.core.theme.displayL,
+    val headingXl: TextStyle = com.example.poco.core.theme.headingXl,
+    val headingL: TextStyle = com.example.poco.core.theme.headingL,
+    val headingM: TextStyle = com.example.poco.core.theme.headingM,
+    val titleM: TextStyle = com.example.poco.core.theme.titleM,
+    val bodyL: TextStyle = com.example.poco.core.theme.bodyL,
+    val bodyM: TextStyle = com.example.poco.core.theme.bodyM,
+    val caption: TextStyle = captionStyle,
+    val micro: TextStyle = com.example.poco.core.theme.micro,
+    val nano: TextStyle = com.example.poco.core.theme.nano,
     val score: TextStyle = displayL,
     val hmiHeading1: TextStyle = headingXl,
     val hmiTitle: TextStyle = titleM,
@@ -140,18 +187,6 @@ data class POCOTypography(
     val hmiCaption: TextStyle = captionStyle
 )
 
-val defaultPOCOTypography = POCOTypography(
-    displayXl = displayXl,
-    displayL = displayL,
-    headingXl = headingXl,
-    headingL = headingL,
-    headingM = headingM,
-    titleM = titleM,
-    bodyL = bodyL,
-    bodyM = bodyM,
-    caption = captionStyle,
-    micro = micro,
-    nano = nano
-)
+val defaultPOCOTypography = POCOTypography()
 
 val LocalPOCOTypographyProvider = staticCompositionLocalOf { defaultPOCOTypography }

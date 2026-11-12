@@ -28,6 +28,10 @@ class SplashViewModel @Inject constructor(
         start()
     }
 
+    /** 갈 곳 (DataStore를 읽으면 정해짐). 인트로 영상이 끝나야 실제로 이동한다 */
+    private var pendingDestination: SplashDestination? = null
+    private var introFinished = false
+
     private fun start() {
         viewModelScope.launch {
             val permissionCompleted = onboardingRepository.isPermissionCompleted.first()
@@ -35,17 +39,41 @@ class SplashViewModel @Inject constructor(
             // 권한 동의 전에는 SDK를 켜지 않는다 (PleosSdkManager 지연 초기화 원칙)
             if (permissionCompleted) launch { connectVehicle() }
 
-            delay(SPLASH_DURATION_MS)
-            _uiState.update {
-                it.copy(
-                    destination = if (permissionCompleted) {
-                        SplashDestination.HOME
-                    } else {
-                        SplashDestination.PERMISSION
-                    }
-                )
+            pendingDestination = if (permissionCompleted) {
+                SplashDestination.HOME
+            } else {
+                SplashDestination.ONBOARDING
             }
+            moveOnIfReady()
         }
+    }
+
+    private var fallbackStarted = false
+
+    /**
+     * 인트로 화면이 처음 보일 때. 영상이 멈추거나 끝 알림이 안 와도 스플래시에 갇히지 않게
+     * 이때부터 [MAX_INTRO_MS] 뒤에는 넘어간다 (앱 프로세스 시작이 느려도 영상은 끝까지 보이도록)
+     */
+    fun onIntroShown() {
+        if (fallbackStarted) return
+        fallbackStarted = true
+        viewModelScope.launch {
+            delay(MAX_INTRO_MS)
+            onIntroFinished()
+        }
+    }
+
+    /** 인트로 영상이 끝났을 때 (재생 실패 · 화면 터치로 건너뛰기 포함) */
+    fun onIntroFinished() {
+        if (introFinished) return
+        introFinished = true
+        moveOnIfReady()
+    }
+
+    private fun moveOnIfReady() {
+        val destination = pendingDestination ?: return
+        if (!introFinished) return
+        _uiState.update { it.copy(destination = destination) }
     }
 
     private suspend fun connectVehicle() = coroutineScope {
@@ -71,7 +99,8 @@ class SplashViewModel @Inject constructor(
     }
 
     companion object {
-        const val SPLASH_DURATION_MS = 2_500L
+        /** 인트로 영상(4.6초)보다 넉넉하게 */
+        private const val MAX_INTRO_MS = 8_000L
         private const val STATUS_VISIBLE_AFTER_MS = 250L
         private const val CONNECT_TIMEOUT_MS = 2_000L
     }

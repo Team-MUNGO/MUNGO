@@ -17,6 +17,11 @@ class PetRepositoryImpl @Inject constructor(
     override suspend fun savePet(pet: Pet): Result<Long> =
         suspendRunCatching { petLocalDataSource.upsertPet(pet) }
 
+    override suspend fun deletePet(pet: Pet): Result<Unit> = suspendRunCatching {
+        petLocalDataSource.deletePet(pet.id)
+        pet.photoPath?.let { petPhotoDataSource.deletePhoto(it) }
+    }
+
     override suspend fun importPhoto(uri: String): Result<String> =
         suspendRunCatching { petPhotoDataSource.importPhoto(uri) }
 

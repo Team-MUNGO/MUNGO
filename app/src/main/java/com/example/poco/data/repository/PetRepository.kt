@@ -8,6 +8,9 @@ interface PetRepository {
 
     suspend fun savePet(pet: Pet): Result<Long>
 
+    /** 펫 삭제. 앱에 복사해 둔 사진 파일도 지운다 */
+    suspend fun deletePet(pet: Pet): Result<Unit>
+
     /** 사진 선택기 URI → 앱 내부 파일로 복사 (줄이고 회전 보정). 저장된 경로를 돌려준다 */
     suspend fun importPhoto(uri: String): Result<String>
 
