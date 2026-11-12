@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- mungo 앱 아이콘 배경: 원본(design/brand/mungo_icon.png)의 주황 그라데이션 (왼쪽 위 → 오른쪽 아래) -->
+<shape xmlns:android="http://schemas.android.com/apk/res/android" android:shape="rectangle">
+    <gradient
+        android:angle="315"
+        android:endColor="#FFF86001"
+        android:startColor="#FFFDA621"
+        android:type="linear" />
+</shape>
