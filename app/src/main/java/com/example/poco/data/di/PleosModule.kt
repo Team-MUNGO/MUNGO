@@ -1,10 +1,16 @@
 package com.example.poco.data.di
 
+import ai.pleos.playground.location.fused.FusedLocation
+import ai.pleos.playground.navi.helper.NaviHelper
 import ai.pleos.playground.stt.SpeechToText
 import ai.pleos.playground.tts.TextToSpeech
 import ai.pleos.playground.tts.constant.Mode
 import ai.pleos.playground.vehicle.Vehicle
+import ai.pleos.playground.vehicle.api.Brake
+import ai.pleos.playground.vehicle.api.EvBattery
+import ai.pleos.playground.vehicle.api.Gear
 import ai.pleos.playground.vehicle.api.HVAC
+import ai.pleos.playground.vehicle.api.SteeringWheel
 import ai.pleos.playground.vehicle.api.Window
 import android.content.Context
 import dagger.Module
@@ -31,7 +37,32 @@ object PleosModule {
 
     @Provides
     @Singleton
+    fun provideGear(vehicle: Vehicle): Gear = vehicle.getGear()
+
+    @Provides
+    @Singleton
+    fun provideSteeringWheel(vehicle: Vehicle): SteeringWheel = vehicle.getSteeringWheel()
+
+    @Provides
+    @Singleton
+    fun provideBrake(vehicle: Vehicle): Brake = vehicle.getBrake()
+
+    @Provides
+    @Singleton
+    fun provideFusedLocation(@ApplicationContext context: Context): FusedLocation =
+        FusedLocation(context)
+
+    @Provides
+    @Singleton
+    fun provideNaviHelper(@ApplicationContext context: Context): NaviHelper = NaviHelper(context)
+
+    @Provides
+    @Singleton
     fun provideHvac(vehicle: Vehicle): HVAC = vehicle.getHVAC()
+
+    @Provides
+    @Singleton
+    fun provideEvBattery(vehicle: Vehicle): EvBattery = vehicle.getEvBattery()
 
     @Provides
     @Singleton

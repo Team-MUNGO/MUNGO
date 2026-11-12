@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- mungo 앱 아이콘: 주황 그라데이션 배경 + 흰 발바닥 (원본: design/brand/mungo_icon.png) -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
-    <background android:drawable="@drawable/ic_launcher_background" />
-    <foreground android:drawable="@drawable/ic_launcher_foreground" />
-    <monochrome android:drawable="@drawable/ic_launcher_foreground" />
+    <background android:drawable="@drawable/ic_launcher_mungo_background" />
+    <foreground android:drawable="@drawable/ic_launcher_mungo_foreground" />
+    <monochrome android:drawable="@drawable/ic_launcher_mungo_foreground" />
 </adaptive-icon>

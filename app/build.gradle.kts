@@ -13,6 +13,8 @@ android {
     compileSdk {
         version = release(37)
     }
+    // 차량 속도 등 Android Automotive 표준 차량 속성 (Pleos SDK에 없는 값)
+    useLibrary("android.car")
 
     defaultConfig {
         applicationId = "com.example.poco"
@@ -80,4 +82,6 @@ dependencies {
     implementation(libs.pleos.vehicle)
     implementation(libs.pleos.text.to.speech)
     implementation(libs.pleos.speech.to.text)
+    implementation(libs.pleos.fused.location)
+    implementation(libs.pleos.navi.helper)
 }

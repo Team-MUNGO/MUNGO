@@ -1,5 +1,7 @@
 package com.example.poco.data.pleos
 
+import ai.pleos.playground.location.fused.FusedLocation
+import ai.pleos.playground.navi.helper.NaviHelper
 import ai.pleos.playground.stt.SpeechToText
 import ai.pleos.playground.stt.listener.OnInitializeListener as SttInitializeListener
 import ai.pleos.playground.tts.TextToSpeech
@@ -23,15 +25,44 @@ import timber.log.Timber
 class PleosSdkManager @Inject constructor(
     private val vehicle: Vehicle,
     private val textToSpeech: TextToSpeech,
-    private val speechToText: SpeechToText
+    private val speechToText: SpeechToText,
+    private val fusedLocation: FusedLocation,
+    private val naviHelper: NaviHelper
 ) {
     private val vehicleMutex = Mutex()
     private val ttsMutex = Mutex()
     private val sttMutex = Mutex()
+    private val locationMutex = Mutex()
+    private val naviMutex = Mutex()
 
     private var isVehicleInitialized = false
     private var isTtsInitialized = false
     private var isSttInitialized = false
+    private var isLocationInitialized = false
+    private var isNaviInitialized = false
+
+    /** FusedLocation: 지원하지 않는 환경이면 예외 → 위치 기능만 끈다 */
+    suspend fun ensureLocation() = locationMutex.withLock {
+        if (isLocationInitialized) return@withLock
+        if (!fusedLocation.isSupported()) throw PleosInitException("FusedLocation", "not supported")
+        fusedLocation.initialize()
+        isLocationInitialized = true
+        Timber.d("FusedLocation initialized")
+    }
+
+    suspend fun ensureNavi() = naviMutex.withLock {
+        if (isNaviInitialized) return@withLock
+        suspendCancellableCoroutine { continuation ->
+            naviHelper.initialize(
+                { continuation.resume(Unit) },
+                { e ->
+                    continuation.resumeWithException(PleosInitException("NaviHelper", e.toString()))
+                }
+            )
+        }
+        isNaviInitialized = true
+        Timber.d("NaviHelper initialized")
+    }
 
     suspend fun ensureVehicle() = vehicleMutex.withLock {
         if (isVehicleInitialized) return@withLock
