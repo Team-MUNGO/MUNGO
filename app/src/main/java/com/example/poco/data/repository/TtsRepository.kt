@@ -1,3 +1,5 @@
 package com.example.poco.data.repository
 
-interface TtsRepository
+interface TtsRepository {
+    suspend fun speak(text: String, onSpeaking: (Boolean) -> Unit)
+}

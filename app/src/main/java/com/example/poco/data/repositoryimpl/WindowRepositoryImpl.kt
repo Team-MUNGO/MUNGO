@@ -1,6 +1,7 @@
 package com.example.poco.data.repositoryimpl
 
 import ai.pleos.playground.vehicle.api.model.area.WindowArea
+import ai.pleos.playground.vehicle.api.model.capability.AccessType
 import ai.pleos.playground.vehicle.constant.area.WindowValue
 import com.example.poco.core.util.suspendRunCatching
 import com.example.poco.data.model.CarWindow
@@ -14,14 +15,22 @@ class WindowRepositoryImpl @Inject constructor(private val windowDataSource: Win
     WindowRepository {
     override suspend fun getSupportedWindows(): Result<Map<CarWindow, WindowPositionRange>> =
         suspendRunCatching {
-            windowDataSource
-                .getWindowPositionCapabilities()
-                .mapNotNull { (area, bounds) ->
-                    area.toCarWindow()?.let {
-                        it to
-                            WindowPositionRange(bounds.minValue, bounds.maxValue)
-                    }
-                }.toMap()
+            val (config, areas) = windowDataSource.getWindowPositionCapabilities()
+            areas.mapNotNull { (area, bounds) ->
+                area.toCarWindow()?.let {
+                    it to
+                        WindowPositionRange(
+                            bounds.minValue,
+                            bounds.maxValue,
+                            canRead =
+                            config.accessType == AccessType.READ ||
+                                config.accessType == AccessType.READ_WRITE,
+                            canWrite =
+                            config.accessType == AccessType.WRITE ||
+                                config.accessType == AccessType.READ_WRITE
+                        )
+                }
+            }.toMap()
         }
 
     override suspend fun getWindowPosition(window: CarWindow): Result<Int?> =

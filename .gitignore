@@ -36,3 +36,11 @@ google-services.json
 
 # macOS
 .DS_Store
+
+# Assistant backend credentials and local emulator state
+node_modules/
+.env*
+!.env.example
+.secret.local
+.firebase/
+__pycache__/

@@ -9,4 +9,9 @@ enum class CarWindow {
 }
 
 /** 창문이 움직일 수 있는 위치 범위 */
-data class WindowPositionRange(val min: Int, val max: Int)
+data class WindowPositionRange(
+    val min: Int,
+    val max: Int,
+    val canRead: Boolean = true,
+    val canWrite: Boolean = true
+)

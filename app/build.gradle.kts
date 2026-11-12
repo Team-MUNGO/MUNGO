@@ -10,6 +10,7 @@ plugins {
 
 android {
     namespace = "com.example.poco"
+    useLibrary("android.car")
     compileSdk {
         version = release(37)
     }
@@ -20,6 +21,26 @@ android {
         targetSdk = 37
         versionCode = 1
         versionName = "1.0"
+
+        val assistantUrl = providers.gradleProperty("POCO_ASSISTANT_URL").orElse("").get()
+        require(assistantUrl.isEmpty() || assistantUrl.matches(Regex("https://[A-Za-z0-9./_-]+"))) {
+            "POCO_ASSISTANT_URL must be an HTTPS function URL without query parameters"
+        }
+        buildConfigField("String", "ASSISTANT_URL", "\"$assistantUrl\"")
+
+        // Public Firebase Web API key (project identifier, not a secret) for anonymous auth.
+        // Empty = development invitation-code mode. Gemini key never enters the APK.
+        val localText: String = providers.fileContents(
+            rootProject.layout.projectDirectory.file("local.properties")
+        ).asText.orElse("").get()
+        val localApiKey: String = Regex("(?m)^POCO_FIREBASE_API_KEY=(\\S*)$")
+            .find(localText)?.groupValues?.get(1) ?: ""
+        val firebaseApiKey: String = providers.gradleProperty("POCO_FIREBASE_API_KEY")
+            .orElse(localApiKey).get()
+        require(firebaseApiKey.isEmpty() || firebaseApiKey.matches(Regex("AIza[0-9A-Za-z_-]{35}"))) {
+            "POCO_FIREBASE_API_KEY must be a Firebase Web API key"
+        }
+        buildConfigField("String", "FIREBASE_API_KEY", "\"$firebaseApiKey\"")
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -80,4 +101,6 @@ dependencies {
     implementation(libs.pleos.vehicle)
     implementation(libs.pleos.text.to.speech)
     implementation(libs.pleos.speech.to.text)
+    implementation(libs.pleos.navigatehelper)
+    implementation(libs.pleos.fused.location)
 }

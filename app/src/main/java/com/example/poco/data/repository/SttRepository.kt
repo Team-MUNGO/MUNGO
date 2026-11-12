@@ -1,3 +1,5 @@
 package com.example.poco.data.repository
 
-interface SttRepository
+interface SttRepository {
+    suspend fun recognize(onPartial: (String) -> Unit): String
+}

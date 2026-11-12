@@ -7,9 +7,6 @@ import ai.pleos.playground.tts.listener.OnInitializeListener as TtsInitializeLis
 import ai.pleos.playground.vehicle.Vehicle
 import javax.inject.Inject
 import javax.inject.Singleton
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import timber.log.Timber
@@ -42,44 +39,37 @@ class PleosSdkManager @Inject constructor(
 
     suspend fun ensureTts() = ttsMutex.withLock {
         if (isTtsInitialized) return@withLock
-        suspendCancellableCoroutine { continuation ->
-            textToSpeech.initialize(
-                object : TtsInitializeListener {
-                    override fun onSuccess() {
-                        continuation.resume(Unit)
-                    }
-
-                    override fun onFailure(errorType: ai.pleos.playground.tts.constant.ErrorType) {
-                        continuation.resumeWithException(
-                            PleosInitException("TTS", errorType.toString())
-                        )
-                    }
-                }
-            )
+        awaitPleos<Unit> { success, error ->
+            textToSpeech.initialize(object : TtsInitializeListener {
+                override fun onSuccess() = success(Unit)
+                override fun onFailure(errorType: ai.pleos.playground.tts.constant.ErrorType) =
+                    error(PleosInitException("TTS", errorType.toString()))
+            })
         }
         isTtsInitialized = true
         Timber.d("TTS initialized")
     }
 
+    suspend fun releaseTts() = ttsMutex.withLock {
+        textToSpeech.release()
+        isTtsInitialized = false
+    }
+
     suspend fun ensureStt() = sttMutex.withLock {
         if (isSttInitialized) return@withLock
-        suspendCancellableCoroutine { continuation ->
-            speechToText.initialize(
-                object : SttInitializeListener {
-                    override fun onSuccess() {
-                        continuation.resume(Unit)
-                    }
-
-                    override fun onFailure(errorType: ai.pleos.playground.stt.constant.ErrorType) {
-                        continuation.resumeWithException(
-                            PleosInitException("STT", errorType.toString())
-                        )
-                    }
-                }
-            )
+        awaitPleos<Unit> { success, error ->
+            speechToText.initialize(object : SttInitializeListener {
+                override fun onSuccess() = success(Unit)
+                override fun onFailure(errorType: ai.pleos.playground.stt.constant.ErrorType) =
+                    error(PleosInitException("STT", errorType.toString()))
+            })
         }
         isSttInitialized = true
         Timber.d("STT initialized")
+    }
+    suspend fun releaseStt() = sttMutex.withLock {
+        speechToText.release()
+        isSttInitialized = false
     }
 }
 

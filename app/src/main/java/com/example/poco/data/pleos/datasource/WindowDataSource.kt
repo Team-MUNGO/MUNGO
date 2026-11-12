@@ -2,15 +2,19 @@ package com.example.poco.data.pleos.datasource
 
 import ai.pleos.playground.vehicle.api.model.area.WindowArea
 import ai.pleos.playground.vehicle.api.model.capability.AreaBounds
+import ai.pleos.playground.vehicle.api.model.capability.CapabilityConfig
 import kotlinx.coroutines.flow.Flow
 
 /**
  * Pleos Window API를 코루틴/Flow 형태로 감싼 DataSource.
  * SDK 타입(WindowArea, AreaBounds)은 data 레이어 안에서만 사용한다.
  */
+typealias WindowPositionCapabilities =
+    Pair<CapabilityConfig, Map<WindowArea, AreaBounds<Int>>>
+
 interface WindowDataSource {
     /** 지원하는 창문 영역과 각 영역의 위치 범위(min~max) */
-    suspend fun getWindowPositionCapabilities(): Map<WindowArea, AreaBounds<Int>>
+    suspend fun getWindowPositionCapabilities(): WindowPositionCapabilities
 
     /** 현재 창문 위치 */
     suspend fun getCurrentWindowPosition(area: WindowArea): Int?
