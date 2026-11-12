@@ -59,8 +59,8 @@ import com.example.poco.presentation.design.MgIcons
 import com.example.poco.presentation.design.Pill
 import com.example.poco.presentation.design.ScoreRing
 import com.example.poco.presentation.design.ValueText
-import com.example.poco.presentation.driving.component.clockText
-import com.example.poco.presentation.driving.component.koreanDuration
+import com.example.poco.presentation.session.component.clockText
+import com.example.poco.presentation.session.component.koreanDuration
 
 private fun deltaText(d: Int) = when {
     d > 0 -> "+$d"

@@ -18,14 +18,19 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 
 class TtsDataSourceImpl @Inject constructor(
-    private val tts: TextToSpeech,
-    private val sdk: PleosSdkManager
+    private val textToSpeech: TextToSpeech,
+    private val sdkManager: PleosSdkManager
 ) : TtsDataSource {
+    override suspend fun speak(text: String) {
+        sdkManager.ensureTts()
+        textToSpeech.speak(text)
+    }
+
     private val mutex = Mutex()
     override suspend fun speak(text: String, onSpeaking: (Boolean) -> Unit) = mutex.withLock {
         var listener: EventListener? = null
         try {
-            sdk.ensureTts()
+            sdkManager.ensureTts()
             withTimeout(30_000) {
                 suspendCancellableCoroutine<Unit> { continuation ->
                     val done = AtomicBoolean(false)
@@ -58,16 +63,16 @@ class TtsDataSourceImpl @Inject constructor(
                         override fun onUpdatedRms(rms: Double) = Unit
                     }
                     continuation.invokeOnCancellation { done.set(true) }
-                    tts.addEventListener(listener!!)
-                    tts.setLocale(Locale.KOREA)
-                    tts.speak(text, false)
+                    textToSpeech.addEventListener(listener!!)
+                    textToSpeech.setLocale(Locale.KOREA)
+                    textToSpeech.speak(text, false)
                 }
             }
         } finally {
-            listener?.let { runCatching { tts.removeEventListener(it) } }
-            runCatching { tts.stop() }
+            listener?.let { runCatching { textToSpeech.removeEventListener(it) } }
+            runCatching { textToSpeech.stop() }
             onSpeaking(false)
-            withContext(NonCancellable) { sdk.releaseTts() }
+            withContext(NonCancellable) { sdkManager.releaseTts() }
         }
     }
 }

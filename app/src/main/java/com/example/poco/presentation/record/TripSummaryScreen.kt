@@ -53,9 +53,9 @@ import com.example.poco.presentation.design.MgIcons
 import com.example.poco.presentation.design.Pill
 import com.example.poco.presentation.design.ScoreRing
 import com.example.poco.presentation.design.SecondaryButton
-import com.example.poco.presentation.driving.SplitLayoutMaxWidth
-import com.example.poco.presentation.driving.component.clockText
-import com.example.poco.presentation.driving.component.koreanDuration
+import com.example.poco.presentation.session.SplitLayoutMaxWidth
+import com.example.poco.presentation.session.component.clockText
+import com.example.poco.presentation.session.component.koreanDuration
 
 /** Trip end screen (Figma 464:46724 full / 464:48080 split). Reads only the stored record. */
 @Composable

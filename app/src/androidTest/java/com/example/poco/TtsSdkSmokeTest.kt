@@ -28,7 +28,9 @@ class TtsSdkSmokeTest {
         val manager = PleosSdkManager(
             Vehicle(context),
             tts,
-            SpeechToText(context, ai.pleos.playground.stt.constant.Mode.ON_DEVICE)
+            SpeechToText(context, ai.pleos.playground.stt.constant.Mode.ON_DEVICE),
+            ai.pleos.playground.location.fused.FusedLocation(context),
+            ai.pleos.playground.navi.helper.NaviHelper(context)
         )
         val listener = object : EventListener {
             override fun onReady() {

@@ -30,10 +30,10 @@ import com.example.poco.presentation.design.MgCard
 import com.example.poco.presentation.design.MgIcon
 import com.example.poco.presentation.design.MgIcons
 import com.example.poco.presentation.design.PrimaryButton
-import com.example.poco.presentation.driving.PetSettingsForm
-import com.example.poco.presentation.driving.component.formatTemperature
-import com.example.poco.presentation.driving.component.intervalText
-import com.example.poco.presentation.driving.component.seatShort
+import com.example.poco.presentation.session.PetSettingsForm
+import com.example.poco.presentation.session.component.formatTemperature
+import com.example.poco.presentation.session.component.intervalText
+import com.example.poco.presentation.session.component.seatShort
 
 /** 설정 (rail tab): rest interval entry and voice guidance. */
 @Composable

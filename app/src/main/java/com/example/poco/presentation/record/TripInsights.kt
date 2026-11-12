@@ -9,10 +9,10 @@ import com.example.poco.data.record.TripEntity
 import com.example.poco.data.record.TripEventEntity
 import com.example.poco.data.record.TripEventType
 import com.example.poco.presentation.design.MgIcons
-import com.example.poco.presentation.driving.component.clockText
-import com.example.poco.presentation.driving.component.intervalText
-import com.example.poco.presentation.driving.component.koreanDuration
-import com.example.poco.presentation.driving.component.seatShort
+import com.example.poco.presentation.session.component.clockText
+import com.example.poco.presentation.session.component.intervalText
+import com.example.poco.presentation.session.component.koreanDuration
+import com.example.poco.presentation.session.component.seatShort
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date

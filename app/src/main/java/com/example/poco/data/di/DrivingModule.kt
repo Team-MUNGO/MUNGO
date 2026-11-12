@@ -5,13 +5,9 @@ import com.example.poco.core.driving.ComfortScoreConfig
 import com.example.poco.core.driving.DrivingClock
 import com.example.poco.data.automotive.VehicleDataSource
 import com.example.poco.data.automotive.VehicleDataSourceImpl
-import com.example.poco.data.pleos.datasource.NaviDataSource
-import com.example.poco.data.pleos.datasourceimpl.NaviDataSourceImpl
 import com.example.poco.data.repository.DrivingSessionRepository
-import com.example.poco.data.repository.NaviRepository
 import com.example.poco.data.repository.VehicleRepository
 import com.example.poco.data.repositoryimpl.DrivingSessionRepositoryImpl
-import com.example.poco.data.repositoryimpl.NaviRepositoryImpl
 import com.example.poco.data.repositoryimpl.VehicleRepositoryImpl
 import dagger.Binds
 import dagger.Module
@@ -29,11 +25,7 @@ abstract class DrivingBindings {
     @Binds @Singleton
     abstract fun vehicleRepository(impl: VehicleRepositoryImpl): VehicleRepository
 
-    @Binds @Singleton
-    abstract fun naviSource(impl: NaviDataSourceImpl): NaviDataSource
-
-    @Binds @Singleton
-    abstract fun naviRepository(impl: NaviRepositoryImpl): NaviRepository
+    // NaviDataSource / NaviRepository are bound in DataSourceModule / RepositoryModule.
 
     @Binds @Singleton
     abstract fun session(impl: DrivingSessionRepositoryImpl): DrivingSessionRepository

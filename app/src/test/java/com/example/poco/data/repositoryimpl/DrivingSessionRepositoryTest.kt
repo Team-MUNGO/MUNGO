@@ -81,6 +81,9 @@ class DrivingSessionRepositoryTest {
             object : HvacRepository {
                 override fun observeInteriorTemperature(seat: PetSeat) =
                     flowOf<Reading<Float>>(Reading.Unavailable("온도 없음"))
+                override suspend fun getSeatTemperature(seat: com.example.poco.data.model.PetSeat) = Result.success<Float?>(null)
+                override fun observeSeatTemperature(seat: com.example.poco.data.model.PetSeat) = kotlinx.coroutines.flow.emptyFlow<Float>()
+                override suspend fun setSeatTemperature(seat: com.example.poco.data.model.PetSeat, celsius: Float) = Result.success<Float?>(null)
             },
             object : WindowRepository {
                 override suspend fun getSupportedWindows() = Result.success(
@@ -104,10 +107,13 @@ class DrivingSessionRepositoryTest {
                 override fun observeWindowPosition(window: CarWindow) = positions
             },
             object : NaviRepository {
+                override fun observeEvents() = kotlinx.coroutines.flow.emptyFlow<com.example.poco.data.model.NaviEvent>()
+                override suspend fun openNavigation(keyword: String?) = Result.success(Unit)
                 override fun observeBumps() = bumps
                 override fun observeRoute() = route
             },
             object : TtsRepository {
+                override suspend fun speak(text: String) = Result.success(Unit)
                 override suspend fun speak(text: String, onSpeaking: (Boolean) -> Unit) {
                     spoken++
                     spokenTexts += text

@@ -1,12 +1,9 @@
 package com.example.poco.presentation.driving
 
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -14,423 +11,403 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.poco.R
-import com.example.poco.core.driving.DrivingGear
-import com.example.poco.core.driving.DrivingSettings
-import com.example.poco.core.driving.RestPhase
-import com.example.poco.core.driving.WindowCloseStatus
-import com.example.poco.core.driving.valueOrNull
-import com.example.poco.data.model.DrivingSessionState
-import com.example.poco.presentation.design.DesignCanvas
-import com.example.poco.presentation.design.DrawableIcon
-import com.example.poco.presentation.design.Mg
-import com.example.poco.presentation.design.MgIcon
-import com.example.poco.presentation.design.MgIcons
-import com.example.poco.presentation.design.Pill
-import com.example.poco.presentation.design.PrimaryButton
-import com.example.poco.presentation.design.SecondaryButton
-import com.example.poco.presentation.driving.component.ComfortCardFull
-import com.example.poco.presentation.driving.component.ComfortCardSplit
-import com.example.poco.presentation.driving.component.DriveTimeTile
-import com.example.poco.presentation.driving.component.GleoSlot
-import com.example.poco.presentation.driving.component.RestChecklist
-import com.example.poco.presentation.driving.component.RestOrWaypointTile
-import com.example.poco.presentation.driving.component.RestPlaceCard
-import com.example.poco.presentation.driving.component.RestSummaryFull
-import com.example.poco.presentation.driving.component.RestTimerSplit
-import com.example.poco.presentation.driving.component.TemperatureTile
-import com.example.poco.presentation.driving.component.TileSize
-import com.example.poco.presentation.driving.component.WindowTile
-import com.example.poco.presentation.driving.component.WindowWarningPanel
-import com.example.poco.presentation.driving.component.WindowWarningPopup
-import com.example.poco.presentation.driving.component.windowWarningBusy
-
-@Composable
-fun DrivingRoute(
-    onOpenHistory: () -> Unit = {},
-    onOpenSettings: () -> Unit = {},
-    viewModel: DrivingViewModel = hiltViewModel(),
-    assistant: AssistantViewModel = hiltViewModel()
-) {
-    val ai by assistant.state.collectAsStateWithLifecycle()
-    val owner = LocalLifecycleOwner.current
-    DisposableEffect(owner, assistant) {
-        val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) assistant.cancel()
-        }
-        owner.lifecycle.addObserver(observer)
-        onDispose {
-            owner.lifecycle.removeObserver(observer)
-            assistant.cancel()
-        }
-    }
-    var showAiSetup by remember { mutableStateOf(false) }
-    val locationPermission =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission(), assistant::locationPermission)
-    LaunchedEffect(ai.needsLocationPermission) {
-        if (ai.needsLocationPermission) locationPermission.launch("pleos.car.permission.FUSED_LOCATION")
-    }
-    val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var showSetup by rememberSaveable { mutableStateOf(false) }
-    var pending by remember { mutableStateOf<DrivingSettings?>(null) }
-    val permission =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-            pending?.let(viewModel::start)
-            pending = null
-        }
-    DrivingScreen(
-        state,
-        onStart = { showSetup = true },
-        onEnd = viewModel::end,
-        onDismissWarning = viewModel::dismissWarning,
-        onCloseWindow = viewModel::closeWindow,
-        assistantState = ai,
-        onAsk = assistant::ask,
-        onCancelAi = assistant::cancel,
-        onSetupAi = { showAiSetup = true },
-        onDismissProposal = assistant::dismissProposal,
-        onAddWaypoint = assistant::addWaypoint,
-        onCancelWaypoint = viewModel::cancelWaypoint,
-        onStartRest = viewModel::startRest,
-        onReadyToDepart = viewModel::readyToDepart,
-        onOpenHistory = onOpenHistory,
-        onOpenSettings = onOpenSettings
-    )
-    if (showAiSetup) {
-        AssistantConnectionDialog(
-            ai,
-            state.session.gear.valueOrNull() == DrivingGear.PARK,
-            { showAiSetup = false },
-            assistant::consent,
-            assistant::connect,
-            assistant::disconnect
-        )
-    }
-    if (showSetup) {
-        DrivingSetupDialog(viewModel.savedSettings, onDismiss = { showSetup = false }) {
-            showSetup = false
-            pending = it
-            // Denial still permits the session; speed then explicitly reports unavailable.
-            permission.launch("android.car.permission.CAR_SPEED")
-        }
-    }
-}
-
-/** Callbacks shared by both layouts; neither layout owns any timer or calculation. */
-data class DrivingActions(
-    val onStart: () -> Unit,
-    val onEnd: () -> Unit,
-    val onAsk: () -> Unit,
-    val onCancelAi: () -> Unit,
-    val onSetupAi: () -> Unit,
-    val onDismissProposal: () -> Unit,
-    val onAddWaypoint: () -> Unit,
-    val onCancelWaypoint: () -> Unit,
-    val onStartRest: () -> Unit,
-    val onReadyToDepart: () -> Unit,
-    val onOpenHistory: () -> Unit,
-    val onOpenSettings: () -> Unit,
-    val onDismissWarning: () -> Unit,
-    val onCloseWindow: () -> Unit
-)
-
-/** Window width below which the app is in the split (navigation + mungo panel) layout. */
-internal val SplitLayoutMaxWidth = 1000.dp
-
-/** Figma app area (header + content) plus the outer margin: full 1172 x 980, split 578 x 980. */
-private const val FullRefWidth = 1220f
-private const val SplitRefWidth = 618f
-private const val RefHeight = 1028f
-
-@Composable
-fun DrivingScreen(
-    uiState: DrivingUiState,
-    onStart: () -> Unit,
-    onEnd: () -> Unit,
-    onDismissWarning: () -> Unit,
-    onCloseWindow: () -> Unit,
-    modifier: Modifier = Modifier,
-    assistantState: AssistantUiState = AssistantUiState(),
-    onAsk: () -> Unit = {},
-    onCancelAi: () -> Unit = {},
-    onSetupAi: () -> Unit = {},
-    onDismissProposal: () -> Unit = {},
-    onAddWaypoint: () -> Unit = {},
-    onCancelWaypoint: () -> Unit = {},
-    onStartRest: () -> Unit = {},
-    onReadyToDepart: () -> Unit = {},
-    onOpenHistory: () -> Unit = {},
-    onOpenSettings: () -> Unit = {}
-) {
-    val state = uiState.session
-    var confirmEnd by rememberSaveable { mutableStateOf(false) }
-    val actions = DrivingActions(
-        onStart, { confirmEnd = true }, onAsk, onCancelAi, onSetupAi, onDismissProposal, onAddWaypoint,
-        onCancelWaypoint, onStartRest, onReadyToDepart, onOpenHistory, onOpenSettings, onDismissWarning, onCloseWindow
-    )
-    BoxWithConstraints(modifier.fillMaxSize().background(Mg.Bg)) {
-        val split = maxWidth < SplitLayoutMaxWidth
-        // Each layout has its own reference size; the split panel is not a scaled-down full screen.
-        DesignCanvas(if (split) SplitRefWidth else FullRefWidth, RefHeight) {
-            Column(Modifier.fillMaxSize().padding(horizontal = if (split) 20.dp else 24.dp, vertical = 24.dp)) {
-                DrivingHeader(state, assistantState, actions)
-                Spacer(Modifier.height(22.dp))
-                Box(Modifier.weight(1f).fillMaxWidth()) {
-                    if (split) SplitDrivingLayout(state, assistantState, actions) else FullDrivingLayout(state, assistantState, actions)
-                }
-            }
-            if (state.windowWarning && !split) {
-                WindowWarningDialog(state, onDismissWarning, onCloseWindow)
-            }
-        }
-        if (confirmEnd) {
-            AlertDialog(
-                onDismissRequest = { confirmEnd = false },
-                title = { Text("주행을 종료할까요?") },
-                text = { Text("이번 주행 기록을 저장하고 요약을 보여 드려요.") },
-                confirmButton = {
-                    TextButton(onClick = {
-                        confirmEnd = false
-                        onEnd()
-                    }) { Text("주행 종료") }
-                },
-                dismissButton = { TextButton(onClick = { confirmEnd = false }) { Text("계속 주행") } }
-            )
-        }
-    }
-}
-
-/** Figma "멍고 헤더": paw + mungo, status chip, then the round Gleo (voice) button. */
-@Composable
-private fun DrivingHeader(state: DrivingSessionState, ai: AssistantUiState, actions: DrivingActions) {
-    val resting = state.active && state.rest.phase != RestPhase.DRIVING
-    val parked = state.gear.valueOrNull() == DrivingGear.PARK
-    Row(Modifier.fillMaxWidth().height(60.dp), verticalAlignment = Alignment.CenterVertically) {
-        DrawableIcon(R.drawable.driving_paw, size = 20.dp)
-        Spacer(Modifier.width(9.dp))
-        Text("mungo", style = Mg.bold(27, 34), color = Mg.Ink)
-        Spacer(Modifier.width(16.dp))
-        when {
-            !state.active -> Pill("주행 준비", background = Mg.Chip, color = Mg.Muted, height = 40.dp)
-            resting -> Pill(
-                "휴식 중", background = Mg.Peach, color = Mg.OrangeText, height = 40.dp,
-                leading = { DrawableIcon(R.drawable.driving_cup, Mg.OrangeText, 16.dp) }
-            )
-            else -> Pill("주행 중", background = Mg.Peach, color = Mg.OrangeText, height = 40.dp)
-        }
-        if (state.simulatedSource) {
-            Spacer(Modifier.width(10.dp))
-            Pill("에뮬레이터 데이터", background = Color(0xFFFFF4E8), color = Mg.OrangeText, height = 40.dp, style = Mg.Caption)
-        }
-        Spacer(Modifier.weight(1f))
-        if (!state.active) {
-            HeaderLink("이동 기록", actions.onOpenHistory)
-            HeaderLink("설정", actions.onOpenSettings)
-        } else {
-            if (state.rest.phase == RestPhase.DRIVING && parked) HeaderLink("휴식 시작", actions.onStartRest)
-            HeaderLink("주행 종료", actions.onEnd)
-        }
-        Spacer(Modifier.width(8.dp))
-        GleoButton(state, ai, actions)
-    }
-}
-
-@Composable
-private fun HeaderLink(text: String, onClick: () -> Unit) {
-    Text(
-        text,
-        Modifier.clip(CircleShape).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 12.dp),
-        style = Mg.BodyStrong,
-        color = Mg.Muted
-    )
-}
-
-@Composable
-private fun GleoButton(state: DrivingSessionState, ai: AssistantUiState, actions: DrivingActions) {
-    val ready = ai.configured && ai.consented && (ai.connected || ai.anonymousAuth)
-    val listening = ai.phase != AssistantPhase.IDLE
-    Box(
-        Modifier.size(60.dp).clip(CircleShape).background(if (listening) Mg.Orange else Color.White, CircleShape)
-            .clickable {
-                when {
-                    listening -> actions.onCancelAi()
-                    !ready -> actions.onSetupAi()
-                    state.active -> actions.onAsk()
-                    else -> actions.onSetupAi()
-                }
-            },
-        contentAlignment = Alignment.Center
-    ) {
-        MgIcon(MgIcons.Mic, if (listening) Color.White else Mg.Ink, 24.dp)
-    }
-}
-
-@Composable
-private fun FullDrivingLayout(state: DrivingSessionState, ai: AssistantUiState, actions: DrivingActions) {
-    val resting = state.active && state.rest.phase != RestPhase.DRIVING
-    Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-        if (resting) {
-            RestSummaryFull(state, Modifier.width(420.dp).fillMaxHeight())
-            Column(Modifier.weight(1f).fillMaxHeight()) {
-                RestChecklist(state, compact = false, modifier = Modifier.fillMaxWidth().height(386.dp))
-                Spacer(Modifier.weight(1f))
-                GleoSlot(state, ai, actions, compact = false, modifier = Modifier.fillMaxWidth().height(186.dp), restMode = true)
-                Spacer(Modifier.weight(1f))
-                RestPlaceCard(state, compact = false, modifier = Modifier.fillMaxWidth().height(120.dp))
-                Spacer(Modifier.weight(1f))
-                RestDepartButton(state, actions, Modifier.fillMaxWidth().height(96.dp))
-            }
-        } else {
-            ComfortCardFull(state, Modifier.width(420.dp).fillMaxHeight())
-            Column(Modifier.weight(1f).fillMaxHeight()) {
-                Row(Modifier.fillMaxWidth().height(218.dp), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                    RestOrWaypointTile(state, TileSize.Full, Modifier.weight(1f).fillMaxHeight())
-                    DriveTimeTile(state, TileSize.Full, Modifier.weight(1f).fillMaxHeight())
-                }
-                Spacer(Modifier.height(18.dp))
-                Row(Modifier.fillMaxWidth().height(218.dp), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-                    TemperatureTile(state, TileSize.Full, Modifier.weight(1f).fillMaxHeight())
-                    WindowTile(state, TileSize.Full, Modifier.weight(1f).fillMaxHeight())
-                }
-                Spacer(Modifier.height(20.dp))
-                GleoSlot(state, ai, actions, compact = false, modifier = Modifier.fillMaxWidth().weight(1f))
-            }
-        }
-    }
-}
+import com.example.poco.core.designsystem.PetPhoto
+import com.example.poco.core.designsystem.PocoIcon
+import com.example.poco.core.designsystem.PocoIconView
+import com.example.poco.core.designsystem.ScoreRing
+import com.example.poco.core.designsystem.component.AlertCard
+import com.example.poco.core.designsystem.component.PocoButton
+import com.example.poco.core.designsystem.component.PocoButtonStyle
+import com.example.poco.core.designsystem.component.StatTile
+import com.example.poco.core.designsystem.component.StatusTone
+import com.example.poco.core.designsystem.component.VoiceCard
+import com.example.poco.core.theme.POCOTheme
+import com.example.poco.core.theme.PocoLayout
+import com.example.poco.core.theme.PocoRadius
+import com.example.poco.core.theme.PocoSize
+import com.example.poco.core.theme.PocoSpacing
+import com.example.poco.core.theme.PocoStroke
+import com.example.poco.data.model.CarWindow
+import com.example.poco.domain.driving.PetMood
+import kotlin.math.roundToInt
 
 /**
- * Split screen: mungo is the right-hand panel next to the Pleos navigation map (Figma 464:46962).
- * Status card, 2 x 2 compact tiles and one guidance slot; the map itself belongs to Navi.
+ * 주행 화면. 기어 D · 내비 길 안내 시작으로 들어오고,
+ * 내비 도착 · 기어 P · '주행 종료'로 끝나면 이동 기록을 저장하고 홈으로 돌아간다.
  */
 @Composable
-private fun SplitDrivingLayout(state: DrivingSessionState, ai: AssistantUiState, actions: DrivingActions) {
-    if (state.windowWarning) {
-        WindowWarningPanel(state, actions.onDismissWarning, actions.onCloseWindow, Modifier.fillMaxSize())
-        return
-    }
-    val resting = state.active && state.rest.phase != RestPhase.DRIVING
-    Column(Modifier.fillMaxSize()) {
-        if (resting) {
-            RestTimerSplit(state, Modifier.fillMaxWidth().height(196.dp))
-            Spacer(Modifier.height(16.dp))
-            RestChecklist(state, compact = true, modifier = Modifier.fillMaxWidth().height(316.dp))
-            Spacer(Modifier.height(16.dp))
-            RestPlaceCard(state, compact = true, modifier = Modifier.fillMaxWidth().height(112.dp))
-            Spacer(Modifier.height(16.dp))
-            GleoSlot(state, ai, actions, compact = true, modifier = Modifier.fillMaxWidth().weight(1f), restMode = true)
-            Spacer(Modifier.height(20.dp))
-            RestDepartButton(state, actions, Modifier.fillMaxWidth().height(96.dp))
-        } else {
-            ComfortCardSplit(state, Modifier.fillMaxWidth().height(196.dp))
-            Spacer(Modifier.height(16.dp))
-            Row(Modifier.fillMaxWidth().height(150.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                RestOrWaypointTile(state, TileSize.Split, Modifier.weight(1f).fillMaxHeight())
-                DriveTimeTile(state, TileSize.Split, Modifier.weight(1f).fillMaxHeight())
-            }
-            Spacer(Modifier.height(16.dp))
-            Row(Modifier.fillMaxWidth().height(150.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                TemperatureTile(state, TileSize.Split, Modifier.weight(1f).fillMaxHeight())
-                WindowTile(state, TileSize.Split, Modifier.weight(1f).fillMaxHeight())
-            }
-            Spacer(Modifier.height(16.dp))
-            GleoSlot(state, ai, actions, compact = true, modifier = Modifier.fillMaxWidth().weight(1f))
-        }
-    }
-}
+fun DrivingRoute(navigateBack: () -> Unit, viewModel: DrivingViewModel = hiltViewModel()) {
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
-@Composable
-private fun RestDepartButton(state: DrivingSessionState, actions: DrivingActions, modifier: Modifier) {
-    if (state.rest.phase == RestPhase.READY_TO_DEPART) {
-        Box(
-            modifier.background(Color.White, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(
-                "출발 준비 완료 · 주행을 시작하면 재출발로 기록돼요",
-                style = Mg.BodyStrong,
-                color = Mg.OrangeText,
-                textAlign = TextAlign.Center
-            )
-        }
-    } else {
-        PrimaryButton("다시 출발 준비", actions.onReadyToDepart, modifier, style = Mg.semi(23, 30))
+    LaunchedEffect(uiState.finishedTripId) {
+        if (uiState.finishedTripId != null) navigateBack()
     }
-}
 
-/** Full layout: modal popup over the mungo area (Figma 464:46215). */
-@Composable
-private fun WindowWarningDialog(state: DrivingSessionState, onDismiss: () -> Unit, onClose: () -> Unit) {
-    val busy = windowWarningBusy(state)
-    Dialog(
-        onDismissRequest = { if (!busy) onDismiss() },
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
-        WindowWarningPopup(state, onDismiss, onClose)
-    }
-}
-
-@Composable
-private fun DrivingSetupDialog(
-    saved: DrivingSettings?,
-    onDismiss: () -> Unit,
-    onStart: (DrivingSettings) -> Unit
-) {
-    var draft by remember { mutableStateOf(saved) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("주행 준비") },
-        text = { PetSettingsForm(saved) { draft = it } },
-        confirmButton = {
-            TextButton(onClick = { draft?.let(onStart) }, enabled = draft != null) { Text("주행 시작") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } }
+    DrivingScreen(
+        uiState = uiState,
+        onFinish = viewModel::finish,
+        onOpenNavigation = viewModel::openNavigation,
+        onCloseWindow = viewModel::closeWindow,
+        onVentWindow = viewModel::openWindowSlightly,
+        onSetTemperature = viewModel::setTargetTemperature,
+        onDismissTemperature = viewModel::dismissTemperatureAlert
     )
 }
 
-/** Idle driving slot: start a trip, or open history/settings (no session values are invented). */
 @Composable
-internal fun IdleStartCard(actions: DrivingActions, compact: Boolean, modifier: Modifier) {
+private fun DrivingScreen(
+    uiState: DrivingUiState,
+    onFinish: () -> Unit,
+    onOpenNavigation: () -> Unit,
+    onCloseWindow: () -> Unit,
+    onVentWindow: () -> Unit,
+    onSetTemperature: () -> Unit,
+    onDismissTemperature: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     Column(
-        modifier.background(Color.White, RoundedCornerShape(Mg.Radius)).padding(if (compact) 24.dp else 28.dp),
-        verticalArrangement = Arrangement.spacedBy(12.dp)
+        modifier = modifier
+            .fillMaxSize()
+            .background(POCOTheme.colors.backgroundDefault)
+            .safeDrawingPadding()
+            .padding(
+                start = PocoSpacing.space48,
+                end = PocoSpacing.space48,
+                top = PocoLayout.screenTop,
+                bottom = PocoLayout.screenBottom
+            )
     ) {
-        Text("반려견과 출발할 준비가 됐나요?", style = Mg.semi(if (compact) 25 else 27, 36), color = Mg.Ink)
-        Text("주행을 시작하면 컴포트 점수와 휴식 시간을 함께 챙길게요.", style = Mg.Body, color = Mg.Muted)
-        Spacer(Modifier.weight(1f))
-        PrimaryButton("주행 시작", actions.onStart, Modifier.fillMaxWidth().height(96.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            SecondaryButton("이동 기록", actions.onOpenHistory, Modifier.weight(1f).height(72.dp))
-            SecondaryButton("설정", actions.onOpenSettings, Modifier.weight(1f).height(72.dp))
+        Header(uiState = uiState, onFinish = onFinish, onOpenNavigation = onOpenNavigation)
+        Spacer(Modifier.height(PocoLayout.drivingColumnGap))
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f),
+            horizontalArrangement = Arrangement.spacedBy(PocoLayout.drivingColumnGap)
+        ) {
+            ScoreCard(
+                uiState = uiState,
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+            )
+            Column(
+                modifier = Modifier
+                    .weight(1.25f)
+                    .fillMaxHeight(),
+                verticalArrangement = Arrangement.spacedBy(PocoLayout.drivingCardGap)
+            ) {
+                AlertArea(
+                    uiState = uiState,
+                    onCloseWindow = onCloseWindow,
+                    onVentWindow = onVentWindow,
+                    onSetTemperature = onSetTemperature,
+                    onDismissTemperature = onDismissTemperature
+                )
+                ListeningBar(isListening = uiState.isListening, heardText = uiState.heardText)
+                VoiceCard(
+                    message = uiState.voiceMessage,
+                    isVoiceOn = uiState.isVoiceEnabled,
+                    onTurnOn = {}
+                )
+                Spacer(Modifier.weight(1f))
+                StatsRow(uiState)
+            }
         }
+    }
+}
+
+// region 머리: 목적지 · 주행 종료
+
+@Composable
+private fun Header(uiState: DrivingUiState, onFinish: () -> Unit, onOpenNavigation: () -> Unit) {
+    val colors = POCOTheme.colors
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = PocoLayout.drivingHeaderHeight),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "주행 중 · ${uiState.elapsedMinutes}분째",
+                style = POCOTheme.typography.caption,
+                color = colors.textSecondary
+            )
+            val destination = uiState.destinationName
+            if (destination != null) {
+                Text(
+                    text = destination,
+                    style = POCOTheme.typography.headingM,
+                    color = colors.textPrimary,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                remainLine(uiState.remainDistanceM, uiState.remainTimeSec)?.let {
+                    Text(
+                        text = it,
+                        style = POCOTheme.typography.bodyM,
+                        color = colors.textSecondary
+                    )
+                }
+            } else {
+                Text(
+                    text = "${uiState.petName} · 함께 이동 중",
+                    style = POCOTheme.typography.headingM,
+                    color = colors.textPrimary
+                )
+                Text(
+                    text = "목적지를 정하면 도착할 때 자동으로 기록을 정리해요",
+                    style = POCOTheme.typography.bodyM,
+                    color = colors.textSecondary
+                )
+            }
+        }
+        if (uiState.destinationName == null) {
+            PocoButton(
+                text = "목적지 설정",
+                onClick = onOpenNavigation,
+                icon = PocoIcon.TURN_RIGHT,
+                style = PocoButtonStyle.SECONDARY
+            )
+            Spacer(Modifier.width(PocoSpacing.space16))
+        }
+        PocoButton(text = "주행 종료", onClick = onFinish)
+    }
+}
+
+/** "남은 12.3km · 약 18분" */
+private fun remainLine(distanceM: Int?, timeSec: Int?): String? {
+    val parts = buildList {
+        distanceM?.let {
+            add(if (it >= 1000) "남은 ${"%.1f".format(it / 1000f)}km" else "남은 ${it}m")
+        }
+        timeSec?.let { add("약 ${(it / 60f).roundToInt().coerceAtLeast(1)}분") }
+    }
+    return parts.takeIf { it.isNotEmpty() }?.joinToString(" · ")
+}
+
+// endregion
+
+// region 왼쪽: 컴포트 점수 · 펫 상태
+
+@Composable
+private fun ScoreCard(uiState: DrivingUiState, modifier: Modifier = Modifier) {
+    val colors = POCOTheme.colors
+    Column(
+        modifier = modifier
+            .background(colors.backgroundCard, RoundedCornerShape(PocoRadius.r28))
+            .padding(PocoSpacing.space32),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        ScoreRing(
+            score = uiState.score,
+            label = "컴포트 점수",
+            strokeWidth = PocoSpacing.space24,
+            scoreStyle = POCOTheme.typography.displayL,
+            progressColor = when {
+                uiState.score >= 90 -> colors.toggleThumb
+                uiState.score >= 70 -> colors.tangerine
+                else -> colors.statusError
+            },
+            modifier = Modifier.size(PocoSize.scoreRingLarge)
+        )
+        Spacer(Modifier.height(PocoSpacing.space32))
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            PetPhoto(
+                photoPath = uiState.petPhotoPath,
+                breed = uiState.petBreed,
+                modifier = Modifier.size(PocoSize.iconTileLarge + PocoSpacing.space16)
+            )
+            Spacer(Modifier.width(PocoSpacing.space20))
+            Column {
+                Text(
+                    text = uiState.petName,
+                    style = POCOTheme.typography.titleM,
+                    color = colors.textPrimary
+                )
+                Text(
+                    text = uiState.mood.description(),
+                    style = POCOTheme.typography.bodyL,
+                    color = colors.textSecondary
+                )
+            }
+        }
+    }
+}
+
+private fun PetMood.description(): String = when (this) {
+    PetMood.CALM -> "편안하게 타고 있어요"
+    PetMood.HAPPY -> "기분 좋게 가고 있어요"
+    PetMood.DIZZY -> "조금 어지러워해요"
+    PetMood.HOT -> "자리가 덥거나 추워요"
+}
+
+// endregion
+
+// region 오른쪽: 알림 · 음성 대답 · 통계
+
+@Composable
+private fun AlertArea(
+    uiState: DrivingUiState,
+    onCloseWindow: () -> Unit,
+    onVentWindow: () -> Unit,
+    onSetTemperature: () -> Unit,
+    onDismissTemperature: () -> Unit
+) {
+    when (val alert = uiState.alert) {
+        is DrivingAlert.Window -> AlertCard(
+            icon = PocoIcon.WINDOW,
+            eyebrow = "안전 알림 · ${alert.speedKmh}km/h",
+            title = "${alert.window.label()} 창문이 ${alert.openPercent}% 열려 있어요",
+            description = "“창문 닫아” 또는 “괜찮아”라고 말해도 돼요",
+            primaryText = "창문 닫기",
+            onPrimary = onCloseWindow,
+            secondaryText = "조금만 열기",
+            onSecondary = onVentWindow,
+            tone = StatusTone.HOT
+        )
+
+        is DrivingAlert.Temperature -> AlertCard(
+            icon = PocoIcon.THERMOMETER,
+            eyebrow = (if (alert.isDanger) "위험 · " else "온도 알림 · ") + "${alert.typeLabel} 쾌적 " +
+                "${alert.comfortRange.start.roundToInt()}~${alert.comfortRange.endInclusive.roundToInt()}°C",
+            title = "${uiState.petName} 자리 ${alert.celsius.roundToInt()}°C" +
+                if (alert.isHot) " · 더워요" else " · 추워요",
+            description = "“맞춰 줘” 또는 “괜찮아”라고 말해도 돼요",
+            primaryText = "${alert.targetCelsius.roundToInt()}°C로 맞추기",
+            onPrimary = onSetTemperature,
+            secondaryText = "괜찮아요",
+            onSecondary = onDismissTemperature,
+            tone = if (alert.isHot) StatusTone.HOT else StatusTone.COLD
+        )
+
+        null -> Unit
+    }
+}
+
+/** 알림 질문 뒤 STT로 듣는 중 · 알아들은 말 */
+@Composable
+private fun ListeningBar(isListening: Boolean, heardText: String?) {
+    if (!isListening && heardText.isNullOrBlank()) return
+    val colors = POCOTheme.colors
+    val shape = RoundedCornerShape(PocoRadius.r24)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .heightIn(min = PocoSize.touchMin)
+            .background(if (isListening) colors.limeSoft else colors.backgroundCard, shape)
+            .border(PocoStroke.card, colors.borderDefault, shape)
+            .padding(horizontal = PocoSpacing.space24, vertical = PocoSpacing.space12),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(PocoSize.iconTile)
+                .background(colors.accentFill, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            PocoIconView(
+                PocoIcon.SPEAKER,
+                tint = colors.onAccentFill,
+                modifier = Modifier.size(PocoSize.icon28)
+            )
+        }
+        Spacer(Modifier.width(PocoSpacing.space16))
+        Text(
+            text = if (isListening) {
+                "듣고 있어요 · “괜찮아” “창문 닫아”처럼 말해 보세요"
+            } else {
+                "“$heardText” 라고 들었어요"
+            },
+            style = POCOTheme.typography.titleM,
+            color = colors.textPrimary,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+@Composable
+private fun StatsRow(uiState: DrivingUiState) {
+    val colors = POCOTheme.colors
+    Row(horizontalArrangement = Arrangement.spacedBy(PocoSpacing.space16)) {
+        StatTile(
+            label = "급제동",
+            value = "${uiState.hardBrakeCount}회",
+            dotColor = colors.tangerine,
+            modifier = Modifier.weight(1f)
+        )
+        StatTile(
+            label = "급회전",
+            value = "${uiState.sharpTurnCount}회",
+            dotColor = colors.coldAccent,
+            modifier = Modifier.weight(1f)
+        )
+        StatTile(
+            label = "편안한 시간",
+            value = "${uiState.calmMinutes}분",
+            dotColor = colors.toggleThumb,
+            modifier = Modifier.weight(1f)
+        )
+        StatTile(
+            label = "자리 온도",
+            value = uiState.seatTemperature?.let { "${it.roundToInt()}°C" } ?: "-",
+            dotColor = if (uiState.isTemperatureOff) colors.tangerine else colors.successAccent,
+            modifier = Modifier.weight(1f)
+        )
+    }
+}
+
+private fun CarWindow.label(): String = when (this) {
+    CarWindow.REAR_LEFT -> "뒷좌석 왼쪽"
+    CarWindow.REAR_RIGHT -> "뒷좌석 오른쪽"
+    CarWindow.PASSENGER -> "조수석"
+    else -> "옆"
+}
+
+// endregion
+
+@Preview(widthDp = 1700, heightDp = 1100)
+@Composable
+private fun DrivingScreenPreview() {
+    POCOTheme(darkTheme = false) {
+        DrivingScreen(
+            uiState = DrivingUiState(
+                petName = "현댕이",
+                score = 92,
+                voiceMessage = "현댕이 옆 창문이 열려 있어요. 닫을까요?",
+                isListening = true,
+                destinationName = "서울숲 공원",
+                remainDistanceM = 12300,
+                remainTimeSec = 1080,
+                seatTemperature = 23f,
+                alert = DrivingAlert.Window(CarWindow.REAR_RIGHT, 40, 52)
+            ),
+            onFinish = {},
+            onOpenNavigation = {},
+            onCloseWindow = {},
+            onVentWindow = {},
+            onSetTemperature = {},
+            onDismissTemperature = {}
+        )
     }
 }

@@ -56,8 +56,8 @@ import com.example.poco.presentation.design.MgIcon
 import com.example.poco.presentation.design.MgIcons
 import com.example.poco.presentation.design.PrimaryButton
 import com.example.poco.presentation.design.SecondaryButton
-import com.example.poco.presentation.driving.component.intervalText
-import com.example.poco.presentation.driving.component.koreanDuration
+import com.example.poco.presentation.session.component.intervalText
+import com.example.poco.presentation.session.component.koreanDuration
 import kotlinx.coroutines.delay
 
 /** A rest-interval change made from the recommendation, kept for the toast and its undo. */

@@ -34,8 +34,8 @@ import com.example.poco.data.record.TripEntity
 import com.example.poco.presentation.design.Mg
 import com.example.poco.presentation.design.MgIcon
 import com.example.poco.presentation.design.MgIcons
-import com.example.poco.presentation.driving.component.durationText
-import com.example.poco.presentation.driving.component.koreanDuration
+import com.example.poco.presentation.session.component.durationText
+import com.example.poco.presentation.session.component.koreanDuration
 
 /** Figma 465:48292 "이동기록_01". */
 @Composable

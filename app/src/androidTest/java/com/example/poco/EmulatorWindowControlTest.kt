@@ -45,7 +45,9 @@ class EmulatorWindowControlTest {
         val manager = PleosSdkManager(
             vehicle,
             TextToSpeech(context, ai.pleos.playground.tts.constant.Mode.ON_DEVICE),
-            SpeechToText(context, ai.pleos.playground.stt.constant.Mode.ON_DEVICE)
+            SpeechToText(context, ai.pleos.playground.stt.constant.Mode.ON_DEVICE),
+            ai.pleos.playground.location.fused.FusedLocation(context),
+            ai.pleos.playground.navi.helper.NaviHelper(context)
         )
         val windows = WindowRepositoryImpl(WindowDataSourceImpl(vehicle.getWindow(), manager))
         val scopeClock = DrivingClock { android.os.SystemClock.elapsedRealtime() }
@@ -55,13 +57,19 @@ class EmulatorWindowControlTest {
             },
             object : HvacRepository {
                 override fun observeInteriorTemperature(seat: PetSeat) = emptyFlow<Reading<Float>>()
+                override suspend fun getSeatTemperature(seat: com.example.poco.data.model.PetSeat) = Result.success<Float?>(null)
+                override fun observeSeatTemperature(seat: com.example.poco.data.model.PetSeat) = emptyFlow<Float>()
+                override suspend fun setSeatTemperature(seat: com.example.poco.data.model.PetSeat, celsius: Float) = Result.success<Float?>(null)
             },
             windows,
             object : NaviRepository {
+                override fun observeEvents() = emptyFlow<com.example.poco.data.model.NaviEvent>()
+                override suspend fun openNavigation(keyword: String?) = Result.success(Unit)
                 override fun observeBumps() = emptyFlow<Reading<List<BumpApproach>>>()
                 override fun observeRoute() = emptyFlow<com.example.poco.data.pleos.datasource.NaviRouteUpdate>()
             },
             object : TtsRepository {
+                override suspend fun speak(text: String) = Result.success(Unit)
                 override suspend fun speak(text: String, onSpeaking: (Boolean) -> Unit) = Unit
             },
             scopeClock,

@@ -46,7 +46,9 @@ class VehicleSdkSmokeTest {
             PleosSdkManager(
                 vehicle,
                 tts,
-                SpeechToText(context, ai.pleos.playground.stt.constant.Mode.ON_DEVICE)
+                SpeechToText(context, ai.pleos.playground.stt.constant.Mode.ON_DEVICE),
+            ai.pleos.playground.location.fused.FusedLocation(context),
+            ai.pleos.playground.navi.helper.NaviHelper(context)
             )
         try {
             record("AAOS speed") {
@@ -70,7 +72,7 @@ class VehicleSdkSmokeTest {
                     WindowDataSourceImpl(vehicle.getWindow(), manager)
                 ).getSupportedWindows()
             }
-            record("Navi connection") { NaviDataSourceImpl(context).observeBumps().first() }
+            record("Navi connection") { NaviDataSourceImpl(ai.pleos.playground.navi.helper.NaviHelper(context), manager, context).observeBumps().first() }
             record("TTS playback callbacks") {
                 TtsDataSourceImpl(tts, manager).speak("창문 안전 안내 테스트입니다.") { }
                 "completed"
