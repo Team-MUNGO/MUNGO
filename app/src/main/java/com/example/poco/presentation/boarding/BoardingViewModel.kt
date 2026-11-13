@@ -10,6 +10,7 @@ import com.example.poco.data.repository.PetRepository
 import com.example.poco.data.repository.SttRepository
 import com.example.poco.data.repository.TtsRepository
 import com.example.poco.data.repository.WindowRepository
+import com.example.poco.data.settings.UserSettingsRepository
 import com.example.poco.presentation.driving.nearbyWindows
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
@@ -17,6 +18,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -33,7 +35,8 @@ class BoardingViewModel @Inject constructor(
     private val sttRepository: SttRepository,
     private val ttsRepository: TtsRepository,
     private val windowRepository: WindowRepository,
-    private val hvacRepository: HvacRepository
+    private val hvacRepository: HvacRepository,
+    private val userSettings: UserSettingsRepository
 ) : ViewModel() {
     private val _uiState = MutableStateFlow(BoardingUiState())
     val uiState = _uiState.asStateFlow()
@@ -181,7 +184,22 @@ class BoardingViewModel @Inject constructor(
         }
     }
 
-    fun openLayoutDialog() = _uiState.update { it.copy(isLayoutDialogVisible = true) }
+    /** 주행 화면 안내 팝업. 다시 보지 않기를 골랐으면 바로 2분할로 출발 */
+    fun openLayoutDialog() {
+        viewModelScope.launch {
+            if (userSettings.layoutGuideHidden.first()) {
+                startDriving(DriveLayout.TWO)
+            } else {
+                _uiState.update { it.copy(isLayoutDialogVisible = true) }
+            }
+        }
+    }
+
+    /** 안내 팝업 "확인": 2분할로 출발 (3분할은 주행 화면에서 드래그) */
+    fun confirmLayoutGuide(hideNextTime: Boolean) {
+        if (hideNextTime) viewModelScope.launch { userSettings.setLayoutGuideHidden(true) }
+        startDriving(DriveLayout.TWO)
+    }
 
     fun closeLayoutDialog() {
         listenJob?.cancel()

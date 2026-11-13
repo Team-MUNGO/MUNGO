@@ -147,7 +147,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /** 오늘의 동승자 = 첫 번째로 등록한 펫. 자리가 바뀌면 그 자리 온도를 다시 읽는다 */
+    /** 오늘의 동승자 = 첫 번째로 등록한 펫. 그 자리 온도를 읽고, 이후 바뀌는 값도 따라간다 */
     private fun observePet() {
         viewModelScope.launch {
             petRepository.observePets()
@@ -155,7 +155,16 @@ class HomeViewModel @Inject constructor(
                 .catch { Timber.e(it, "펫 조회 실패") }
                 .collectLatest { pet ->
                     _uiState.update { it.copy(pet = pet) }
-                    if (vehicleLink.isLinked) pet?.let { loadSeatTemperature(it) }
+                    if (pet == null) return@collectLatest
+                    if (vehicleLink.isLinked) loadSeatTemperature(pet)
+                    // 홈에 있는 동안 실내 온도가 바뀌면 칸도 바로 바뀌게 계속 지켜본다
+                    hvacRepository.observeSeatTemperature(pet.seat)
+                        .catch { Timber.w(it, "좌석 온도 관찰 실패") }
+                        .collect { temperature ->
+                            if (vehicleLink.isLinked) {
+                                _uiState.update { it.copy(seatTemperature = temperature) }
+                            }
+                        }
                 }
         }
     }

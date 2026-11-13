@@ -5,18 +5,44 @@ import com.example.poco.data.model.Pet
 import com.example.poco.data.model.PetSeat
 import com.example.poco.data.model.Restraint
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class MungoStandardTest {
     @Test
-    fun `중대형 보통 털은 기본 유형 - 26도 이상 더움, 17도 이하 추움`() {
+    fun `일반 반려견 - 쾌적 20~25도, 26도부터 주의, 28도부터 위험, 20도 미만 추움`() {
         val types = MungoStandard.petTypes("비글", weightKg = 12f, ageYears = 3)
         val standard = MungoStandard.temperature(types)
 
         assertEquals(setOf(PetType.BASIC), types)
-        assertEquals(26f, standard.hotAt)
-        assertEquals(17f, standard.coldAt)
+        assertEquals(TemperatureGroup.GENERAL, standard.group)
+        assertEquals(20f..25f, standard.comfort)
+        assertFalse(standard.isHot(25f))
+        assertTrue(standard.isHot(26f))
+        assertFalse(standard.isDanger(27f))
+        assertTrue(standard.isDanger(28f))
+        assertTrue(standard.isCold(19.5f))
+        assertFalse(standard.isCold(20f))
+    }
+
+    @Test
+    fun `위험군 - 쾌적 20~24도, 25도부터 주의, 27도부터 위험`() {
+        val standard = MungoStandard.temperature(MungoStandard.petTypes("시츄", 7f, ageYears = 3))
+
+        assertEquals(TemperatureGroup.RISK, standard.group)
+        assertEquals(20f..24f, standard.comfort)
+        assertFalse(standard.isHot(24f))
+        assertTrue(standard.isHot(25f))
+        assertFalse(standard.isDanger(26f))
+        assertTrue(standard.isDanger(27f))
+    }
+
+    @Test
+    fun `이중모 · 소형은 위험군이 아니라 일반 기준`() {
+        val standard =
+            MungoStandard.temperature(MungoStandard.petTypes("포메라니안", 3f, ageYears = 2))
+        assertEquals(TemperatureGroup.GENERAL, standard.group)
     }
 
     @Test
@@ -28,34 +54,27 @@ class MungoStandardTest {
     }
 
     @Test
-    fun `단두종 + 노견은 더 엄격한 값 - 더움 24도, 추움 19도`() {
-        val types = MungoStandard.petTypes("퍼그", weightKg = 12f, ageYears = 9)
-        val standard = MungoStandard.temperature(types)
-
-        assertEquals(setOf(PetType.BRACHYCEPHALIC, PetType.SENIOR_PUPPY), types)
-        assertEquals(24f, standard.hotAt)
-        assertEquals(19f, standard.coldAt)
-        assertTrue(standard.comfort.start <= standard.comfort.endInclusive)
+    fun `노령견 시작 나이 - 소형 10살 · 중대형 8살 · 초대형 6살`() {
+        assertFalse(MungoStandard.isSenior("시츄", 7f, ageYears = 9))
+        assertTrue(MungoStandard.isSenior("시츄", 7f, ageYears = 10))
+        assertFalse(MungoStandard.isSenior("진돗개", 18f, ageYears = 7))
+        assertTrue(MungoStandard.isSenior("진돗개", 18f, ageYears = 8))
+        assertTrue(MungoStandard.isSenior("골든리트리버", 40f, ageYears = 8))
+        assertFalse(MungoStandard.isSenior("그레이트데인", 55f, ageYears = 5))
+        assertTrue(MungoStandard.isSenior("그레이트데인", 55f, ageYears = 6))
     }
 
     @Test
-    fun `포메라니안은 이중모 + 소형 - 더위는 이중모, 추위는 소형 기준`() {
-        val standard =
-            MungoStandard.temperature(MungoStandard.petTypes("포메라니안", 3f, ageYears = 2))
-
-        assertEquals(24f, standard.hotAt)
-        assertEquals(18f, standard.coldAt)
+    fun `몸무게를 모르면 견종으로 크기 추정`() {
+        assertEquals(10, MungoStandard.seniorAge("몰티즈", null))
+        assertEquals(8, MungoStandard.seniorAge("진돗개", null))
     }
 
     @Test
-    fun `1살 미만은 퍼피`() {
+    fun `노령견 · 1살 미만은 위험군`() {
         assertTrue(PetType.SENIOR_PUPPY in MungoStandard.petTypes("진돗개", 15f, ageYears = 0))
-    }
-
-    @Test
-    fun `29_5도 이상은 모든 유형 위험`() {
-        val standard = MungoStandard.temperature(setOf(PetType.DOUBLE_COAT))
-        assertTrue(standard.isDanger(29.5f))
+        assertTrue(PetType.SENIOR_PUPPY in MungoStandard.petTypes("진돗개", 15f, ageYears = 8))
+        assertFalse(PetType.SENIOR_PUPPY in MungoStandard.petTypes("몰티즈", 4f, ageYears = 8))
     }
 
     @Test

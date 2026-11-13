@@ -27,6 +27,8 @@ import com.example.poco.core.driving.WindowDangerDetector
 import com.example.poco.core.driving.normalizeWindowPosition
 import com.example.poco.core.driving.temperatureStatus
 import com.example.poco.core.driving.valueOrNull
+import com.example.poco.core.util.ege
+import com.example.poco.core.util.iGa
 import com.example.poco.data.assistant.AssistantWaypointSource
 import com.example.poco.data.assistant.LocationStream
 import com.example.poco.data.automotive.VehicleUpdate
@@ -125,10 +127,16 @@ class DrivingSessionRepositoryImpl @Inject constructor(
     private var waypointTracker: WaypointTracker? = null
     private var lastTemperatureStatus = CabinTemperatureStatus.UNKNOWN
     private var lastTemperatureSample = Long.MIN_VALUE
+
+    /** 주의(더움) 이상이 시작된 시각. 쾌적 · 추움으로 돌아오면 null */
+    private var hotSince: Long? = null
+    private var hotEpisode = 0
+    private var hotRestAsked = false
     private var started = 0L
     private var startedEpoch = 0L
     private var restStartScore: Int? = null
     private var latestLocation: com.example.poco.data.assistant.LocationFix? = null
+    private var latestPlace: com.example.poco.data.pleos.datasource.NaviPlaceHint? = null
 
     private fun epoch(mono: Long) = startedEpoch + (mono - started)
 
@@ -161,15 +169,31 @@ class DrivingSessionRepositoryImpl @Inject constructor(
                 temperatureC = snapshot.temperature.valueOrNull(),
                 windowPercent = snapshot.windowPercent.valueOrNull(),
                 seat = snapshot.settings?.seat?.name,
-                guidanceText = snapshot.guidance?.displayText ?: snapshot.gleoResponse
+                guidanceText = snapshot.guidance?.displayText ?: snapshot.gleoResponse,
+                placeName = placeAt(eventEpoch)
             )
         )
+    }
+
+    /**
+     * 이벤트 때의 위치 이름. IC · 톨게이트 같은 랜드마크는 20초, 구 · 동 주소는 60초 안에
+     * 받은 것만 쓴다 (오래된 이름을 붙이지 않는다)
+     */
+    private fun placeAt(eventEpoch: Long): String? {
+        val hint = latestPlace ?: return null
+        val age = eventEpoch - hint.atEpoch
+        return when {
+            age !in -5_000..PLACE_ADDRESS_MAX_AGE_MS -> null
+            hint.landmark != null && age <= PLACE_LANDMARK_MAX_AGE_MS -> hint.landmark
+            else -> hint.address
+        }
     }
 
     override fun start(settings: DrivingSettings) {
         if (state.value.active) return
         val token = ++generation
         latestLocation = null
+        latestPlace = null
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         sessionScope = scope
         detector = DrivingEventDetector(
@@ -190,6 +214,9 @@ class DrivingSessionRepositoryImpl @Inject constructor(
         windowEpisode = 0
         lastTemperatureStatus = CabinTemperatureStatus.UNKNOWN
         lastTemperatureSample = Long.MIN_VALUE
+        hotSince = null
+        hotEpisode = 0
+        hotRestAsked = false
         started = clock.now()
         startedEpoch = System.currentTimeMillis()
         shakeSampler = ShakeSampler(started)
@@ -288,6 +315,21 @@ class DrivingSessionRepositoryImpl @Inject constructor(
             navi.observeRoute().collect { update -> if (current()) onRoute(update) }
         }
         scope.launch {
+            navi.observePlace().collect { hint ->
+                if (!current()) return@collect
+                // 랜드마크가 사라져도 바로 지우지 않고, 주소만 새로 받는다
+                val previous = latestPlace
+                latestPlace = if (hint.landmark == null &&
+                    previous?.landmark != null &&
+                    hint.atEpoch - previous.atEpoch <= PLACE_LANDMARK_MAX_AGE_MS
+                ) {
+                    previous.copy(address = hint.address ?: previous.address)
+                } else {
+                    hint
+                }
+            }
+        }
+        scope.launch {
             location.observe().catch { }.collect { fix ->
                 if (!current()) return@collect
                 latestLocation = fix
@@ -353,6 +395,7 @@ class DrivingSessionRepositoryImpl @Inject constructor(
                     )
                 }
                 publishRest()
+                state.value.settings?.let { checkHotRest(clock.now(), it) }
                 mutableState.update {
                     it.copy(
                         elapsedMs = (clock.now() - started).coerceAtLeast(0),
@@ -454,15 +497,77 @@ class DrivingSessionRepositoryImpl @Inject constructor(
                 detail = "%.1f".format(java.util.Locale.ROOT, value)
             )
         }
-        val outside = status == CabinTemperatureStatus.HOT || status == CabinTemperatureStatus.COLD
+        val hot = status == CabinTemperatureStatus.HOT || status == CabinTemperatureStatus.DANGER
+        val outside = hot || status == CabinTemperatureStatus.COLD
         if (outside && status != lastTemperatureStatus) {
+            // "HOT:27.5:25.0" = 상태 : 측정값 : 그때 기준 (꿀팁 숫자를 기준과 맞추려고 같이 남긴다)
+            val limit = if (hot) settings.maxTemperatureC else settings.minTemperatureC
             record(
                 TripEventType.TEMPERATURE_OUT_OF_RANGE,
-                detail = "${status.name}:%.1f".format(java.util.Locale.ROOT, value)
+                detail = "${status.name}:%.1f:%.1f".format(java.util.Locale.ROOT, value, limit)
             )
         }
+        if (status != CabinTemperatureStatus.UNKNOWN) {
+            // 주의 구간이 시작되면 시간을 잰다 (3분 넘게 이어지면 휴식 제안)
+            if (hot && hotSince == null) {
+                hotSince = now
+                hotEpisode++
+                hotRestAsked = false
+            } else if (!hot) {
+                hotSince = null
+                ledger.removeWhere { it.id.startsWith("temp-rest-") }
+                mutableState.update { it.copy(temperatureRestSuggested = false) }
+                publishGuidance()
+            }
+            onTemperatureDanger(status, value, settings)
+        }
+        checkHotRest(now, settings)
         // UNKNOWN (no measurement) neither ends nor starts an episode: no value is invented.
         if (status != CabinTemperatureStatus.UNKNOWN) lastTemperatureStatus = status
+    }
+
+    /** 위험(일반 28°C · 위험군 27°C 이상)에 들어서면 팝업 + "에어컨을 켜 주세요" */
+    private fun onTemperatureDanger(
+        status: CabinTemperatureStatus,
+        value: Float?,
+        settings: DrivingSettings
+    ) {
+        val danger = status == CabinTemperatureStatus.DANGER
+        if (danger && lastTemperatureStatus != CabinTemperatureStatus.DANGER && value != null) {
+            mutableState.update { it.copy(temperatureDanger = true) }
+            announce(
+                Guidance(
+                    "temp-danger-$hotEpisode-${clock.now()}",
+                    GuidancePriority.WINDOW_WARNING,
+                    "실내가 ${value.roundToInt()}°C로 ${settings.petName.ege} 위험해요. 에어컨을 켜 주세요."
+                )
+            )
+        } else if (!danger && state.value.temperatureDanger) {
+            mutableState.update { it.copy(temperatureDanger = false) }
+            ledger.removeWhere { it.id.startsWith("temp-danger-") }
+            publishGuidance()
+        }
+    }
+
+    /** 주의 이상이 3분 넘게 이어지면 한 번 휴식 제안 */
+    private fun checkHotRest(now: Long, settings: DrivingSettings) {
+        val since = hotSince ?: return
+        if (hotRestAsked || now - since < HOT_REST_AFTER_MS) return
+        hotRestAsked = true
+        mutableState.update { it.copy(temperatureRestSuggested = true) }
+        announce(
+            Guidance(
+                "temp-rest-$hotEpisode",
+                GuidancePriority.REST_PROPOSAL,
+                "${settings.petName.iGa} 더워한 지 3분이 넘었어요. 잠깐 쉬어 갈까요?"
+            )
+        )
+    }
+
+    override fun dismissTemperatureDanger() {
+        mutableState.update { it.copy(temperatureDanger = false) }
+        ledger.removeWhere { it.id.startsWith("temp-danger-") }
+        publishGuidance()
     }
 
     private fun publishRest() {
@@ -945,6 +1050,7 @@ class DrivingSessionRepositoryImpl @Inject constructor(
         }
         generation++
         latestLocation = null
+        latestPlace = null
         sessionScope?.cancel()
         sessionScope = null
         closeJob = null
@@ -960,3 +1066,12 @@ class DrivingSessionRepositoryImpl @Inject constructor(
         )
     }
 }
+
+/** 주의(더움)가 이만큼 이어지면 휴식 제안 */
+private const val HOT_REST_AFTER_MS = 3 * 60_000L
+
+/** 내비 랜드마크(IC · 톨게이트) 이름을 이벤트에 붙이는 최대 시간 */
+private const val PLACE_LANDMARK_MAX_AGE_MS = 20_000L
+
+/** 내비 주소(구 · 동)를 이벤트에 붙이는 최대 시간 */
+private const val PLACE_ADDRESS_MAX_AGE_MS = 60_000L

@@ -66,6 +66,10 @@ class DrivingSessionRepositoryTest {
     private val voice = MutableStateFlow(true)
     private val locationFixes = MutableSharedFlow<LocationFix>(extraBufferCapacity = 8)
     private val route = MutableSharedFlow<NaviRouteUpdate>(extraBufferCapacity = 8)
+    private val places =
+        MutableSharedFlow<com.example.poco.data.pleos.datasource.NaviPlaceHint>(
+            extraBufferCapacity = 8
+        )
     private var waypointCalls = 0
     private var waypointFailure: String? = null
     private var removeCalls = 0
@@ -120,6 +124,7 @@ class DrivingSessionRepositoryTest {
                 override suspend fun openNavigation(keyword: String?) = Result.success(Unit)
                 override fun observeBumps() = bumps
                 override fun observeRoute() = route
+                override fun observePlace() = places
             },
             object : TtsRepository {
                 override suspend fun speak(text: String) = Result.success(Unit)
@@ -686,6 +691,33 @@ class DrivingSessionRepositoryTest {
         assertEquals(id, session.state.value.lastEndedTripId)
         assertEquals(1, recorder.events.count { it.type == "WINDOW_WARNING" })
         assertTrue(recorder.trips.single().simulated)
+    }
+
+    @Test fun eventKeepsNaviPlaceNameLandmarkFirstThenAddress() {
+        session.start(settings)
+        scheduler.runCurrent()
+        val epoch = recorder.trips.single().startedAtEpoch
+        places.tryEmit(
+            com.example.poco.data.pleos.datasource.NaviPlaceHint("판교IC", "수정구 시흥동", epoch)
+        )
+        scheduler.runCurrent()
+        positions.value = 100
+        scheduler.runCurrent()
+        assertEquals("판교IC", recorder.events.last { it.type == "WINDOW_WARNING" }.placeName)
+        // 랜드마크는 20초가 지나면 쓰지 않고 주소로
+        positions.value = 0
+        scheduler.runCurrent()
+        advance(25_000)
+        positions.value = 100
+        scheduler.runCurrent()
+        assertEquals("수정구 시흥동", recorder.events.last { it.type == "WINDOW_WARNING" }.placeName)
+        // 1분이 넘은 이름은 붙이지 않는다
+        positions.value = 0
+        scheduler.runCurrent()
+        advance(40_000)
+        positions.value = 100
+        scheduler.runCurrent()
+        assertNull(recorder.events.last { it.type == "WINDOW_WARNING" }.placeName)
     }
 
     @Test fun eventCapturesFreshLocationWithoutHeadingAndDropsStaleFixes() {

@@ -33,7 +33,9 @@ data class AlertSettings(
     val arrivalSummary: Boolean = true,
     val intervalMinutes: Int = RestIntervalPolicy.DEFAULT_MINUTES,
     /** No pet registered yet: the pet-based toggles have nothing to change. */
-    val hasPet: Boolean = false
+    val hasPet: Boolean = false,
+    /** '멍고 음성 안내' 설명에 쓰는 첫 번째 반려견 이름 */
+    val petName: String? = null
 )
 
 @HiltViewModel
@@ -78,7 +80,8 @@ class SettingsViewModel @Inject constructor(
                     windowAlertPercent = first?.windowAlertPercent ?: 20,
                     arrivalSummary = arrival,
                     intervalMinutes = interval,
-                    hasPet = first != null
+                    hasPet = first != null,
+                    petName = first?.name
                 )
             }.collect { _alerts.value = it }
         }

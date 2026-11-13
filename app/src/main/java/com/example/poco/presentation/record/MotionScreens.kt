@@ -1,15 +1,16 @@
 package com.example.poco.presentation.record
 
-import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,36 +23,30 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.PathEffect
-import androidx.compose.ui.text.drawText
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.poco.core.driving.RestIntervalPolicy
 import com.example.poco.data.record.MotionRecord
 import com.example.poco.data.record.MotionSign
-import com.example.poco.data.record.TripEntity
 import com.example.poco.domain.motion.InsightType
-import com.example.poco.domain.motion.RestRecommendation
+import com.example.poco.domain.motion.MotionAnalysis
 import com.example.poco.presentation.design.IconBadge
 import com.example.poco.presentation.design.InfoNote
 import com.example.poco.presentation.design.Mg
@@ -62,6 +57,8 @@ import com.example.poco.presentation.design.PrimaryButton
 import com.example.poco.presentation.design.SecondaryButton
 import com.example.poco.presentation.session.component.intervalText
 import com.example.poco.presentation.session.component.koreanDuration
+import java.time.LocalDate
+import java.util.Locale
 import kotlinx.coroutines.delay
 
 /** A rest-interval change made from the recommendation, kept for the toast and its undo. */
@@ -69,7 +66,10 @@ data class AppliedInterval(val from: Int, val to: Int)
 
 private fun hm(minutes: Int) = "%d:%02d".format(minutes / 60, minutes % 60)
 
-/** Figma 465:48703 / 465:48921 "멀미 징후". Counts are guardian-entered, never inferred. */
+/**
+ * Figma 515:347 "이동기록_04_멀미징후": 최근 7일 요약 · 징후 × 날짜 표 · 패턴 제안.
+ * 체크는 보호자가 도착 후 고른 값만 센다. 이번 이동이 있는 날(주황 열)의 칸을 누르면 그 이동 기록을 고친다.
+ */
 @Composable
 fun MotionSicknessRoute(
     tripId: String,
@@ -85,7 +85,6 @@ fun MotionSicknessRoute(
     val all by viewModel.allTrips.collectAsStateWithLifecycle()
     val interval by viewModel.interval.collectAsStateWithLifecycle()
     val analysis by viewModel.motionAnalysis.collectAsStateWithLifecycle()
-    var editing by rememberSaveable { mutableStateOf(false) }
     var toast by rememberSaveable { mutableStateOf(applied != null) }
     LaunchedEffect(applied) {
         if (applied != null) {
@@ -96,335 +95,82 @@ fun MotionSicknessRoute(
         }
     }
     val t = trip
+    val tripDay = t?.startedAtEpoch?.toLocalDate()
+    val today = remember { LocalDate.now() }
+    // 표의 마지막 날. 처음엔 이번 이동이 있는 날
+    var endEpochDay by rememberSaveable(tripDay) {
+        mutableLongStateOf((tripDay ?: today).toEpochDay())
+    }
+    val end = LocalDate.ofEpochDay(endEpochDay)
+    val week = motionWeek(all.ifEmpty { listOfNotNull(t) }, end)
     PageScaffold(
         "멀미 징후",
         onBack,
-        titleExtra = { if (applied != null) HeaderChip("보호자 기록") },
+        titleExtra = {
+            Text(
+                "최근 7일 기준",
+                Modifier.background(Mg.IconBg, CircleShape)
+                    .padding(horizontal = 18.dp, vertical = 8.dp),
+                style = Mg.bold(21, 28),
+                color = Mg.OrangeText
+            )
+        },
         action = {
-            HeaderAction(
-                if (editing) "수정 완료" else "기록 수정",
-                if (editing) MgIcons.Check else MgIcons.Pencil
-            ) {
-                editing =
-                    !editing
-            }
+            WeekNav(
+                week,
+                canNext = end < today,
+                onPrev = { endEpochDay -= MOTION_WEEK_DAYS },
+                onNext = {
+                    endEpochDay = minOf(endEpochDay + MOTION_WEEK_DAYS, today.toEpochDay())
+                }
+            )
         }
     ) {
         if (t == null) return@PageScaffold
         val record = MotionRecord.decode(t.motionSicknessSigns)
         Box(Modifier.fillMaxSize()) {
-            Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(26.dp)) {
-                MgCard(
-                    Modifier.width(696.dp).fillMaxHeight(),
-                    padding = PaddingValues(start = 37.dp, end = 15.dp, top = 34.dp, bottom = 28.dp)
+            Column(Modifier.fillMaxSize()) {
+                Row(
+                    Modifier.fillMaxWidth().height(139.dp),
+                    horizontalArrangement = Arrangement.spacedBy(22.dp)
                 ) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(end = 20.dp),
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text("이번 이동에서 본 모습", style = Mg.bold(28, 36), color = Mg.Ink)
-                            Text(
-                                "${dateText(t.startedAtEpoch, "M월 d일")} · 도착 후 기록",
-                                style = Mg.regular(23, 30),
-                                color = Mg.Muted
-                            )
-                        }
-                        if (applied == null) HeaderChip("보호자 기록")
-                    }
-                    Spacer(Modifier.height(28.dp))
-                    Column(
-                        Modifier.weight(1f).padding(end = 22.dp),
-                        verticalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        MotionSign.entries.forEach { sign ->
-                            val n = record?.count(sign) ?: 0
-                            Row(
-                                Modifier.fillMaxWidth().weight(1f).clip(RoundedCornerShape(20.dp))
-                                    .background(if (n > 0) Mg.Yellow else Color.White)
-                                    .then(
-                                        if (n >
-                                            0
-                                        ) {
-                                            Modifier
-                                        } else {
-                                            Modifier.border(
-                                                2.dp,
-                                                Mg.Line,
-                                                RoundedCornerShape(20.dp)
-                                            )
-                                        }
-                                    )
-                                    .padding(horizontal = 18.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(20.dp)
-                            ) {
-                                IconBadge(
-                                    motionIcon(sign),
-                                    size = 56.dp,
-                                    background = if (n >
-                                        0
-                                    ) {
-                                        Color.White
-                                    } else {
-                                        Mg.Chip
-                                    },
-                                    tint = if (n >
-                                        0
-                                    ) {
-                                        Mg.OrangeText
-                                    } else {
-                                        Mg.Muted
-                                    }
-                                )
-                                Text(
-                                    sign.label,
-                                    Modifier.weight(1f),
-                                    style = if (n >
-                                        0
-                                    ) {
-                                        Mg.bold(28, 36)
-                                    } else {
-                                        Mg.regular(28, 36)
-                                    },
-                                    color = if (n >
-                                        0
-                                    ) {
-                                        Mg.Ink
-                                    } else {
-                                        Mg.Muted
-                                    }
-                                )
-                                if (editing) {
-                                    StepButton(MgIcons.Minus, n > 0) {
-                                        viewModel.setMotion(
-                                            (
-                                                record
-                                                    ?: MotionRecord()
-                                                ).withCount(sign, n - 1)
-                                        )
-                                    }
-                                }
-                                Text(
-                                    "${n}회",
-                                    style = Mg.bold(31, 39),
-                                    color = if (n >
-                                        0
-                                    ) {
-                                        Mg.OrangeText
-                                    } else {
-                                        Mg.Muted
-                                    }
-                                )
-                                if (editing) {
-                                    StepButton(MgIcons.Plus, true) {
-                                        viewModel.setMotion(
-                                            (
-                                                record
-                                                    ?: MotionRecord()
-                                                ).withCount(sign, n + 1)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(20.dp))
-                    InfoNote(
-                        if (record ==
-                            null
-                        ) {
-                            "아직 기록하지 않았어요 · 기록 수정으로 입력할 수 있어요"
-                        } else {
-                            "걱정되면 수의사와 상담해 주세요"
-                        },
-                        style = Mg.regular(21, 28)
+                    SummaryTile(MgIcons.Car, "최근 7일 이동", "${week.tripCount}", "번", null, false)
+                    SummaryTile(
+                        MgIcons.Yawn,
+                        "징후가 보인 이동",
+                        "${week.signTrips}",
+                        "번",
+                        "${week.tripCount}번 중".takeIf { week.tripCount > 0 },
+                        week.signTrips > 0
+                    )
+                    val top = week.top
+                    SummaryTile(
+                        top?.first?.let(::motionIcon) ?: MgIcons.Yawn,
+                        "가장 자주 보인 징후",
+                        top?.first?.label ?: "없음",
+                        null,
+                        top?.let { "${week.tripCount}번 중 ${it.second}번" },
+                        top != null
                     )
                 }
-                Column(Modifier.weight(1f).fillMaxHeight()) {
-                    val recent = windowTrips(all, t, analysis)
-                    MgCard(
-                        Modifier.fillMaxWidth().height(492.dp),
-                        padding = PaddingValues(horizontal = 38.dp, vertical = 32.dp)
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                "최근 ${recent.size}번 이동 비교",
-                                Modifier.weight(1f),
-                                style = Mg.bold(28, 36),
-                                color = Mg.Ink
-                            )
-                            Box(
-                                Modifier.size(
-                                    16.dp
-                                ).background(Mg.BarGrey, RoundedCornerShape(3.dp))
-                            )
-                            Text(" 지난 이동", style = Mg.regular(21, 28), color = Mg.Muted)
-                            Spacer(Modifier.width(20.dp))
-                            Box(
-                                Modifier.size(16.dp).background(Mg.Orange, RoundedCornerShape(3.dp))
-                            )
-                            Text(" 이번 이동", style = Mg.regular(21, 28), color = Mg.Muted)
-                        }
-                        MotionBars(
-                            recent,
-                            t,
-                            applied != null,
-                            Modifier.fillMaxWidth().weight(1f).padding(top = 20.dp)
-                        )
-                    }
-                    Spacer(Modifier.height(24.dp))
-                    val insight = analysis?.insight
-                    val tip = insight?.let(::insightTip)
-                    BulbCard(
-                        tip?.title ?: "이동 기록을 더 모으면 변화를 비교할 수 있어요.",
-                        tip?.body ?: "15분 이상 이동하고 징후를 기록하면 비교에 쓰여요.",
-                        Modifier.fillMaxWidth().heightIn(min = 115.dp),
-                        color = Mg.Yellow,
-                        bodyStyle = Mg.regular(23, 30),
-                        bodyColor = Color(0xFF4E5968)
-                    )
-                    Spacer(Modifier.height(24.dp))
-                    // Insight and recommendation come from the same analysis result; nothing is applied
-                    // until the guardian accepts it on the interval screen.
-                    val recommendation = analysis?.recommendation
-                    val recommended = if (applied == null) analysis?.recommendedMinutes else null
-                    // Keep: wraps its content with equal top/bottom padding instead of filling the column.
-                    val keep = applied == null && recommended == null
-                    MgCard(
-                        if (keep) Modifier.fillMaxWidth() else Modifier.fillMaxWidth().weight(1f),
-                        padding = PaddingValues(horizontal = 27.dp, vertical = 28.dp)
-                    ) {
-                        ChevronTitle(
-                            when {
-                                applied != null -> "다음 이동부터 이렇게 바뀌어요"
-                                recommended != null -> "다음 이동에 이렇게 바꿔 볼까요?"
-                                else -> "다음 이동도 지금 간격을 유지해요"
-                            },
-                            recommended?.let { r -> { onOpenInterval(r) } }
-                        )
-                        Spacer(Modifier.height(24.dp))
-                        Row(
-                            Modifier.fillMaxWidth().height(
-                                150.dp
-                            ).background(
-                                Mg.Yellow,
-                                RoundedCornerShape(20.dp)
-                            ).padding(horizontal = 30.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(24.dp)
-                        ) {
-                            IconBadge(MgIcons.Cup, size = 66.dp, background = Color.White)
-                            Column(
-                                Modifier.weight(1f),
-                                verticalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Text(
-                                    if (applied == null &&
-                                        recommended == null
-                                    ) {
-                                        "휴식 간격"
-                                    } else {
-                                        "휴식 추천 간격"
-                                    },
-                                    style = Mg.bold(28, 36),
-                                    color = Mg.Ink
-                                )
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(14.dp)
-                                ) {
-                                    val from = applied?.from ?: interval
-                                    val to = applied?.to ?: recommended
-                                    // Figma 465:48812: 지금 R25 · 추천 B25 망고
-                                    Text(
-                                        intervalText(from),
-                                        style = Mg.regular(25, 32),
-                                        color = Color(0xFF4E5968)
-                                    )
-                                    if (to != null) {
-                                        MgIcon(MgIcons.ArrowRight, Mg.OrangeText, 18.dp)
-                                        Text(
-                                            intervalText(to),
-                                            style = Mg.bold(25, 32),
-                                            color = Mg.OrangeText
-                                        )
-                                    } else {
-                                        Text(
-                                            "· 지금 간격 유지",
-                                            style = Mg.regular(25, 32),
-                                            color = Color(0xFF4E5968)
-                                        )
-                                    }
-                                }
-                            }
-                            when {
-                                applied != null -> Row(
-                                    Modifier.height(
-                                        70.dp
-                                    ).background(
-                                        Mg.Orange,
-                                        CircleShape
-                                    ).padding(horizontal = 30.dp),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
-                                ) {
-                                    MgIcon(MgIcons.Check, Color.White, 18.dp)
-                                    Text("적용됨", style = Mg.bold(25, 32), color = Color.White)
-                                }
-                                recommended != null -> Switch(
-                                    false,
-                                    { if (it) onOpenInterval(recommended) },
-                                    colors = SwitchDefaults.colors(
-                                        checkedTrackColor = Mg.Orange,
-                                        uncheckedTrackColor = Mg.BarGrey,
-                                        uncheckedThumbColor = Color.White,
-                                        uncheckedBorderColor = Color.Transparent
-                                    )
-                                )
-                            }
-                        }
-                        if (applied == null && recommendation is RestRecommendation.Shorten) {
-                            Spacer(Modifier.height(18.dp))
-                            InfoNote(
-                                "스위치를 켜면 상세 페이지에서 휴식 간격을 조절할 수 있어요. 직접 적용하기 전엔 바뀌지 않아요.",
-                                style = Mg.regular(21, 28)
-                            )
-                        }
-                    }
-                }
+                Spacer(Modifier.height(22.dp))
+                MotionTable(
+                    week = week,
+                    highlight = tripDay?.takeIf { it in week.start..week.end },
+                    editable = true,
+                    unrecorded = record?.entered != true,
+                    onToggle = { sign ->
+                        viewModel.setMotion((record ?: MotionRecord()).toggle(sign))
+                    },
+                    modifier = Modifier.fillMaxWidth().weight(1f)
+                )
+                Spacer(Modifier.height(22.dp))
+                PatternCard(week, analysis, interval, applied, onOpenInterval)
             }
             if (toast && applied != null) {
-                Row(
-                    Modifier.align(
-                        Alignment.Center
-                    ).offset(
-                        y = (-40).dp
-                    ).height(91.dp).background(Mg.Ink, CircleShape).padding(horizontal = 40.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(20.dp)
-                ) {
-                    Box(
-                        Modifier.size(32.dp).background(Mg.Orange, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        MgIcon(MgIcons.Check, Color.White, 16.dp)
-                    }
-                    Text(
-                        "휴식 간격을 ${intervalText(applied.to)}으로 바꿨어요",
-                        style = Mg.regular(25, 32),
-                        color = Color.White
-                    )
-                    Box(Modifier.width(2.dp).height(30.dp).background(Mg.Muted))
-                    Text(
-                        "되돌리기",
-                        Modifier.clickable {
-                            toast = false
-                            onUndo(applied)
-                        },
-                        style = Mg.bold(25, 32),
-                        color = Mg.Orange
-                    )
+                AppliedToast(applied) {
+                    toast = false
+                    onUndo(applied)
                 }
             }
         }
@@ -432,106 +178,315 @@ fun MotionSicknessRoute(
 }
 
 @Composable
-private fun StepButton(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
-    enabled: Boolean,
-    onClick: () -> Unit
-) {
-    Box(
-        Modifier.size(52.dp).clip(CircleShape).background(if (enabled) Color.White else Mg.Chip)
-            .border(2.dp, Mg.Line, CircleShape).clickable(enabled = enabled, onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) { MgIcon(icon, if (enabled) Mg.Ink else Mg.Faint, 22.dp) }
+private fun WeekNav(week: MotionWeek, canNext: Boolean, onPrev: () -> Unit, onNext: () -> Unit) {
+    Row(
+        Modifier.height(59.dp).background(Mg.Chip, CircleShape).padding(horizontal = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            Modifier.size(44.dp).clip(CircleShape).clickable(onClick = onPrev),
+            contentAlignment = Alignment.Center
+        ) { MgIcon(MgIcons.ChevronLeft, Mg.Ink, 18.dp) }
+        Text(
+            "${week.start.monthValue}월 ${week.start.dayOfMonth}일 – " +
+                "${week.end.monthValue}월 ${week.end.dayOfMonth}일",
+            Modifier.padding(horizontal = 12.dp),
+            style = Mg.bold(24, 32),
+            color = Mg.Ink
+        )
+        Box(
+            Modifier.size(44.dp).clip(CircleShape).clickable(enabled = canNext, onClick = onNext),
+            contentAlignment = Alignment.Center
+        ) { MgIcon(MgIcons.ChevronRight, if (canNext) Mg.Ink else Mg.BarGrey, 18.dp) }
+    }
 }
 
 @Composable
-private fun MotionBars(
-    recent: List<Pair<TripEntity, MotionRecord?>>,
-    current: TripEntity,
-    withDuration: Boolean,
+private fun RowScope.SummaryTile(
+    icon: ImageVector,
+    label: String,
+    value: String,
+    unit: String?,
+    note: String?,
+    accent: Boolean
+) {
+    val color = if (accent) Mg.OrangeText else Mg.Ink
+    Row(
+        Modifier.weight(1f).fillMaxHeight().background(Color.White, RoundedCornerShape(Mg.Radius))
+            .padding(horizontal = 29.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconBadge(icon, size = 64.dp)
+        Spacer(Modifier.width(22.dp))
+        Column(Modifier.weight(1f)) {
+            Text(label, style = Mg.regular(21, 28), color = Mg.Muted)
+            Row(verticalAlignment = Alignment.Bottom) {
+                Text(value, style = Mg.bold(43, 52), color = color, maxLines = 1)
+                unit?.let {
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        it,
+                        Modifier.padding(bottom = 6.dp),
+                        style = Mg.bold(24, 32),
+                        color = color
+                    )
+                }
+            }
+        }
+        note?.let {
+            Text(
+                it,
+                Modifier.align(Alignment.Bottom).padding(bottom = 30.dp),
+                style = Mg.regular(21, 28),
+                color = Mg.Muted
+            )
+        }
+    }
+}
+
+private val TABLE_LABEL_W = 245.dp
+private val TABLE_TOTAL_W = 130.dp
+private val TABLE_ROW_H = 68.dp
+private val TableDim = Color(0xFFB0B8C1)
+private val TableSub = Color(0xFF4E5968)
+
+@Composable
+private fun MotionTable(
+    week: MotionWeek,
+    highlight: LocalDate?,
+    editable: Boolean,
+    unrecorded: Boolean,
+    onToggle: (MotionSign) -> Unit,
     modifier: Modifier
 ) {
-    val measurer = rememberTextMeasurer()
-    // Figma 465:48770: 눈금 R20 · 개수 B20 · 날짜 R23(이번 B23) · 점수 R19
-    val axis = Mg.regular(20, 26).copy(color = Mg.Muted)
-    val countStyle = Mg.bold(20, 26)
-    val subStyle = Mg.regular(19, 25)
-    val dateStyle = Mg.regular(23, 30)
-    val maxCount = (recent.maxOfOrNull { it.second?.total ?: 0 } ?: 0).coerceAtLeast(4)
-    Canvas(modifier) {
-        val left = 40.dp.toPx()
-        val labelsH = 70.dp.toPx()
-        val topPad = 34.dp.toPx()
-        val h = size.height - labelsH - topPad
-        val w = size.width - left
-        for (i in 0..4) {
-            val v = maxCount * i / 4
-            val y = topPad + h * (1f - i / 4f)
-            drawLine(
-                Mg.Line,
-                Offset(left, y),
-                Offset(size.width, y),
-                2f,
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(8f, 8f))
-            )
-            val text = measurer.measure("$v", axis)
-            drawText(text, topLeft = Offset(0f, y - text.size.height / 2))
+    MgCard(
+        modifier,
+        padding = PaddingValues(start = 37.dp, end = 37.dp, top = 30.dp, bottom = 22.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text("날짜별로 보면", Modifier.weight(1f), style = Mg.bold(29, 38), color = Mg.Ink)
+            CheckMark(true, 24.dp)
+            Text(" 보였어요", style = Mg.regular(20, 26), color = TableSub)
+            Spacer(Modifier.width(18.dp))
+            CheckMark(false, 24.dp)
+            Text(" 없었어요", style = Mg.regular(20, 26), color = TableSub)
         }
-        val slot = w / recent.size.coerceAtLeast(1)
-        val barW = (slot * 0.42f).coerceAtMost(76.dp.toPx())
-        recent.forEachIndexed { i, (trip, record) ->
-            val cx = left + slot * (i + 0.5f)
-            val isNow = trip.id == current.id
-            val n = record?.total
-            val bh = if (n == null) 0f else (n / maxCount.toFloat()) * h
-            val color = if (isNow) Mg.Orange else Mg.BarGrey
-            drawRoundRect(
-                color,
-                Offset(cx - barW / 2, topPad + h - bh.coerceAtLeast(4f)),
-                Size(barW, bh.coerceAtLeast(4f)),
-                CornerRadius(8.dp.toPx())
-            )
-            val countText = measurer.measure(
-                n?.let {
-                    "${it}개"
-                } ?: "기록 없음",
-                countStyle.copy(color = if (isNow) Mg.OrangeText else Color(0xFF4E5968))
-            )
-            drawText(
-                countText,
-                topLeft = Offset(
-                    cx - countText.size.width / 2,
-                    topPad + h - bh - countText.size.height - 6.dp.toPx()
-                )
-            )
-            val date = measurer.measure(
-                dateText(trip.startedAtEpoch, "M/d"),
-                (
-                    if (isNow) {
-                        dateStyle.copy(
-                            fontWeight = FontWeight.Bold
+        Spacer(Modifier.height(10.dp))
+        Box(Modifier.fillMaxWidth().weight(1f)) {
+            // 이번 이동이 있는 날 열 바탕
+            highlight?.let { day ->
+                val index = week.days.indexOfFirst { it.date == day }
+                if (index >= 0) {
+                    BoxWithConstraints(Modifier.fillMaxSize()) {
+                        val col = (maxWidth - TABLE_LABEL_W - TABLE_TOTAL_W) / MOTION_WEEK_DAYS
+                        Box(
+                            Modifier.offset(x = TABLE_LABEL_W + col * index + 8.dp)
+                                .width(col - 16.dp).fillMaxHeight()
+                                .background(Mg.Peach, RoundedCornerShape(16.dp))
                         )
-                    } else {
-                        dateStyle
                     }
-                    ).copy(color = if (isNow) Mg.Ink else Mg.Muted)
-            )
-            drawText(date, topLeft = Offset(cx - date.size.width / 2, topPad + h + 12.dp.toPx()))
-            val sub =
-                (if (withDuration) "${koreanDuration(tripDurationMs(trip))} · " else "") +
-                    (trip.finalScore?.let { "${it}점" } ?: "")
-            val subText = measurer.measure(
-                sub,
-                subStyle.copy(color = if (isNow) Mg.Orange else Mg.Muted)
-            )
-            drawText(
-                subText,
-                topLeft = Offset(
-                    cx - subText.size.width / 2,
-                    topPad + h + 44.dp.toPx()
-                )
+                }
+            }
+            Column(Modifier.fillMaxSize()) {
+                TableRow(label = {}, total = {
+                    Text("7일 합계", style = Mg.bold(20, 26), color = TableSub)
+                }, week = week) { day ->
+                    val on = day.date == highlight
+                    Text(
+                        "${dayName(day.date)} ${day.date.monthValue}/${day.date.dayOfMonth}",
+                        style = if (on) Mg.bold(20, 26) else Mg.regular(20, 26),
+                        color = if (on) Mg.OrangeText else TableSub
+                    )
+                }
+                TableRow(
+                    label = { RowLabel(MgIcons.Car, "이동 시간", true) },
+                    total = { Text("${week.tripCount}번", style = Mg.bold(23, 30), color = Mg.Ink) },
+                    week = week
+                ) { day ->
+                    if (day.trips == 0) {
+                        Text("–", style = Mg.regular(21, 28), color = Mg.BarGrey)
+                    } else {
+                        Text(
+                            hm((day.drivingMs / 60_000).toInt()),
+                            Modifier.background(
+                                if (day.date == highlight) Color.White else Mg.Chip,
+                                CircleShape
+                            ).padding(horizontal = 20.dp, vertical = 6.dp),
+                            style = Mg.bold(20, 26),
+                            color = Mg.Ink
+                        )
+                    }
+                }
+                Box(Modifier.fillMaxWidth().height(2.dp).background(Mg.Line))
+                MotionSign.entries.forEach { sign ->
+                    val seen = week.perSign[sign] ?: 0
+                    TableRow(
+                        label = { RowLabel(motionIcon(sign), sign.label, seen > 0) },
+                        total = {
+                            Text(
+                                "$seen / ${week.tripCount}",
+                                style = Mg.bold(23, 30),
+                                color = if (seen > 0) Mg.OrangeText else TableDim
+                            )
+                        },
+                        week = week
+                    ) { day ->
+                        val tappable = editable && day.date == highlight
+                        if (day.trips > 0 && (day.recorded || tappable)) {
+                            Box(
+                                Modifier.size(52.dp).clip(CircleShape).then(
+                                    if (tappable) {
+                                        Modifier.clickable {
+                                            onToggle(sign)
+                                        }
+                                    } else {
+                                        Modifier
+                                    }
+                                ),
+                                contentAlignment = Alignment.Center
+                            ) { CheckMark(sign in day.signs, 36.dp) }
+                        }
+                    }
+                }
+                Spacer(Modifier.weight(1f))
+            }
+        }
+        Text(
+            "주행이 끝날 때 체크한 \"보였어요\"만 모아서 세요 · 이동이 ${MOTION_PATTERN_MIN_TRIPS}번 이상일 때 판단해요" +
+                if (unrecorded && highlight != null) " · 주황 칸을 눌러 이번 이동을 기록해요" else "",
+            style = Mg.regular(20, 26),
+            color = Mg.Muted
+        )
+    }
+}
+
+@Composable
+private fun TableRow(
+    label: @Composable () -> Unit,
+    total: @Composable () -> Unit,
+    week: MotionWeek,
+    cell: @Composable (MotionDay) -> Unit
+) {
+    Row(
+        Modifier.fillMaxWidth().height(TABLE_ROW_H),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(Modifier.width(TABLE_LABEL_W)) { label() }
+        week.days.forEach { day ->
+            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) { cell(day) }
+        }
+        Box(Modifier.width(TABLE_TOTAL_W), contentAlignment = Alignment.Center) { total() }
+    }
+}
+
+@Composable
+private fun RowLabel(icon: ImageVector, text: String, strong: Boolean) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        MgIcon(icon, if (strong) Mg.Ink else Mg.Faint, 22.dp)
+        Spacer(Modifier.width(14.dp))
+        Text(
+            text,
+            style = if (strong) Mg.bold(23, 30) else Mg.regular(23, 30),
+            color = if (strong) Mg.Ink else Mg.Faint
+        )
+    }
+}
+
+/** 보였어요 = 주황 원 + 흰 체크, 없었어요 = 회색 테두리 원 */
+@Composable
+private fun CheckMark(on: Boolean, size: Dp) {
+    if (on) {
+        Box(
+            Modifier.size(size).background(Mg.Orange, CircleShape),
+            contentAlignment = Alignment.Center
+        ) { MgIcon(MgIcons.Check, Color.White, size * 0.45f) }
+    } else {
+        Box(Modifier.size(size).border(2.dp, Mg.BarGrey, CircleShape))
+    }
+}
+
+private fun dayName(date: LocalDate) =
+    date.dayOfWeek.getDisplayName(java.time.format.TextStyle.SHORT, Locale.KOREAN)
+
+/** 어두운 패턴 · 제안 카드: 규칙 분석 결과로만 말하고, 바꾸는 건 휴식 간격 화면에서 보호자가 한다 */
+@Composable
+private fun PatternCard(
+    week: MotionWeek,
+    analysis: MotionAnalysis?,
+    interval: Int,
+    applied: AppliedInterval?,
+    onOpenInterval: (Int) -> Unit
+) {
+    val tip = analysis?.insight?.let(::insightTip)
+    val recommended = if (applied == null) analysis?.recommendedMinutes else null
+    val title = when {
+        applied != null -> "다음 이동부터 ${intervalText(applied.to)}마다 쉬어 가요"
+        tip != null -> tip.title
+        week.tripCount < MOTION_PATTERN_MIN_TRIPS ->
+            "이동이 ${MOTION_PATTERN_MIN_TRIPS}번 이상 모이면 패턴을 알려 드릴게요"
+        week.signTrips == 0 -> "이번 주는 징후 없이 잘 다녀왔어요"
+        else -> "아직 눈에 띄는 패턴은 없어요"
+    }
+    val body = when {
+        applied != null -> "휴식 간격을 ${intervalText(
+            applied.from
+        )} → ${intervalText(applied.to)}으로 바꿨어요"
+        recommended != null ->
+            "다음 이동부터 휴식 간격을 ${intervalText(interval)} → ${intervalText(recommended)}으로 줄여 볼까요?"
+        tip != null -> tip.body
+        week.tripCount < MOTION_PATTERN_MIN_TRIPS -> "주행이 끝날 때 보인 모습을 체크해 주세요"
+        else -> "지금처럼 ${intervalText(interval)}마다 쉬어 가요"
+    }
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 144.dp)
+            .background(Mg.Ink, RoundedCornerShape(Mg.Radius))
+            .padding(horizontal = 37.dp, vertical = 22.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        IconBadge(MgIcons.Bulb, size = 70.dp, background = Mg.Orange, tint = Color.White)
+        Spacer(Modifier.width(26.dp))
+        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(title, style = Mg.bold(29, 38), color = Color.White)
+            Text(body, style = Mg.regular(21, 28), color = Mg.OnDarkMuted)
+        }
+        if (recommended != null) {
+            Spacer(Modifier.width(24.dp))
+            PrimaryButton(
+                "휴식 간격 바꿔 보기",
+                { onOpenInterval(recommended) },
+                Modifier.width(320.dp).height(82.dp),
+                style = Mg.bold(25, 32)
             )
         }
+    }
+}
+
+@Composable
+private fun BoxScope.AppliedToast(applied: AppliedInterval, onUndo: () -> Unit) {
+    Row(
+        Modifier.align(Alignment.Center).offset(y = (-40).dp).height(91.dp)
+            .background(Mg.Ink, CircleShape).padding(horizontal = 40.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(20.dp)
+    ) {
+        Box(
+            Modifier.size(32.dp).background(Mg.Orange, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            MgIcon(MgIcons.Check, Color.White, 16.dp)
+        }
+        Text(
+            "휴식 간격을 ${intervalText(applied.to)}으로 바꿨어요",
+            style = Mg.regular(25, 32),
+            color = Color.White
+        )
+        Box(Modifier.width(2.dp).height(30.dp).background(Mg.Muted))
+        Text(
+            "되돌리기",
+            Modifier.clickable(onClick = onUndo),
+            style = Mg.bold(25, 32),
+            color = Mg.Orange
+        )
     }
 }
 

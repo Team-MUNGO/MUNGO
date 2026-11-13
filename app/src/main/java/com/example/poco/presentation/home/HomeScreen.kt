@@ -37,7 +37,6 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
@@ -46,28 +45,33 @@ import com.example.poco.core.designsystem.MungoIcon
 import com.example.poco.core.designsystem.MungoIconView
 import com.example.poco.core.designsystem.PetPhoto
 import com.example.poco.core.designsystem.ScoreRing
+import com.example.poco.core.designsystem.ShihTzuIllustration
 import com.example.poco.core.designsystem.component.pressable
 import com.example.poco.core.designsystem.hasFullPetImage
 import com.example.poco.core.designsystem.previewTrip
 import com.example.poco.core.theme.MungoRadius
 import com.example.poco.core.theme.MungoTheme
 import com.example.poco.core.util.eulReul
-import com.example.poco.core.util.toMonthDay
 import com.example.poco.data.model.MotionSensitivity
 import com.example.poco.data.model.Pet
 import com.example.poco.data.model.PetSeat
 import com.example.poco.data.model.PetTrait
-import com.example.poco.domain.driving.PetType
+import com.example.poco.domain.driving.TemperatureGroup
+import com.example.poco.domain.driving.isSenior
 import com.example.poco.domain.driving.temperatureStandard
 import com.example.poco.presentation.common.MungoNavRail
 import com.example.poco.presentation.common.RailTab
 import com.example.poco.presentation.design.Mg
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 import kotlin.math.roundToInt
 
 /*
- * 홈 (mungo 시안 · 1700×1184)
- * [메뉴 레일 | 펫 · 차량 상태 패널 | 드라이브 카드 + 컴포트 점수 · 이번 주 이동]
- * - 아직 차량 정보가 없는 칸(공기 청정 · 날씨 · 차종)은 '—' 또는 생략
+ * 홈 (Figma 페이지 4 · Home 510:38 · 1700×1184)
+ * [메뉴 레일 | 펫 · 차량 상태 패널 | 드라이브 카드 + 최근 이동 · 이번 주 이동 · 휴식 추천 간격]
+ * - 아직 차량에서 못 읽는 값(공기 청정 · 날씨)은 '—' 또는 생략
+ * - 연동을 해지해도 배치는 같고, 아래 카드는 회색 면 · 회색 값이 되며 눌리지 않는다
  */
 
 @Composable
@@ -75,6 +79,7 @@ fun HomeRoute(
     navigateToPetProfile: () -> Unit,
     navigateToBoarding: () -> Unit,
     navigateToDriving: () -> Unit,
+    navigateToRecords: () -> Unit = {},
     navigateToWeeklyRecords: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
@@ -98,6 +103,7 @@ fun HomeRoute(
         onOpenPet = navigateToPetProfile,
         onStartDrive = navigateToBoarding,
         onRelink = viewModel::relinkVehicle,
+        onOpenRecentTrip = navigateToRecords,
         onOpenWeekTrips = navigateToWeeklyRecords
     )
 }
@@ -109,9 +115,11 @@ private fun HomeScreen(
     onStartDrive: () -> Unit,
     modifier: Modifier = Modifier,
     onRelink: () -> Unit = {},
+    onOpenRecentTrip: () -> Unit = {},
     onOpenWeekTrips: () -> Unit = {}
 ) {
     val colors = MungoTheme.colors
+    val linked = uiState.isVehicleLinked
     Row(
         modifier = modifier
             .fillMaxSize()
@@ -138,7 +146,7 @@ private fun HomeScreen(
             DriveCard(
                 pet = uiState.pet,
                 onStartDrive = onStartDrive,
-                linked = uiState.isVehicleLinked,
+                linked = linked,
                 onRelink = onRelink,
                 modifier = Modifier
                     .fillMaxWidth()
@@ -148,19 +156,27 @@ private fun HomeScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(23.dp)
+                horizontalArrangement = Arrangement.spacedBy(24.dp)
             ) {
-                // 연동이 꺼져도 배치는 같고, 카드 면 · 값 · 그래프만 회색으로 보여 준다
-                ComfortCard(
+                // 최근 이동 · 이번 주 이동은 누르면 이동 기록 탭으로 (연동 해지 중에는 눌리지 않는다)
+                RecentTripCard(
                     score = uiState.lastTrip?.comfortScore,
-                    linked = uiState.isVehicleLinked,
-                    modifier = cell()
+                    endedAtMillis = uiState.lastTrip?.endedAtMillis,
+                    linked = linked,
+                    modifier = cell(),
+                    onClick = onOpenRecentTrip
                 )
                 WeekTripCard(
                     counts = uiState.weekTripCounts,
-                    linked = uiState.isVehicleLinked,
-                    modifier = Modifier.weight(2f).fillMaxHeight(),
+                    linked = linked,
+                    modifier = cell(),
                     onClick = onOpenWeekTrips
+                )
+                RestIntervalCard(
+                    minutes = uiState.restIntervalMinutes,
+                    reason = uiState.pet?.restReason(),
+                    linked = linked,
+                    modifier = cell()
                 )
             }
         }
@@ -171,22 +187,22 @@ private fun RowScope.cell(): Modifier = Modifier.weight(1f).fillMaxHeight()
 
 // region 펫 · 차량 상태 패널
 
-/** 연동 중 · 해지 모두 같은 배치. 해지하면 차량 값은 '—', 칩 · 칸은 회색 */
+/** 연동 중 · 해지 모두 같은 배치. 해지하면 차량 값은 '—', 강조 칸은 회색 */
 @Composable
 private fun PetPanel(uiState: HomeUiState, onOpenPet: () -> Unit, modifier: Modifier = Modifier) {
     val colors = MungoTheme.colors
     val typography = MungoTheme.typography
     val pet = uiState.pet
     val linked = uiState.isVehicleLinked
-    val today = remember { System.currentTimeMillis().toMonthDay() }
+    val today = remember { DATE_FORMAT.format(Date()) }
     Column(
         modifier = modifier
             .background(colors.bgSurface)
-            .padding(start = 32.dp, end = 32.dp, top = 44.dp, bottom = 46.dp)
+            .padding(start = 32.dp, end = 32.dp, top = 52.dp, bottom = 46.dp)
     ) {
-        // Figma 470:55182 정보 패널: 날짜 47 · 사진 124 · 이름 292 · 구분선 469 · 상태 칸 670
-        Text(text = today, style = Mg.regular(22, 28), color = colors.textTertiary)
-        Spacer(Modifier.height(48.dp))
+        // Figma 510:84 날짜 · 510:85 사진 · 510:87 이름 · 510:95 구분선 · 510:102 상태 칸
+        Text(text = today, style = Mg.regular(20, 24), color = colors.textSecondary)
+        Spacer(Modifier.height(47.dp))
         // 펫 사진 · 이름 (누르면 마이펫)
         Column(
             modifier = Modifier.pressable(RoundedCornerShape(MungoRadius.md), onClick = onOpenPet)
@@ -201,86 +217,88 @@ private fun PetPanel(uiState: HomeUiState, onOpenPet: () -> Unit, modifier: Modi
                     photoPath = pet?.photoPath,
                     breed = pet?.breed,
                     modifier = Modifier.size(
-                        if (hasFullPetImage(pet?.photoPath, pet?.breed)) AVATAR_SIZE else 96.dp
+                        if (hasFullPetImage(pet?.photoPath, pet?.breed)) AVATAR_SIZE else 74.dp
                     )
                 )
             }
-            Spacer(Modifier.height(36.dp))
-            Row(verticalAlignment = Alignment.Bottom) {
+            Spacer(Modifier.height(31.dp))
+            Text(text = "프로필", style = Mg.regular(20, 24), color = colors.textSecondary)
+            Spacer(Modifier.height(7.dp))
+            Text(
+                text = pet?.name ?: "펫을 추가해 주세요",
+                style = if (pet != null) Mg.bold(48, 58) else typography.title1,
+                color = colors.textPrimary,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            pet?.detailLine()?.takeIf { it.isNotEmpty() }?.let { detail ->
+                Spacer(Modifier.height(13.dp))
                 Text(
-                    text = pet?.name ?: "펫을 추가해 주세요",
-                    style = if (pet != null) Mg.bold(45, 55) else typography.title1,
-                    color = colors.textPrimary,
+                    text = detail,
+                    style = Mg.regular(23, 28),
+                    color = colors.textSecondary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
                 )
-                pet?.detailLine()?.takeIf { it.isNotEmpty() }?.let { detail ->
-                    Spacer(Modifier.width(12.dp))
-                    Text(
-                        text = detail,
-                        style = typography.body2,
-                        color = colors.textSecondary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.padding(bottom = 4.dp)
-                    )
-                }
             }
         }
-        pet?.tags()?.takeIf { it.isNotEmpty() }?.let { tags ->
-            Spacer(Modifier.height(16.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                tags.forEach { PetTag(it, linked = linked) }
+        pet?.let(::petChips)?.takeIf { it.all > 0 }?.let { chips ->
+            Spacer(Modifier.height(19.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(11.dp)) {
+                chips.shown.forEach { PetTag(it) }
+                // "+N"을 누르면 마이펫(케어 기준)으로
+                if (chips.more > 0) PetTag("+${chips.more}", onClick = onOpenPet)
             }
         }
-        Spacer(Modifier.height(60.dp))
+        Spacer(Modifier.height(35.dp))
         HorizontalDivider(color = colors.borderDefault)
-        Spacer(Modifier.height(58.dp))
+        Spacer(Modifier.height(31.dp))
 
-        // 차량 상태
+        // 차량 상태 (Figma 510:96 ~ 510:101)
+        Text(text = "차량", style = Mg.regular(20, 24), color = colors.textSecondary)
+        Spacer(Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = when {
-                    !linked -> "연결 안 됨"
-                    uiState.isParked == true -> "차량 정차 중"
-                    uiState.isParked == false -> "주행 중"
-                    else -> "차량 확인 중"
-                },
-                style = Mg.bold(37, 46),
+                text = if (linked) "연결됨" else "연결 안 됨",
+                style = Mg.bold(37, 44),
                 color = if (linked) colors.textPrimary else colors.textTertiary
             )
-            if (linked && uiState.isParked != null) {
+            if (linked) {
                 Spacer(Modifier.width(12.dp))
-                GearBadge(if (uiState.isParked) "P" else "D")
+                Box(
+                    modifier = Modifier
+                        .size(35.dp)
+                        .background(colors.bgAccent, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    MungoIconView(MungoIcon.CHECK, tint = colors.textOnAccent, size = 20.dp)
+                }
             }
         }
         Spacer(Modifier.height(12.dp))
         Text(
-            text = listOfNotNull(
-                uiState.vehicleName,
-                if (linked) "mungo 연동 중" else "연동이 꺼져 있어요"
-            ).joinToString(" | "),
-            style = Mg.regular(24, 31),
+            text = vehicleLine(uiState),
+            style = Mg.regular(21, 25),
             color = colors.textSecondary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
         )
-        Spacer(Modifier.height(54.dp))
+        Spacer(Modifier.height(38.dp))
 
         // 상태 칸: 실내 온도 · 창문 한 줄, 공기 청정이 아래 한 줄을 다 쓴다
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+            verticalArrangement = Arrangement.spacedBy(19.dp)
         ) {
-            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                // 견종 기준보다 덥거나 추우면 면 · 테두리 · 글자로 알린다 (Figma 488:12312)
+            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(17.dp)) {
+                // 견종 기준보다 덥거나 추우면 창문 닫힘과 같은 주황 강조로 알린다
                 StatusTile(
                     icon = MungoIcon.THERMOMETER,
                     label = "실내 온도",
                     value = uiState.seatTemperature?.takeIf { linked }
-                        ?.let { "${it.roundToInt()}°C" } ?: "—",
+                        ?.let { "${it.roundToInt()}°C" } ?: "–",
                     alert = linked && uiState.temperatureStatus == CheckStatus.WARNING
                 )
                 StatusTile(
@@ -289,58 +307,51 @@ private fun PetPanel(uiState: HomeUiState, onOpenPet: () -> Unit, modifier: Modi
                     value = when (uiState.isAllWindowsClosed.takeIf { linked }) {
                         true -> "닫힘"
                         false -> "열림"
-                        null -> "—"
+                        null -> "–"
                     },
                     highlighted = linked && uiState.isAllWindowsClosed == true
                 )
             }
-            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(17.dp)) {
                 // 공기 청정은 아직 차량 SDK에서 읽지 않는다
-                StatusTile(icon = MungoIcon.FAN, label = "공기 청정", value = "—")
+                StatusTile(icon = MungoIcon.FAN, label = "공기 청정", value = "–")
             }
         }
     }
 }
 
-/**
- * 프로필 칩: 모양(알약)은 같고 연동 상태에 따라 색만 바뀐다 (Figma 470:55188 연동 중 · 470:56703 연결해제)
- * 연동 중 = 연한 망고 배경 + 망고 글자, 해지 = 회색 배경 + 진한 글자
- */
+/** "그랜저 · 정차 중 · Pleos Connect" (해지하면 "그랜저 · 연동이 꺼져 있어요") */
+private fun vehicleLine(uiState: HomeUiState): String = if (uiState.isVehicleLinked) {
+    listOfNotNull(
+        uiState.vehicleName,
+        when (uiState.isParked) {
+            true -> "정차 중"
+            false -> "주행 중"
+            null -> null
+        },
+        "Pleos Connect"
+    )
+} else {
+    listOfNotNull(uiState.vehicleName, "연동이 꺼져 있어요")
+}.joinToString(" · ")
+
+/** 프로필 칩 (Figma 510:89): 회색 알약 + 진한 글자 */
 @Composable
-private fun PetTag(text: String, linked: Boolean) {
+private fun PetTag(text: String, onClick: (() -> Unit)? = null) {
     val colors = MungoTheme.colors
     Box(
         modifier = Modifier
-            .heightIn(min = 44.dp)
-            .background(if (linked) colors.bgAccentSubtle else colors.bgSurfaceSunken, CircleShape)
-            .padding(horizontal = 20.dp),
+            .pressable(CircleShape, onClick = onClick)
+            .heightIn(min = 45.dp)
+            .background(colors.bgSurfaceSunken, CircleShape)
+            .padding(horizontal = 19.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(
-            text = text,
-            style = Mg.semi(24, 31),
-            color = if (linked) colors.textAccent else colors.textPrimary
-        )
+        Text(text = text, style = Mg.bold(20, 24), color = colors.textPrimary)
     }
 }
 
-@Composable
-private fun GearBadge(gear: String) {
-    val colors = MungoTheme.colors
-    Box(
-        modifier = Modifier
-            .size(44.dp)
-            .background(colors.bgAccent, CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = gear,
-            style = Mg.bold(26, 34),
-            color = colors.textOnAccent
-        )
-    }
-}
-
+/** 상태 칸 (Figma 510:102): 왼쪽 위에 아이콘 · 이름 · 값을 차례로 */
 @Composable
 private fun RowScope.StatusTile(
     icon: MungoIcon,
@@ -351,59 +362,39 @@ private fun RowScope.StatusTile(
 ) {
     val colors = MungoTheme.colors
     val shape = RoundedCornerShape(MungoRadius.lg)
+    // 온도 경고도 창문 '닫힘'과 같은 홈 강조 스타일 (주행 화면의 굵은 테두리는 쓰지 않는다)
     val accent = highlighted || alert
     Column(
         modifier = Modifier
             .weight(1f)
             .fillMaxHeight()
-            .background(
-                when {
-                    alert -> colors.alertSurface()
-                    highlighted -> colors.bgAccentSubtle
-                    else -> colors.bgSurfaceSunken
-                },
-                shape
-            )
+            .background(if (accent) colors.bgAccentSubtle else colors.bgSurfaceSunken, shape)
             .then(
-                when {
-                    alert -> Modifier.border(ALERT_STROKE, colors.borderAccent, shape)
-                    highlighted -> Modifier.border(
-                        2.dp,
-                        colors.borderAccent.copy(alpha = 0.4f),
-                        shape
-                    )
-                    else -> Modifier
+                if (accent) {
+                    Modifier.border(2.dp, colors.borderAccent.copy(alpha = 0.4f), shape)
+                } else {
+                    Modifier
                 }
             )
-            .padding(start = 14.dp, end = 28.dp, top = 17.dp, bottom = 22.dp)
+            .padding(start = 27.dp, end = 20.dp, top = 34.dp, bottom = 20.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                modifier = Modifier
-                    .size(42.dp)
-                    .background(colors.bgSurface, CircleShape),
-                contentAlignment = Alignment.Center
-            ) {
-                MungoIconView(
-                    icon,
-                    tint = if (accent) colors.textAccent else colors.textPrimary,
-                    size = 22.dp
-                )
-            }
-            Spacer(Modifier.width(9.dp))
-            Text(
-                text = label,
-                style = if (alert) Mg.bold(24, 30) else Mg.regular(24, 30),
-                color = if (alert) colors.textAccent else colors.textSecondary,
-                maxLines = 1
-            )
-        }
-        Spacer(Modifier.weight(1f))
+        MungoIconView(
+            icon,
+            tint = if (accent) colors.textAccent else colors.textPrimary,
+            size = 24.dp
+        )
+        Spacer(Modifier.height(28.dp))
+        Text(
+            text = label,
+            style = Mg.regular(21, 30),
+            color = colors.textSecondary,
+            maxLines = 1
+        )
+        Spacer(Modifier.height(15.dp))
         Text(
             text = value,
-            style = if (alert) Mg.bold(35, 42) else Mg.semi(35, 42),
-            color = if (accent) colors.textAccent else colors.textPrimary,
-            modifier = Modifier.align(Alignment.End)
+            style = Mg.bold(35, 42),
+            color = if (accent) colors.textAccent else colors.textPrimary
         )
     }
 }
@@ -418,8 +409,9 @@ private fun com.example.poco.core.theme.MungoColors.alertSurface(): Color =
 // region 드라이브 카드
 
 /**
- * 드라이브 카드: 연동 중 · 해지 모두 같은 배치.
- * 해지하면 칩 · 제목 · 버튼 문구가 바뀌고, 버튼은 '다시 연결하기'로 연동을 되살린다
+ * 드라이브 카드 (Figma 510:123): 연동 중 · 해지 모두 같은 배치.
+ * 해지하면 칩 · 제목 · 버튼 문구가 바뀌고, 버튼은 '다시 연결하기'로 연동을 되살린다.
+ * 오른쪽 그림은 등록한 사진 · 품종과 상관없이 늘 mungo 시츄 일러스트
  */
 @Composable
 private fun DriveCard(
@@ -431,85 +423,94 @@ private fun DriveCard(
 ) {
     val colors = MungoTheme.colors
     val name = pet?.name ?: "우리 아이"
-    HomeCard(modifier = modifier, padding = 48.dp) {
-        Row(modifier = Modifier.fillMaxSize()) {
-            Column(
-                modifier = Modifier
-                    .weight(1f)
-                    .fillMaxHeight()
-            ) {
-                // 상태 칩 (해지 = 연한 망고 배경 + 망고 글자)
-                val chipText = if (linked) colors.textPrimary else colors.textAccent
-                Row(
-                    modifier = Modifier
-                        .background(
-                            if (linked) colors.bgSurfaceSunken else colors.bgAccentSubtle,
-                            CircleShape
-                        )
-                        .heightIn(min = 62.dp)
-                        .padding(horizontal = 32.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    MungoIconView(MungoIcon.CAR, tint = chipText, size = 24.dp)
-                    Spacer(Modifier.width(10.dp))
-                    Text(
-                        text = if (linked) "탑승 준비 전" else "차량 연동이 꺼져 있어요",
-                        style = Mg.semi(23, 30),
-                        color = chipText
-                    )
-                }
-                Spacer(Modifier.height(36.dp))
-                Text(
-                    text = if (linked) {
-                        "$name,\n드라이브 갈까요?"
-                    } else {
-                        "차량을 연결하면\n${name.eulReul} 지켜볼게요"
-                    },
-                    style = Mg.bold(65, 81),
-                    color = colors.textPrimary
-                )
-                Spacer(Modifier.weight(1f))
-                // 가장 큰 터치 영역: 탑승 준비 시작 → 탑승 준비 (기어 D · 내비 길 안내면 바로 주행)
-                val shape = CircleShape
-                Row(
-                    modifier = Modifier
-                        .background(colors.bgAccent, shape)
-                        .pressable(shape = shape, onClick = if (linked) onStartDrive else onRelink)
-                        .heightIn(min = 108.dp)
-                        .padding(horizontal = 48.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = if (linked) "탑승 준비 시작" else "다시 연결하기",
-                        style = Mg.bold(40, 52),
-                        color = colors.textOnAccent
-                    )
-                    Spacer(Modifier.width(16.dp))
-                    MungoIconView(
-                        if (linked) MungoIcon.PLAY_FILLED else MungoIcon.CAR,
-                        tint = colors.textOnAccent,
-                        size = 32.dp
-                    )
-                }
-            }
-            DriveIllustration(pet)
-        }
-    }
-}
-
-@Composable
-private fun DriveIllustration(pet: Pet?) {
     Box(
-        modifier = Modifier
-            .fillMaxHeight()
-            .width(DRIVE_ILLUSTRATION),
-        contentAlignment = Alignment.Center
+        modifier = modifier.background(colors.bgSurface, RoundedCornerShape(MungoRadius.xl))
     ) {
-        PetPhoto(
-            photoPath = pet?.photoPath,
-            breed = pet?.breed,
-            modifier = Modifier.size(DRIVE_ILLUSTRATION)
+        // 연동 중 = 앉은 시츄 (510:137) · 해지 = 서 있는 시츄 (488:11766)
+        ShihTzuIllustration(
+            standing = !linked,
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 29.dp, bottom = if (linked) 71.dp else 108.dp, top = 40.dp)
+                .then(
+                    if (linked) {
+                        Modifier.size(width = 441.dp, height = 460.dp)
+                    } else {
+                        Modifier.size(width = 423.dp, height = 385.dp)
+                    }
+                )
         )
+        Column(
+            modifier = Modifier
+                .fillMaxHeight()
+                .padding(start = 53.dp, top = 56.dp, bottom = 53.dp)
+        ) {
+            // 상태 칩 (해지 = 연한 망고 배경 + 망고 글자)
+            val chipText = if (linked) colors.textPrimary else colors.textAccent
+            Row(
+                modifier = Modifier
+                    .background(
+                        if (linked) colors.bgSurfaceSunken else colors.bgAccentSubtle,
+                        CircleShape
+                    )
+                    .heightIn(min = 48.dp)
+                    .padding(horizontal = 22.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                MungoIconView(
+                    if (linked) MungoIcon.MAP_PIN else MungoIcon.CAR,
+                    tint = chipText,
+                    size = 20.dp
+                )
+                Spacer(Modifier.width(8.dp))
+                Text(
+                    text = if (linked) "탑승 준비 전" else "차량 연동이 꺼져 있어요",
+                    style = Mg.bold(21, 26),
+                    color = chipText
+                )
+            }
+            Spacer(Modifier.height(40.dp))
+            Text(
+                text = if (linked) {
+                    "$name,\n드라이브 갈까요?"
+                } else {
+                    "차량을 연결하면\n${name.eulReul} 지켜볼게요"
+                },
+                style = Mg.bold(54, 75),
+                color = colors.textPrimary
+            )
+            if (!linked) {
+                Spacer(Modifier.height(15.dp))
+                Text(
+                    text = "이동 기록과 프로필은 그대로 있어요",
+                    style = Mg.regular(25, 30),
+                    color = colors.textSecondary
+                )
+            }
+            Spacer(Modifier.weight(1f))
+            // 가장 큰 터치 영역: 탑승 준비 시작 → 탑승 준비 (기어 D · 내비 길 안내면 바로 주행)
+            val shape = RoundedCornerShape(MungoRadius.lg)
+            Row(
+                modifier = Modifier
+                    .background(colors.bgAccent, shape)
+                    .pressable(shape = shape, onClick = if (linked) onStartDrive else onRelink)
+                    .width(428.dp)
+                    .heightIn(min = 107.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // 해지 상태 '다시 연결하기'는 글자만 (Figma 488:11763)
+                if (linked) {
+                    MungoIconView(MungoIcon.PLAY_FILLED, tint = colors.textOnAccent, size = 24.dp)
+                    Spacer(Modifier.width(20.dp))
+                }
+                Text(
+                    text = if (linked) "탑승 준비 시작" else "다시 연결하기",
+                    style = Mg.bold(32, 38),
+                    color = colors.textOnAccent
+                )
+            }
+        }
     }
 }
 
@@ -517,12 +518,41 @@ private fun DriveIllustration(pet: Pet?) {
 
 // region 아래 카드 (연동 해지면 Figma 488:11767 · 488:11775처럼 회색 면 · 회색 값)
 
+/**
+ * 최근 이동 (Figma 510:138 · 해지 488:11767): 마지막 이동의 컴포트 점수를 링으로.
+ * 기록이 없으면 '아직 없어요' + 빈 링, 있으면 '최근 이동 · 어제' + 점수 + '리포트 보기 ›'
+ */
 @Composable
-private fun ComfortCard(score: Int?, modifier: Modifier = Modifier, linked: Boolean = true) {
-    HomeCard(modifier = modifier, linked = linked) {
-        CardHeader(icon = MungoIcon.MAP, title = "컴포트 점수", linked = linked)
-        Spacer(Modifier.height(16.dp))
-        BigValue(value = score?.toString() ?: "0", unit = "점", linked = linked)
+private fun RecentTripCard(
+    score: Int?,
+    endedAtMillis: Long?,
+    modifier: Modifier = Modifier,
+    linked: Boolean = true,
+    onClick: () -> Unit = {}
+) {
+    HomeCard(
+        modifier = modifier.pressable(
+            RoundedCornerShape(MungoRadius.xl),
+            onClick = onClick.takeIf { linked }
+        ),
+        linked = linked
+    ) {
+        CardLabel(
+            listOfNotNull("최근 이동", endedAtMillis?.toRelativeDay()).joinToString(" · "),
+            linked = linked
+        )
+        if (score != null) {
+            Spacer(Modifier.height(23.dp))
+            BigValue(value = score.toString(), unit = "점", linked = linked)
+        } else {
+            val colors = MungoTheme.colors
+            Spacer(Modifier.height(36.dp))
+            Text(
+                text = "아직 없어요",
+                style = Mg.bold(40, 48),
+                color = if (linked) colors.textPrimary else colors.textTertiary
+            )
+        }
         Spacer(Modifier.height(16.dp))
         // 남은 공간의 가로 · 세로 가운데에, 칸 높이가 허락하는 만큼 (최대 RING_SIZE) 크게
         Box(
@@ -546,9 +576,18 @@ private fun ComfortCard(score: Int?, modifier: Modifier = Modifier, linked: Bool
                 EmptyRing(modifier = ringModifier, linked = linked)
             }
         }
+        if (score != null) {
+            Spacer(Modifier.height(12.dp))
+            Text(
+                text = "리포트 보기 ›",
+                style = Mg.regular(20, 24),
+                color = MungoTheme.colors.textTertiary
+            )
+        }
     }
 }
 
+/** 이번 주 이동 (Figma 510:144 · 해지 488:11775): 횟수 + 요일별 막대 그래프 (횟수만큼 높게) */
 @Composable
 private fun WeekTripCard(
     counts: List<Int>,
@@ -560,87 +599,116 @@ private fun WeekTripCard(
     val active = if (linked) colors.bgAccent else offStrongColor()
     val idle = if (linked) colors.borderDefault else offTrackColor()
     HomeCard(
-        modifier = modifier.pressable(RoundedCornerShape(MungoRadius.xl), onClick = onClick),
+        modifier = modifier.pressable(
+            RoundedCornerShape(MungoRadius.xl),
+            onClick = onClick.takeIf { linked }
+        ),
         linked = linked
     ) {
-        CardHeader(icon = MungoIcon.CALENDAR, title = "이번 주 이동", linked = linked)
-        Spacer(Modifier.height(16.dp))
+        CardLabel("이번 주 이동", linked = linked)
+        Spacer(Modifier.height(23.dp))
         BigValue(value = counts.sum().toString(), unit = "회", linked = linked)
         Spacer(Modifier.weight(1f))
-        // 요일 칸이 카드 폭을 나눠 쓴다 (넓어져도 막대가 같이 길어져 빈 곳이 생기지 않게)
+        val max = counts.maxOrNull()?.coerceAtLeast(1) ?: 1
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(start = 8.dp, end = 20.dp),
+            horizontalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             WEEK_DAYS.forEachIndexed { index, day ->
+                val count = counts.getOrElse(index) { 0 }
                 Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+                    // 0회는 낮은 알약, 그 외에는 이번 주 최다 횟수 대비 높이
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(12.dp)
-                            .background(
-                                if (counts.getOrElse(index) { 0 } > 0) active else idle,
-                                CircleShape
-                            )
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    Text(
-                        text = day,
-                        style = Mg.regular(17, 22),
-                        color = colors.textTertiary
-                    )
+                            .height(BAR_MAX_HEIGHT),
+                        contentAlignment = Alignment.BottomCenter
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(
+                                    BAR_MIN_HEIGHT + (BAR_MAX_HEIGHT - BAR_MIN_HEIGHT) * count / max
+                                )
+                                .background(
+                                    if (count > 0) active else idle,
+                                    RoundedCornerShape(BAR_RADIUS)
+                                )
+                        )
+                    }
+                    Spacer(Modifier.height(13.dp))
+                    Text(text = day, style = Mg.regular(17, 20), color = colors.textSecondary)
                 }
             }
         }
     }
 }
 
+/** 휴식 추천 간격 (Figma 510:163): 설정한 간격 + 펫 특성에 따른 이유 꼬리표 */
 @Composable
-private fun CardHeader(icon: MungoIcon, title: String, linked: Boolean = true) {
+private fun RestIntervalCard(
+    minutes: Int,
+    reason: String?,
+    modifier: Modifier = Modifier,
+    linked: Boolean = true
+) {
     val colors = MungoTheme.colors
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(
-            modifier = Modifier
-                .size(48.dp)
-                .background(if (linked) colors.bgSurfaceSunken else offTagColor(), CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            MungoIconView(
-                icon,
-                tint = if (linked) colors.textPrimary else colors.textTertiary,
-                size = 24.dp
-            )
+    val (value, unit) = minutes.toIntervalLabel()
+    HomeCard(modifier = modifier, linked = linked) {
+        CardLabel("휴식 추천 간격", linked = linked)
+        Spacer(Modifier.height(23.dp))
+        BigValue(value = value, unit = unit, linked = linked)
+        Spacer(Modifier.weight(1f))
+        reason?.let {
+            val tint = if (linked) colors.textAccent else colors.textTertiary
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .heightIn(min = 107.dp)
+                    .background(
+                        if (linked) colors.alertSurface() else offTagColor(),
+                        RoundedCornerShape(MungoRadius.md)
+                    )
+                    .padding(start = 23.dp, end = 16.dp, top = 26.dp, bottom = 20.dp)
+            ) {
+                MungoIconView(
+                    MungoIcon.TAG,
+                    tint = tint,
+                    size = 22.dp,
+                    modifier = Modifier.padding(top = 4.dp)
+                )
+                Spacer(Modifier.width(12.dp))
+                Text(text = it, style = Mg.bold(20, 32), color = tint)
+            }
         }
-        Spacer(Modifier.width(14.dp))
-        Text(
-            text = title,
-            style = Mg.regular(28, 36),
-            color = if (linked) Color(0xFF4D4D4D) else colors.textSecondary,
-            modifier = Modifier.weight(1f)
-        )
-        MungoIconView(MungoIcon.CHEVRON_RIGHT, tint = colors.textTertiary, size = 28.dp)
     }
 }
 
 @Composable
-private fun BigValue(value: String, unit: String?, linked: Boolean = true) {
+private fun CardLabel(title: String, linked: Boolean = true) {
+    val colors = MungoTheme.colors
+    Text(
+        text = title,
+        style = Mg.regular(21, 25),
+        color = if (linked) colors.textSecondary else colors.textTertiary
+    )
+}
+
+@Composable
+private fun BigValue(value: String, unit: String, linked: Boolean = true) {
     val colors = MungoTheme.colors
     val color = if (linked) colors.textPrimary else colors.textTertiary
     Row(verticalAlignment = Alignment.Bottom) {
+        Text(text = value, style = Mg.bold(67, 80), color = color)
+        Spacer(Modifier.width(8.dp))
         Text(
-            text = value,
-            style = Mg.bold(if (unit == null) 64 else 67, 80),
-            color = color
+            text = unit,
+            style = Mg.regular(27, 32),
+            color = color,
+            modifier = Modifier.padding(bottom = 8.dp)
         )
-        unit?.let {
-            Spacer(Modifier.width(8.dp))
-            Text(
-                text = it,
-                style = Mg.semi(30, 38),
-                color = color,
-                modifier = Modifier.padding(bottom = 10.dp)
-            )
-        }
     }
 }
 
@@ -674,7 +742,6 @@ private fun EmptyRing(modifier: Modifier = Modifier, linked: Boolean = true) {
 @Composable
 private fun HomeCard(
     modifier: Modifier = Modifier,
-    padding: Dp = 32.dp,
     linked: Boolean = true,
     content: @Composable ColumnScope.() -> Unit
 ) {
@@ -684,7 +751,7 @@ private fun HomeCard(
                 if (linked) MungoTheme.colors.bgSurface else offCardColor(),
                 RoundedCornerShape(MungoRadius.xl)
             )
-            .padding(padding),
+            .padding(start = 35.dp, end = 29.dp, top = 40.dp, bottom = 32.dp),
         content = content
     )
 }
@@ -719,8 +786,8 @@ private fun VerticalLine() {
     )
 }
 
-/** "시츄 | 10살 | 7kg" */
-private fun Pet.detailLine(separator: String = " | "): String = listOfNotNull(
+/** "시츄 · 10살 · 7kg" */
+private fun Pet.detailLine(separator: String = " · "): String = listOfNotNull(
     breed.takeIf { it.isNotBlank() },
     ageYears?.let { "${it}살" },
     weightKg?.let { "${it.toKgLabel()}kg" }
@@ -730,30 +797,49 @@ private fun Pet.detailLine(separator: String = " | "): String = listOfNotNull(
 private fun Float.toKgLabel(): String =
     if (this % 1f == 0f) roundToInt().toString() else "%.1f".format(this)
 
-/** 이름 아래 꼬리표 (최대 2개): 나이 · 더위/추위 위험 · 멀미 */
-private fun Pet.tags(): List<String> = buildList {
-    val age = ageYears
-    if (age != null && age >= SENIOR_AGE) add("노령견")
-    if (age != null && age < 1) add("어린 강아지")
-    val types = temperatureStandard.types
-    val heatRisk = PetType.BRACHYCEPHALIC in types ||
-        PetType.DOUBLE_COAT in types ||
+/** 온도 위험군(단두종 · 노령견 · 어린 강아지)이거나 더위에 약하다고 고른 경우 */
+private val Pet.isHeatRisk: Boolean
+    get() = temperatureStandard.group == TemperatureGroup.RISK ||
         PetTrait.HEAT_SENSITIVE in traits
-    if (heatRisk) add("더위 고위험")
-    if (PetTrait.COLD_SENSITIVE in traits) add("추위 주의")
-    if (PetTrait.MOTION_SICK in traits) add("멀미 주의")
-}.take(MAX_TAGS)
 
-private val PET_PANEL_WIDTH = 460.dp
+/** 휴식 추천 꼬리표: 자주 쉬어야 하는 이유가 있을 때만 */
+private fun Pet.restReason(): String? = when {
+    isHeatRisk -> "더위에 약해 자주 쉬어 가요"
+    PetTrait.MOTION_SICK in traits -> "멀미가 있어 자주 쉬어 가요"
+    isSenior -> "나이가 많아 자주 쉬어 가요"
+    else -> null
+}
+
+/** 120 → ("2", "시간마다"), 90 → ("1.5", "시간마다"), 30 → ("30", "분마다") */
+private fun Int.toIntervalLabel(): Pair<String, String> = when {
+    this < 60 -> "$this" to "분마다"
+    this % 60 == 0 -> "${this / 60}" to "시간마다"
+    else -> "%.1f".format(this / 60f) to "시간마다"
+}
+
+/** 오늘 · 어제 · 3일 전 · (일주일 넘으면) 11월 3일 */
+private fun Long.toRelativeDay(now: Long = System.currentTimeMillis()): String {
+    val zone = java.time.ZoneId.systemDefault()
+    val day = java.time.Instant.ofEpochMilli(this).atZone(zone).toLocalDate()
+    val today = java.time.Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+    return when (val days = java.time.temporal.ChronoUnit.DAYS.between(day, today)) {
+        0L -> "오늘"
+        1L -> "어제"
+        in 2L..6L -> "${days}일 전"
+        else -> "${day.monthValue}월 ${day.dayOfMonth}일"
+    }
+}
+
+private val DATE_FORMAT = SimpleDateFormat("M월 d일 EEEE", Locale.KOREA)
+private val BAR_MIN_HEIGHT = 11.dp
+private val BAR_MAX_HEIGHT = 75.dp
+private val BAR_RADIUS = 6.dp
+private val PET_PANEL_WIDTH = 464.dp
 private const val HERO_WEIGHT = 655f / 428f
-private val ALERT_STROKE = 3.dp
-private val AVATAR_SIZE = 132.dp
-private val DRIVE_ILLUSTRATION = 380.dp
+private val AVATAR_SIZE = 102.dp
 private val RING_SIZE = 200.dp
 private val RING_STROKE = 20.dp
 private val WEEK_DAYS = listOf("월", "화", "수", "목", "금", "토", "일")
-private const val SENIOR_AGE = 8
-private const val MAX_TAGS = 2
 
 // endregion
 
@@ -770,13 +856,29 @@ private fun previewState() = HomeUiState(
     isParked = true,
     seatTemperature = 24f,
     isAllWindowsClosed = true,
-    isRearTempWatchEnabled = true
+    isRearTempWatchEnabled = true,
+    vehicleName = "그랜저"
 )
 
 @Preview(widthDp = 1700, heightDp = 1184)
 @Composable
 internal fun HomeScreenPreview() {
     MungoTheme(darkTheme = false) { HomeScreen(previewState(), {}, {}) }
+}
+
+@Preview(widthDp = 1700, heightDp = 1184, name = "최근 이동 있음")
+@Composable
+internal fun HomeScreenWithTripPreview() {
+    MungoTheme(darkTheme = false) {
+        HomeScreen(
+            previewState().copy(
+                lastTrip = previewTrip(),
+                weekTripCounts = listOf(1, 0, 2, 0, 1, 3, 0)
+            ),
+            {},
+            {}
+        )
+    }
 }
 
 @Preview(widthDp = 1700, heightDp = 1184, name = "다크 모드")
@@ -809,7 +911,6 @@ internal fun HomeScreenUnlinkedPreview() {
                 isParked = null,
                 seatTemperature = null,
                 isAllWindowsClosed = null,
-                vehicleName = "그랜저",
                 lastTrip = previewTrip(),
                 weekTripCounts = listOf(1, 0, 2, 0, 1, 3, 0)
             ),

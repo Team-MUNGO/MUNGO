@@ -75,3 +75,27 @@ fun PetPhoto(photoPath: String?, modifier: Modifier = Modifier, breed: String? =
 /** 동그라미를 꽉 채우는 이미지(사진 · 품종 아바타)인지. 아니면 기본 마크라 조금 작게 그린다 */
 fun hasFullPetImage(photoPath: String?, breed: String?): Boolean =
     photoPath != null || BreedAvatar.from(breed) != null
+
+/**
+ * mungo 시츄 일러스트 (Figma 페이지 4 홈 510:137 · 탑승 준비 4 488:9017).
+ * 유저가 등록한 사진 · 품종과 상관없이 늘 같은 그림을 보여 준다.
+ * 배경 없는 원본이라 자르지 않고 칸 안에 맞춰 그린다.
+ *
+ * @param standing true면 서 있는 시츄 (Figma 홈2 · 차량 연동 해지 488:11766)
+ */
+@Composable
+fun ShihTzuIllustration(modifier: Modifier = Modifier, standing: Boolean = false) {
+    Image(
+        painter = painterResource(
+            if (standing) {
+                com.example.poco.R.drawable.mungo_shih_tzu_standing
+            } else {
+                com.example.poco.R.drawable.mungo_shih_tzu
+            }
+        ),
+        contentDescription = "시츄",
+        contentScale = ContentScale.Fit,
+        alignment = Alignment.BottomCenter,
+        modifier = modifier
+    )
+}

@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -106,8 +107,9 @@ fun comfortLabel(state: DrivingSessionState): String {
     if (!state.active) return "주행 준비"
     val temp = state.settings?.let { temperatureStatus(state.temperature.valueOrNull(), it) }
     return when {
+        temp == CabinTemperatureStatus.DANGER -> "너무 더워해요"
         temp == CabinTemperatureStatus.HOT -> "조금 더워해요"
-        temp == CabinTemperatureStatus.COLD -> "조금 추워해요"
+        temp == CabinTemperatureStatus.COLD -> "추울 수 있어요"
         state.comfort.score >= 85 -> "편안해요"
         state.comfort.score >= 70 -> "조금 흔들렸어요"
         else -> "많이 힘들어해요"
@@ -291,10 +293,17 @@ fun TemperatureTile(state: DrivingSessionState, size: TileSize, modifier: Modifi
         "실내 온도",
         temp?.let(::formatTemperature) ?: "—",
         if (temp != null) "°C" else null,
-        if (temp == null && state.active) "실내 측정 온도를 확인할 수 없어요" else range,
+        when {
+            temp == null && state.active -> "실내 측정 온도를 확인할 수 없어요"
+            status == CabinTemperatureStatus.COLD -> "추울 수 있어요"
+            status == CabinTemperatureStatus.DANGER -> "에어컨을 켜 주세요"
+            else -> range
+        },
         modifier,
-        warning =
-        status == CabinTemperatureStatus.HOT || status == CabinTemperatureStatus.COLD,
+        // 기준 밖이면(더움 · 위험 · 추움) 주황 테두리 + 굵은 글씨로 알린다
+        warning = status == CabinTemperatureStatus.HOT ||
+            status == CabinTemperatureStatus.DANGER ||
+            status == CabinTemperatureStatus.COLD,
         iconRes = R.drawable.driving_thermo
     )
 }
@@ -330,8 +339,9 @@ fun comfortBubble(state: DrivingSessionState): String {
     if (!state.active) return "주행 준비"
     val temp = state.settings?.let { temperatureStatus(state.temperature.valueOrNull(), it) }
     return when {
+        temp == CabinTemperatureStatus.DANGER -> "너무 더워요"
         temp == CabinTemperatureStatus.HOT -> "조금 더워요"
-        temp == CabinTemperatureStatus.COLD -> "조금 추워요"
+        temp == CabinTemperatureStatus.COLD -> "추울 수 있어요"
         state.comfort.score >= 85 -> "편안해요!"
         state.comfort.score >= 70 -> "조금 흔들렸어요"
         else -> "많이 힘들어해요"
@@ -465,6 +475,26 @@ fun ComfortCardSplit(state: DrivingSessionState, modifier: Modifier) {
  * Higher-priority guidance (arrival, 5 minutes) replaces a proposal in the same slot, so the tiles
  * above never move when cards appear or disappear.
  */
+private fun isProposalVisible(state: DrivingSessionState, restMode: Boolean): Boolean {
+    val top = state.guidance
+    val proposal = state.proposal ?: return false
+    return !restMode &&
+        (
+            top == null ||
+                top.priority.rank >= GuidancePriority.REST_PROPOSAL.rank ||
+                top.id == proposal.eventId
+            )
+}
+
+/**
+ * 2분할에서 음성 안내 카드(문장 + 음성 질문)만 보이는지.
+ * 이때는 카드가 내용 높이만 쓰고, 남는 높이는 위쪽 칸들이 나눠 가진다
+ */
+fun isPlainGleo(state: DrivingSessionState, ai: AssistantUiState): Boolean = state.active &&
+    !(isProposalVisible(state, restMode = false) && ai.phase == AssistantPhase.IDLE) &&
+    state.waypoint !is WaypointUiState.Adding &&
+    state.waypoint !is WaypointUiState.Added
+
 @Composable
 fun GleoSlot(
     state: DrivingSessionState,
@@ -479,14 +509,7 @@ fun GleoSlot(
         return
     }
     val top = state.guidance
-    val proposal = state.proposal
-    val proposalVisible = !restMode &&
-        proposal != null &&
-        (
-            top == null ||
-                top.priority.rank >= GuidancePriority.REST_PROPOSAL.rank ||
-                top.id == proposal.eventId
-            )
+    val proposalVisible = isProposalVisible(state, restMode)
     val waypoint = state.waypoint
     val added = waypoint as? WaypointUiState.Added
     // Figma 464:47342: the confirmation card returns to the Gleo card after 5 seconds.
@@ -527,16 +550,18 @@ internal fun idleGuidance(state: DrivingSessionState, restMode: Boolean): String
     val subject = "$pet${subjectParticle(pet)}"
     if (restMode) return "10분 정도 같이 걷는 걸 추천해요.\n출발 전에 리드줄을 다시 연결해 주세요."
     val temp = state.settings?.let { temperatureStatus(state.temperature.valueOrNull(), it) }
-    // 휴식 제안은 휴식 20분 전에 온다 (RestRecommendationCoordinator)
-    val toProposal = state.rest.remainingMs?.let { it / 60_000 - 20 }
+    // '다음 휴식까지' 칸과 같은 숫자로 말한다 (같은 남은 시간 · 같은 분 내림)
+    val toRest = state.rest.remainingMs
     val restLine = when {
         state.rest.restDue -> "지금 쉬어 갈 곳을 찾아볼게요."
-        toProposal != null && toProposal > 0 -> "${toProposal}분 뒤 쉴 곳을 알려 드릴게요."
-        else -> "곧 쉴 곳을 알려 드릴게요."
+        toRest != null && toRest >= 60_000 -> "${koreanDuration(toRest)} 뒤 쉬어 가요."
+        else -> "곧 쉬어 갈 시간이에요."
     }
     return when {
+        temp == CabinTemperatureStatus.DANGER -> "$subject 너무 더워해요.\n에어컨을 켜 주세요."
+        state.temperatureRestSuggested -> "$subject 더워한 지 3분이 넘었어요.\n잠깐 쉬어 갈까요?"
         temp == CabinTemperatureStatus.HOT -> "$subject 조금 더워해요.\n실내 온도를 낮춰 주세요."
-        temp == CabinTemperatureStatus.COLD -> "$subject 조금 추워해요.\n실내 온도를 높여 주세요."
+        temp == CabinTemperatureStatus.COLD -> "$subject 추울 수 있어요.\n실내 온도를 높여 주세요."
         state.comfort.score >= 85 -> "$subject 편안하게 가고 있어요.\n$restLine"
         state.comfort.score >= 70 -> "$subject 조금 흔들렸어요.\n천천히 부드럽게 가 볼까요?"
         else -> "$subject 많이 힘들어해요.\n안전한 곳에서 잠시 쉬어 가요."
@@ -616,26 +641,30 @@ private fun GleoCard(
         }
         return
     }
-    // Figma 488:12146: 578 × 354, 라운드 26 · "mungo" R24 · 스피커 52 · B25 문장 · 카드 안 음성 질문 알약
-    Column(
-        modifier.background(Mg.Ink, RoundedCornerShape(26.dp))
-            .padding(start = 26.dp, end = 26.dp, top = 56.dp, bottom = 32.dp)
-    ) {
-        Text(
-            "mungo",
-            Modifier.padding(start = 70.dp),
-            style = Mg.regular(24, 30),
-            color = Mg.OnDarkMuted
-        )
-        Spacer(Modifier.height(10.dp))
-        Row(verticalAlignment = Alignment.Top) {
-            Box(
-                Modifier.size(52.dp).background(Mg.Orange, CircleShape),
-                contentAlignment = Alignment.Center
+    // Figma Frame2 (513:33): 남색 음성 카드(왼쪽 "mungo" + 주황 스피커, 오른쪽 문장) 아래에
+    // 음성 질문 알약이 따로 놓인다. 색 · 글자 크기는 앱 디자인 그대로
+    Column(modifier) {
+        // 높이는 문장에 맞추고 위아래 여백을 넉넉히 (남는 높이로 늘리지 않는다)
+        Row(
+            Modifier.fillMaxWidth()
+                .heightIn(min = 168.dp)
+                .background(Mg.Ink, RoundedCornerShape(26.dp))
+                .padding(horizontal = 26.dp, vertical = 32.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                MgIcon(MgIcons.Speaker, Color.White, 24.dp)
+                Text("mungo", style = Mg.regular(22, 28), color = Mg.OnDarkMuted)
+                Box(
+                    Modifier.size(52.dp).background(Mg.Orange, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    MgIcon(MgIcons.Speaker, Color.White, 24.dp)
+                }
             }
-            Spacer(Modifier.width(18.dp))
+            Spacer(Modifier.width(22.dp))
             Text(
                 text?.let(::quoted) ?: "듣고 있어요…",
                 Modifier.weight(1f),
@@ -645,16 +674,16 @@ private fun GleoCard(
                 overflow = TextOverflow.Ellipsis
             )
         }
-        Spacer(Modifier.weight(1f))
-        Row(Modifier.padding(start = 2.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Spacer(Modifier.height(16.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             AskHint(
                 state,
                 ai,
                 actions,
-                dark = true,
-                modifier = Modifier.weight(1f, fill = false).height(60.dp)
+                dark = false,
+                modifier = Modifier.weight(1f).height(72.dp)
             )
-            CancelWaypointPill(state, actions, Modifier.height(60.dp))
+            CancelWaypointPill(state, actions, Modifier.height(72.dp))
         }
     }
 }
@@ -724,8 +753,12 @@ private fun AskHint(
     modifier: Modifier
 ) {
     val ready = ai.configured && ai.consented && (ai.connected || ai.anonymousAuth)
+    // 음성 안내가 꺼져 있으면 마이크는 회색 · 음성 질문은 막는다 (위치 권한 허용은 음성과 무관하니 그대로)
+    val voiceOff = !com.example.poco.core.designsystem.LocalVoiceEnabled.current &&
+        !(ai.restNeedsLocation && ai.phase == AssistantPhase.IDLE)
     val text = when {
         ai.restNeedsLocation && ai.phase == AssistantPhase.IDLE -> "위치 권한 허용하고 휴식 장소 찾기"
+        voiceOff -> "음성 안내가 꺼져 있어요"
         ai.error != null && ai.phase == AssistantPhase.IDLE -> ai.error
         ai.phase == AssistantPhase.CONNECTING -> "mungo에 연결하고 있어요"
         ai.phase == AssistantPhase.LISTENING ->
@@ -755,6 +788,7 @@ private fun AskHint(
             CircleShape
         ).background(if (dark) Color(0xFF2C3440) else Color.White, CircleShape)
             .clickable(
+                enabled = !voiceOff,
                 onClick = onClick
             ).padding(start = if (dark) 14.dp else 12.dp, end = if (dark) 26.dp else 12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -763,9 +797,22 @@ private fun AskHint(
         Box(
             Modifier.size(
                 if (dark) 32.dp else 48.dp
-            ).background(if (dark) Color.White else Mg.Bubble, CircleShape),
+            ).background(
+                when {
+                    voiceOff -> Mg.BarGrey
+                    dark -> Color.White
+                    else -> Mg.Bubble
+                },
+                CircleShape
+            ),
             contentAlignment = Alignment.Center
-        ) { MgIcon(MgIcons.Mic, if (dark) Mg.Ink else Color.White, if (dark) 18.dp else 20.dp) }
+        ) {
+            MgIcon(
+                MgIcons.Mic,
+                if (dark && !voiceOff) Mg.Ink else Color.White,
+                if (dark) 18.dp else 20.dp
+            )
+        }
         Text(
             text,
             Modifier.weight(1f, fill = !dark),
@@ -1341,6 +1388,47 @@ fun WindowWarningPanel(
             Modifier.fillMaxWidth().height(100.dp),
             enabled = !busy,
             style = Mg.semi(24, 31)
+        )
+    }
+}
+
+/** 실내 온도 위험 팝업 (일반 28°C · 위험군 27°C 이상): 창문 경고 팝업과 같은 카드 · 버튼 스타일 */
+@Composable
+fun TemperatureDangerPopup(state: DrivingSessionState, onDismiss: () -> Unit) {
+    val temp = state.temperature.valueOrNull()
+    Column(
+        Modifier.width(760.dp)
+            .background(Color.White, RoundedCornerShape(32.dp))
+            .padding(horizontal = 40.dp, vertical = 40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        IconBadge(
+            res = R.drawable.driving_thermo,
+            size = 92.dp,
+            background = Mg.Orange,
+            tint = Mg.Ink
+        )
+        Spacer(Modifier.height(26.dp))
+        Text(
+            "에어컨을 켜 주세요",
+            style = Mg.bold(30, 38),
+            color = Mg.Ink,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(18.dp))
+        Text(
+            (temp?.let { "실내가 ${formatTemperature(it)}°C예요.\n" } ?: "") +
+                "${petName(state)}에게 위험한 온도예요.",
+            style = Mg.Body.copy(lineHeight = Mg.Body.fontSize * 1.55f),
+            color = Mg.Muted,
+            textAlign = TextAlign.Center
+        )
+        Spacer(Modifier.height(36.dp))
+        PrimaryButton(
+            "확인했어요",
+            onDismiss,
+            Modifier.fillMaxWidth().height(96.dp),
+            icon = null
         )
     }
 }

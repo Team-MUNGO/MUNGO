@@ -106,7 +106,7 @@ class TripInsightsTest {
         // A plain count increase on the detail screen never shortens the interval by itself.
         val calm = motionAnalysis(listOf(trips[0], trips[1]), trips[1], 120)
         assertNull(calm.recommendedMinutes)
-        assertEquals("이동 중 반려견 상태를 조금 더 살펴 주세요.", detailTip(trips[1], trips[0], 120, calm).body)
+        assertEquals("이동 중 반려견 상태를 조금 더 살펴 주세요.", detailTip(trips[1], trips[0], 120, calm)?.body)
     }
 
     @Test fun cautionAndRepeatedSignTextUseParticles() {
@@ -198,5 +198,57 @@ class TripInsightsTest {
         assertEquals("23°C / 창문 닫힘", eventCabinText(item, emptyList()))
         assertEquals("37.00000, 127.00000", eventLocationText(item))
         assertNull(eventLocationText(item.copy(snapshot = null)))
+    }
+
+    @Test fun eventTipsFollowTheGuide() {
+        val t = trip("t", 0, 150, signs = "YAWN:2")
+        val items = timelineItems(
+            t,
+            listOf(
+                e(5 * m, TripEventType.SCORE_PENALTY, -3, 97, "RAPID_BRAKING"),
+                e(10 * m, TripEventType.SCORE_PENALTY, -2, 95, "RAPID_ACCELERATION"),
+                e(20 * m, TripEventType.TEMPERATURE_OUT_OF_RANGE, detail = "DANGER:28.0:24.0"),
+                e(30 * m, TripEventType.TEMPERATURE_OUT_OF_RANGE, detail = "COLD:18.0:20.0"),
+                e(40 * m, TripEventType.WINDOW_WARNING, detail = "40")
+            )
+        )
+        fun tip(type: String, place: String? = null) =
+            eventTip(items.first { it.type == type }, "현댕이", place)
+        assertEquals("양지 IC 진입 300m 전부터 속도를 줄여 보세요.", tip("RAPID_BRAKING", "양지 IC"))
+        assertEquals("이 구간 진입 300m 전부터 속도를 줄여 보세요.", tip("RAPID_BRAKING"))
+        assertEquals(
+            "출발할 땐 3초 동안 천천히 밟아 주세요. 현댕이가 뒤로 쏠리지 않아요.",
+            tip("RAPID_ACCELERATION")
+        )
+        // 위험(DANGER)도 '높음'이고, 숫자는 그때 기준(24°C)을 따른다
+        assertEquals("실내 온도 높음", items.first { it.type == "TEMPERATURE_HOT" }.title)
+        assertEquals(
+            "현댕이는 24°C를 넘으면 힘들어해요. 출발 전에 에어컨을 미리 켜 두세요.",
+            tip("TEMPERATURE_HOT")
+        )
+        assertEquals("20°C 아래로 내려가면 추울 수 있어요. 자리에 담요를 깔아 주세요.", tip("TEMPERATURE_COLD"))
+        // 150분 동안 쉬지 않음 → 휴식 간격(2시간)을 넘긴 구간 하나
+        assertEquals(1, items.count { it.type == "LONG_DRIVE" })
+        assertEquals("2시간마다 한 번은 쉬어 가요. 다음엔 휴게소에 들러 보세요.", tip("LONG_DRIVE"))
+        assertEquals(
+            "1시간 넘게 달린 날 징후가 늘었어요. 다음엔 1시간 30분마다 쉬어 보세요.",
+            tip("MOTION")
+        )
+        assertEquals(
+            "오늘은 흔들림이 거의 없었어요. 현댕이가 편안하게 다녀왔어요.",
+            noEventTip("현댕이")
+        )
+    }
+
+    @Test fun restInsideIntervalIsNotALongDrive() {
+        val t = trip("t", 0, 200)
+        val items = timelineItems(
+            t,
+            listOf(
+                e(100 * m, TripEventType.REST_STARTED, detail = "USER"),
+                e(115 * m, TripEventType.REST_COMPLETED)
+            )
+        )
+        assertEquals(0, items.count { it.type == "LONG_DRIVE" })
     }
 }

@@ -19,6 +19,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.example.poco.core.designsystem.LocalVoiceEnabled
 import com.example.poco.core.designsystem.MungoIcon
 import com.example.poco.core.designsystem.MungoIconView
 import com.example.poco.core.designsystem.MungoPaw
@@ -86,13 +87,20 @@ fun MungoNavRail(
             onClick = railActions.onSettings.takeIf { selected != RailTab.SETTINGS }
         )
         Spacer(Modifier.weight(1f))
+        // 음성 안내가 꺼져 있으면 회색 (설정 > 음성 및 알림)
+        val voiceOn = LocalVoiceEnabled.current
         Box(
             modifier = Modifier
                 .size(96.dp)
                 .background(colors.bgSurfaceSunken, CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            MungoIconView(MungoIcon.MIC, size = 36.dp, contentDescription = "음성으로 말하기")
+            MungoIconView(
+                MungoIcon.MIC,
+                tint = if (voiceOn) colors.textPrimary else colors.textDisabled,
+                size = 36.dp,
+                contentDescription = if (voiceOn) "음성으로 말하기" else "음성 안내 꺼짐"
+            )
         }
     }
 }

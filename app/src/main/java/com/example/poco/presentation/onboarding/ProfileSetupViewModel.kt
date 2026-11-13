@@ -141,7 +141,7 @@ class ProfileSetupViewModel @Inject constructor(
         val state = _uiState.value
         if (state.isSaving || state.form.name.isBlank()) return
         val traits = state.form.traits
-        // 정보로 알 수 있는 케어 기준(8살 이상 노령견 · 단두종 더위)도 같이 저장
+        // 정보로 알 수 있는 케어 기준(크기별 노령견 · 단두종 더위)도 같이 저장
         val form = state.form.withDerivedCare(original = null).copy(
             motionSensitivity = if (PetTrait.MOTION_SICK in traits) {
                 MotionSensitivity.HIGH

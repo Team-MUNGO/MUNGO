@@ -7,7 +7,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,25 +21,28 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import com.example.poco.R
 import com.example.poco.core.designsystem.MungoIcon
 import com.example.poco.core.designsystem.MungoIconView
-import com.example.poco.core.designsystem.PetPhoto
+import com.example.poco.core.designsystem.ShihTzuIllustration
 import com.example.poco.core.designsystem.component.pressable
-import com.example.poco.core.designsystem.hasFullPetImage
 import com.example.poco.core.theme.MungoRadius
 import com.example.poco.core.theme.MungoTheme
 import com.example.poco.core.util.iGa
@@ -48,9 +50,9 @@ import com.example.poco.data.model.PetSeat
 import com.example.poco.data.model.Restraint
 import com.example.poco.presentation.design.DrawableIcon
 import com.example.poco.presentation.design.Mg
+import com.example.poco.presentation.design.ScrimDialog
 import com.example.poco.presentation.petprofile.label
 import kotlin.math.roundToInt
-import kotlinx.coroutines.delay
 
 /* 출발 준비 끝 (요약 + 음성 한마디) → 주행 시작 → 주행 화면 분할 고르기 */
 
@@ -182,28 +184,13 @@ private fun ReadyCard(uiState: BoardingUiState, modifier: Modifier = Modifier) {
                     RoundedCornerShape(40.dp)
                 )
         )
-        // 사진 · 품종 그림은 둥글게 잘린 그림이라 뒷판 위에 원으로 앉힌다 (그림이 없으면 작은 기본 마크)
-        Row(
+        // 유저가 등록한 사진 · 품종 대신 mungo 시츄 일러스트를 뒷판 위에 앉힌다 (Figma 488:9017 · 527×618)
+        ShihTzuIllustration(
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(end = 68.dp, bottom = 76.dp),
-            horizontalArrangement = Arrangement.spacedBy((-60).dp),
-            verticalAlignment = Alignment.Bottom
-        ) {
-            val shown = pets.take(MAX_PETS_SHOWN)
-            shown.forEach { pet ->
-                val full = hasFullPetImage(pet.photoPath, pet.breed)
-                PetPhoto(
-                    photoPath = pet.photoPath,
-                    breed = pet.breed,
-                    modifier = when {
-                        !full -> Modifier.padding(end = 60.dp, bottom = 70.dp).size(240.dp)
-                        shown.size == 1 -> Modifier.size(360.dp)
-                        else -> Modifier.size(240.dp)
-                    }
-                )
-            }
-        }
+                .padding(end = 27.dp, bottom = 38.dp)
+                .size(width = 527.dp, height = 618.dp)
+        )
 
         Column(
             modifier = Modifier
@@ -271,207 +258,230 @@ private val READY_BACK = Color(0xFFFFE2BF)
 private val READY_FLOOR = Color(0xFFFFC98A)
 private val READY_SUB = Color(0xFF4E5968)
 
-// region 주행 화면 분할
+// region 주행 화면 안내 (Figma 탑승준비_05 · 주행 화면 안내 팝업)
 
+/** 주행 화면은 2분할로 시작한다는 안내. "확인" = 2분할로 출발, 3분할은 주행 화면에서 드래그 */
 @Composable
-internal fun DriveLayoutDialog(
-    isListening: Boolean,
-    heardText: String?,
-    onMic: () -> Unit,
-    onDismiss: () -> Unit,
-    onPick: (DriveLayout) -> Unit
-) {
+internal fun DriveLayoutDialog(onDismiss: () -> Unit, onConfirm: (hideNextTime: Boolean) -> Unit) {
     val colors = MungoTheme.colors
-    // 고르지 않으면 추천(3분할)으로 출발. 말하는 중에는 기다린다
-    var secondsLeft by remember { mutableIntStateOf(AUTO_START_SECONDS) }
-    LaunchedEffect(isListening) {
-        while (!isListening && secondsLeft > 0) {
-            delay(1_000L)
-            secondsLeft--
-        }
-        if (secondsLeft == 0) onPick(DriveLayout.THREE)
-    }
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
+    var hideNextTime by remember { mutableStateOf(false) }
+    ScrimDialog(onDismiss = onDismiss) {
         Column(
             modifier = Modifier
                 .width(1150.dp)
-                .background(colors.bgSurface, RoundedCornerShape(MungoRadius.xl))
-                .padding(48.dp)
+                .background(colors.bgSurface, RoundedCornerShape(43.dp))
+                .padding(start = 53.dp, end = 53.dp, top = 37.dp, bottom = 35.dp)
         ) {
             Row(verticalAlignment = Alignment.Top) {
-                Column(modifier = Modifier.weight(1f)) {
+                Column(modifier = Modifier.weight(1f).padding(top = 11.dp)) {
                     Text(
-                        text = "주행 화면을 어떻게 볼까요?",
-                        style = Mg.bold(40, 52),
+                        text = "주행 화면은 2분할로 시작해요",
+                        style = Mg.bold(40, 48),
                         color = colors.textPrimary
                     )
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(15.dp))
                     Text(
-                        text = "운전 중에는 네비게이션을 함께 보는 걸 추천해요",
-                        style = Mg.regular(25, 34),
+                        text = "내비를 함께 보고 싶으면 화면을 드래그해서 3분할로 바꿀 수 있어요",
+                        style = Mg.regular(25, 30),
                         color = colors.textSecondary
                     )
                 }
                 Box(
                     modifier = Modifier
-                        .size(72.dp)
+                        .size(70.dp)
                         .background(colors.bgSurfaceSunken, CircleShape)
                         .pressable(CircleShape, onClick = onDismiss),
                     contentAlignment = Alignment.Center
                 ) {
-                    MungoIconView(MungoIcon.CLOSE, size = 32.dp, contentDescription = "닫기")
+                    MungoIconView(MungoIcon.CLOSE, size = 28.dp, contentDescription = "닫기")
                 }
             }
-            Spacer(Modifier.height(40.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(28.dp)) {
-                LayoutOption(DriveLayout.TWO, selected = false, onClick = {
-                    onPick(DriveLayout.TWO)
-                })
-                LayoutOption(
-                    DriveLayout.THREE,
-                    selected = true,
-                    onClick = { onPick(DriveLayout.THREE) }
-                )
+            Spacer(Modifier.height(46.dp))
+            Row(verticalAlignment = Alignment.Top) {
+                LayoutGuidePreview(DriveLayout.TWO)
+                DragHint(modifier = Modifier.weight(1f))
+                LayoutGuidePreview(DriveLayout.THREE)
             }
-            Spacer(Modifier.height(36.dp))
+            Spacer(Modifier.height(21.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
-                MungoIconView(MungoIcon.INFO, tint = colors.textTertiary, size = 24.dp)
-                Spacer(Modifier.width(10.dp))
-                Text(
-                    text = "고르지 않으면 3분할로 출발해요 (${secondsLeft}초)",
-                    style = Mg.regular(24, 32),
-                    color = Color(0xFF4E5968),
-                    modifier = Modifier.weight(1f)
-                )
-                Row(
-                    modifier = Modifier
-                        .background(colors.bgSurfaceSunken, CircleShape)
-                        .padding(start = 10.dp, end = 28.dp, top = 10.dp, bottom = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    VoiceRow(
-                        isListening = isListening,
-                        heardText = heardText,
-                        example = "mungo, 네비랑 같이 보여 줘",
-                        onMic = onMic,
-                        micSize = 56.dp
-                    )
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun RowScope.LayoutOption(layout: DriveLayout, selected: Boolean, onClick: () -> Unit) {
-    val colors = MungoTheme.colors
-    val shape = RoundedCornerShape(MungoRadius.xl)
-    Column(
-        modifier = Modifier
-            .weight(1f)
-            .border(
-                if (selected) 3.dp else 2.dp,
-                if (selected) colors.borderAccent else colors.borderDefault,
-                shape
-            )
-            .pressable(shape, onClick = onClick)
-            .padding(28.dp)
-    ) {
-        // 미리보기: 차량 | (내비) | mungo
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(220.dp)
-                .background(colors.bgSurfaceSunken, RoundedCornerShape(MungoRadius.md))
-                .padding(12.dp),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
-        ) {
-            PreviewPane(weight = 0.27f, background = colors.bgNeutral) {
-                MungoIconView(MungoIcon.CAR, tint = colors.textTertiary, size = 32.dp)
-            }
-            if (layout == DriveLayout.THREE) {
-                PreviewPane(weight = 0.4f, background = colors.statusCalmSubtle) {
-                    MungoIconView(MungoIcon.MAP_PIN, tint = colors.statusCalm, size = 32.dp)
-                    Spacer(Modifier.height(8.dp))
-                    Text(
-                        "Navigation",
-                        style = Mg.medium(19, 24),
-                        color = Color(0xFF08705D)
-                    )
-                }
-            }
-            PreviewPane(
-                weight = if (layout == DriveLayout.THREE) 0.33f else 0.73f,
-                background = colors.bgAccentSubtle,
-                outlined = true
-            ) {
-                MungoIconView(MungoIcon.PAW_FILLED, tint = colors.bgAccent, size = 32.dp)
-                Spacer(Modifier.height(8.dp))
-                Text("Mungo", style = Mg.medium(19, 24), color = colors.textAccent)
-            }
-        }
-        Spacer(Modifier.height(28.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = if (layout == DriveLayout.THREE) "3분할" else "2분할",
-                style = Mg.bold(35, 46),
-                color = colors.textPrimary
-            )
-            if (layout == DriveLayout.THREE) {
-                Spacer(Modifier.width(14.dp))
                 Box(
                     modifier = Modifier
-                        .heightIn(min = 44.dp)
+                        .height(40.dp)
                         .background(colors.bgAccentSubtle, CircleShape)
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = 21.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text(
-                        text = "추천",
-                        style = Mg.bold(24, 32),
-                        color = colors.textAccent
-                    )
+                    Text("기본", style = Mg.bold(19, 23), color = colors.textAccent)
                 }
-            }
-            Spacer(Modifier.weight(1f))
-            if (selected) {
-                CheckBadge(size = 52.dp)
-            } else {
-                Box(
-                    Modifier
-                        .size(52.dp)
-                        .border(3.dp, colors.borderStrong, CircleShape)
+                Spacer(Modifier.width(13.dp))
+                Text(
+                    text = "2분할 · 주행 정보 + 멍고",
+                    style = Mg.bold(23, 28),
+                    color = colors.textPrimary,
+                    modifier = Modifier.weight(1f)
                 )
+                Text(
+                    text = "3분할 · 주행 정보 + 내비 + 멍고",
+                    style = Mg.bold(23, 28),
+                    color = colors.textPrimary,
+                    modifier = Modifier.width(401.dp)
+                )
+            }
+            Spacer(Modifier.height(91.dp))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.pressable(RoundedCornerShape(MungoRadius.sm)) {
+                        hideNextTime = !hideNextTime
+                    },
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    val boxShape = RoundedCornerShape(9.dp)
+                    Box(
+                        modifier = Modifier
+                            .size(35.dp)
+                            .then(
+                                if (hideNextTime) {
+                                    Modifier.background(colors.bgAccent, boxShape)
+                                } else {
+                                    Modifier.border(3.dp, GUIDE_CHECK_BORDER, boxShape)
+                                }
+                            ),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (hideNextTime) {
+                            MungoIconView(MungoIcon.CHECK, tint = Color.White, size = 24.dp)
+                        }
+                    }
+                    Spacer(Modifier.width(16.dp))
+                    Text("다시 보지 않기", style = Mg.regular(24, 29), color = READY_SUB)
+                }
+                Spacer(Modifier.weight(1f))
+                Box(
+                    modifier = Modifier
+                        .size(width = 294.dp, height = 86.dp)
+                        .background(colors.bgAccent, CircleShape)
+                        .pressable(CircleShape) { onConfirm(hideNextTime) },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("확인", style = Mg.bold(29, 35), color = Color.White)
+                }
             }
         }
     }
 }
 
+/** 화면 분할 미리보기: 차량 | (내비) | 멍고 */
 @Composable
-private fun RowScope.PreviewPane(
-    weight: Float,
+private fun LayoutGuidePreview(layout: DriveLayout) {
+    val colors = MungoTheme.colors
+    val three = layout == DriveLayout.THREE
+    Row(
+        modifier = Modifier
+            .size(width = 401.dp, height = 262.dp)
+            .background(colors.bgSurfaceSunken, RoundedCornerShape(21.dp))
+            .padding(13.dp),
+        horizontalArrangement = Arrangement.spacedBy(11.dp)
+    ) {
+        GuidePane(width = 96.dp, background = GUIDE_CAR_PANE) {
+            MungoIconView(MungoIcon.CAR, tint = colors.textSecondary, size = 28.dp)
+        }
+        if (three) {
+            GuidePane(
+                width = 128.dp,
+                background = GUIDE_NAV_PANE,
+                border = GUIDE_NAV_BORDER,
+                dashed = true
+            ) {
+                Spacer(Modifier.height(36.dp))
+                MungoIconView(MungoIcon.MAP_PIN, tint = GUIDE_NAV_TEXT, size = 28.dp)
+                Spacer(Modifier.height(10.dp))
+                Text("내비", style = Mg.bold(19, 23), color = GUIDE_NAV_TEXT)
+                Spacer(Modifier.height(16.dp))
+                Box(
+                    modifier = Modifier.size(48.dp).background(Color.White, CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    DrawableIcon(R.drawable.ic_mungo_hand, tint = GUIDE_NAV_TEXT, size = 21.dp)
+                }
+            }
+        }
+        GuidePane(
+            width = if (three) 128.dp else 268.dp,
+            background = colors.bgAccentSubtle,
+            border = colors.bgAccent
+        ) {
+            DrawableIcon(R.drawable.ic_mungo_paw_guide, size = 24.dp)
+            Spacer(Modifier.height(12.dp))
+            Text("멍고", style = Mg.bold(19, 23), color = colors.textAccent)
+        }
+    }
+}
+
+@Composable
+private fun GuidePane(
+    width: Dp,
     background: Color,
-    outlined: Boolean = false,
+    border: Color? = null,
+    dashed: Boolean = false,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val colors = MungoTheme.colors
-    val shape = RoundedCornerShape(MungoRadius.sm)
+    val shape = RoundedCornerShape(13.dp)
     Column(
         modifier = Modifier
-            .weight(weight)
+            .width(width)
             .fillMaxHeight()
             .background(background, shape)
-            .then(if (outlined) Modifier.border(2.dp, colors.borderAccent, shape) else Modifier),
+            .then(
+                when {
+                    border == null -> Modifier
+                    dashed -> Modifier.dashedBorder(border, 13.dp)
+                    else -> Modifier.border(2.7.dp, border, shape)
+                }
+            ),
         horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center,
+        verticalArrangement = if (dashed) Arrangement.Top else Arrangement.Center,
         content = content
     )
 }
 
-// endregion
+/** 가운데 → 화살표 + 손 + "드래그" */
+@Composable
+private fun DragHint(modifier: Modifier = Modifier) {
+    Column(
+        modifier = modifier.padding(top = 88.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        DrawableIcon(R.drawable.ic_mungo_arrow_right, size = 31.dp)
+        Spacer(Modifier.height(27.dp))
+        Box(
+            modifier = Modifier.size(70.dp).background(Mg.AlertBg, CircleShape),
+            contentAlignment = Alignment.Center
+        ) {
+            DrawableIcon(R.drawable.ic_mungo_hand, size = 26.dp)
+        }
+        Spacer(Modifier.height(14.dp))
+        Text("드래그", style = Mg.bold(20, 24), color = MungoTheme.colors.textAccent)
+    }
+}
 
-private const val MAX_PETS_SHOWN = 3
-private const val AUTO_START_SECONDS = 10
+private fun Modifier.dashedBorder(color: Color, radius: Dp): Modifier = drawBehind {
+    val stroke = 2.7.dp.toPx()
+    drawRoundRect(
+        color = color,
+        topLeft = Offset(stroke / 2, stroke / 2),
+        size = Size(size.width - stroke, size.height - stroke),
+        cornerRadius = CornerRadius(radius.toPx()),
+        style = Stroke(
+            width = stroke,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(10.dp.toPx(), 6.dp.toPx()))
+        )
+    )
+}
+
+private val GUIDE_CAR_PANE = Color(0xFFD1D6DB)
+private val GUIDE_NAV_PANE = Color(0xFFDCE6FB)
+private val GUIDE_NAV_BORDER = Color(0xFF2F6FED)
+private val GUIDE_NAV_TEXT = Color(0xFF2F5BC4)
+private val GUIDE_CHECK_BORDER = Color(0xFFB0B8C1)
+
+// endregion

@@ -5,6 +5,7 @@ import ai.pleos.playground.navi.constants.NaviErrorCode
 import ai.pleos.playground.navi.constants.TurnType
 import ai.pleos.playground.navi.constants.WaypointIndex
 import ai.pleos.playground.navi.data.CautionPoint
+import ai.pleos.playground.navi.data.CurrentLocationInfo
 import ai.pleos.playground.navi.data.DestinationArrivedInfo
 import ai.pleos.playground.navi.data.DestinationInfo
 import ai.pleos.playground.navi.data.NavigationScreenRequest
@@ -25,6 +26,7 @@ import com.example.poco.data.model.UpcomingTurn
 import com.example.poco.data.pleos.PleosSdkManager
 import com.example.poco.data.pleos.datasource.BumpApproach
 import com.example.poco.data.pleos.datasource.NaviDataSource
+import com.example.poco.data.pleos.datasource.NaviPlaceHint
 import com.example.poco.data.pleos.datasource.NaviRouteUpdate
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
@@ -166,6 +168,48 @@ class NaviDataSourceImpl @Inject constructor(
         }
     }
 
+    override fun observePlace() = callbackFlow<NaviPlaceHint> {
+        // Each collection owns its connection; only the session repository collects it.
+        val helper = NaviHelper(context)
+        var address: String? = null
+        var landmark: String? = null
+        fun emitHint() {
+            trySend(NaviPlaceHint(landmark, address, System.currentTimeMillis()))
+        }
+        val listener = object : NaviHelperEventListener {
+            override fun onCurrentLocationInfo(currentLocationInfo: CurrentLocationInfo) {
+                address = currentLocationInfo.address.trim().takeIf { it.isNotEmpty() }
+                emitHint()
+            }
+
+            override fun onTBTInfo(tbtInfoList: List<TBTInfo>) {
+                landmark = nearbyLandmark(tbtInfoList)
+                emitHint()
+            }
+        }
+        fun request() = runCatching {
+            helper.getCurrentLocationInfo()
+            helper.getTBTInfo()
+        }.onFailure { Timber.w(it, "내비 위치 이름 요청 실패") }
+        try {
+            helper.addListener(listener)
+            // 연결되자마자 한 번 묻고, 그 뒤로 주기적으로 (출발 직후 이벤트도 이름을 받게)
+            helper.initialize(onConnected = {
+                request()
+                launch {
+                    while (isActive) {
+                        delay(PLACE_POLL_MS)
+                        request()
+                    }
+                }
+            }, onFailed = { close(it) })
+            awaitClose { }
+        } finally {
+            helper.removeListener(listener)
+            helper.release()
+        }
+    }
+
     override fun observeRoute() = callbackFlow<NaviRouteUpdate> {
         val helper = NaviHelper(context)
         val listener = object : NaviHelperEventListener {
@@ -220,6 +264,7 @@ class NaviDataSourceImpl @Inject constructor(
     private companion object {
         const val TBT_POLL_MS = 2_000L
         const val DESTINATION_POLL_MS = 10_000L
+        const val PLACE_POLL_MS = 5_000L
     }
 }
 
@@ -254,3 +299,29 @@ private fun CautionPoint.toUpcomingCaution() = UpcomingCaution(
     },
     distanceM = remainDistance
 )
+
+/** IC · JC · 톨게이트 · 휴게소: 기록에 남길 만한 '지금 있는 곳' 이름 */
+private val LANDMARK_TURNS = setOf(
+    TurnType.TURN_ENTER_IC_R, TurnType.TURN_ENTER_IC_L, TurnType.TURN_ENTER_IC_C,
+    TurnType.TURN_EXIT_IC_R, TurnType.TURN_EXIT_IC_L, TurnType.TURN_EXIT_IC_C,
+    TurnType.TURN_TOLL, TurnType.TURN_RESTAREA, TurnType.TURN_ENTER_SERVICEAREA
+)
+
+/** 이만큼 가까운 안내 지점이면 '그 근처에서 일어났다'고 본다 */
+internal const val LANDMARK_NEAR_METERS = 300.0
+
+/** 가장 가까운 300m 안쪽 랜드마크 이름. 방향 안내("원주,인천 방면")는 쓰지 않는다 */
+internal fun nearbyLandmark(turns: List<TBTInfo>): String? = turns
+    .filter { it.distance in 0.0..LANDMARK_NEAR_METERS }
+    .sortedBy { it.distance }
+    .firstNotNullOfOrNull { landmarkName(it.type, it.description) }
+
+/**
+ * "판교IC - 부산 방면" → "판교IC", "서울톨게이트" → "서울톨게이트".
+ * IC · 톨게이트 · 휴게소 안내이거나, 이름이 JC로 끝날 때만 (JC는 차로 유지 안내로 온다)
+ */
+internal fun landmarkName(type: TurnType, description: String): String? {
+    val name = description.substringBefore(" - ").removeSuffix("방면").trim()
+    if (name.isEmpty() || ',' in name) return null
+    return name.takeIf { type in LANDMARK_TURNS || name.endsWith("JC") }
+}

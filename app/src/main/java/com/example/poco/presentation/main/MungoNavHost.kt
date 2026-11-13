@@ -16,6 +16,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.example.poco.core.designsystem.FitWideWindow
+import com.example.poco.core.designsystem.LocalVoiceEnabled
 import com.example.poco.presentation.boarding.BoardingRoute
 import com.example.poco.presentation.common.LocalRailActions
 import com.example.poco.presentation.common.RailActions
@@ -101,7 +102,12 @@ fun MungoNavHost(
             onSettings = { navController.navigateToRailTab(MungoDestination.Settings) }
         )
     }
-    CompositionLocalProvider(LocalRailActions provides railActions) {
+    val voiceEnabled by hiltViewModel<VoiceSettingViewModel>().enabled
+        .collectAsStateWithLifecycle()
+    CompositionLocalProvider(
+        LocalRailActions provides railActions,
+        LocalVoiceEnabled provides voiceEnabled
+    ) {
         MungoNavGraph(navController, modifier)
     }
 }
@@ -229,6 +235,9 @@ private fun MungoNavGraph(navController: NavHostController, modifier: Modifier) 
                     navigateToPetProfile = { navController.navigate(MungoDestination.PetProfile) },
                     navigateToBoarding = { navController.navigate(MungoDestination.Boarding) },
                     navigateToDriving = { navController.navigate(MungoDestination.Driving) },
+                    navigateToRecords = {
+                        navController.navigateToRailTab(MungoDestination.Records())
+                    },
                     navigateToWeeklyRecords = {
                         navController.navigateToRailTab(MungoDestination.Records("WEEK"))
                     }

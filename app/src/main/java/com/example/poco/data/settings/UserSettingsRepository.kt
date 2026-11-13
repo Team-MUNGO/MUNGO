@@ -25,6 +25,10 @@ interface UserSettingsRepository {
     /** 설정 > 알림 '도착 요약': 주행을 마치면 요약 화면을 보여 줄지 */
     val arrivalSummaryEnabled: Flow<Boolean> get() = flowOf(true)
     suspend fun setArrivalSummaryEnabled(enabled: Boolean) {}
+
+    /** 탑승 준비 끝 '주행 화면 안내' 팝업에서 다시 보지 않기를 골랐는지 */
+    val layoutGuideHidden: Flow<Boolean> get() = flowOf(false)
+    suspend fun setLayoutGuideHidden(hidden: Boolean) {}
 }
 
 private val Context.userSettings: DataStore<Preferences> by preferencesDataStore(
@@ -45,6 +49,13 @@ class DataStoreUserSettingsRepository @Inject constructor(
     override val voiceGuidanceEnabled = context.userSettings.data.map { it[voiceKey] ?: true }
     private val arrivalKey = booleanPreferencesKey("arrival_summary_enabled")
     override val arrivalSummaryEnabled = context.userSettings.data.map { it[arrivalKey] ?: true }
+
+    private val layoutGuideKey = booleanPreferencesKey("layout_guide_hidden")
+    override val layoutGuideHidden = context.userSettings.data.map { it[layoutGuideKey] ?: false }
+
+    override suspend fun setLayoutGuideHidden(hidden: Boolean) {
+        context.userSettings.edit { it[layoutGuideKey] = hidden }
+    }
 
     override suspend fun setArrivalSummaryEnabled(enabled: Boolean) {
         context.userSettings.edit { it[arrivalKey] = enabled }

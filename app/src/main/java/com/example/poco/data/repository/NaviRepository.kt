@@ -3,6 +3,7 @@ package com.example.poco.data.repository
 import com.example.poco.core.driving.Reading
 import com.example.poco.data.model.NaviEvent
 import com.example.poco.data.pleos.datasource.BumpApproach
+import com.example.poco.data.pleos.datasource.NaviPlaceHint
 import com.example.poco.data.pleos.datasource.NaviRouteUpdate
 import kotlinx.coroutines.flow.Flow
 
@@ -18,4 +19,7 @@ interface NaviRepository {
 
     /** 주행 세션용 경유지 · 도착 */
     fun observeRoute(): Flow<NaviRouteUpdate>
+
+    /** 주행 세션용: 이벤트 기록에 붙일 지금 위치 이름 */
+    fun observePlace(): Flow<NaviPlaceHint> = kotlinx.coroutines.flow.emptyFlow()
 }

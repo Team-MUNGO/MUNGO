@@ -31,7 +31,9 @@ data class DrivingSettings(
     /** 설정 > 알림 '창문 안전 알림'. 끄면 창문이 열려도 경고·음성 안내를 하지 않는다 */
     val windowAlerts: Boolean = true,
     /** 설정 > 알림 '휴식 쉼터 제안'. 끄면 휴식 20분 전 쉼터 제안을 받지 않는다 */
-    val restSuggestions: Boolean = true
+    val restSuggestions: Boolean = true,
+    /** 이 온도 이상이면 위험 (일반 28°C · 위험군 27°C, mungo 기준점 ①) */
+    val dangerTemperatureC: Float = 28f
 ) {
     val petSize: PetSize? get() = weightTenths?.let(::petSizeFor)
 
@@ -40,14 +42,17 @@ data class DrivingSettings(
         require(weightTenths == null || weightTenths in 1..1500)
         require(minTemperatureC.isFinite() && maxTemperatureC.isFinite())
         require(minTemperatureC <= maxTemperatureC)
+        require(dangerTemperatureC > maxTemperatureC)
     }
 }
 
-enum class CabinTemperatureStatus { UNKNOWN, COLD, NORMAL, HOT }
+/** COLD = 추울 수 있어요, HOT = 주의(쾌적보다 더움), DANGER = 위험(에어컨을 켜 주세요) */
+enum class CabinTemperatureStatus { UNKNOWN, COLD, NORMAL, HOT, DANGER }
 
 fun temperatureStatus(value: Float?, settings: DrivingSettings): CabinTemperatureStatus = when {
     value == null || !value.isFinite() -> CabinTemperatureStatus.UNKNOWN
     value < settings.minTemperatureC -> CabinTemperatureStatus.COLD
+    value >= settings.dangerTemperatureC -> CabinTemperatureStatus.DANGER
     value > settings.maxTemperatureC -> CabinTemperatureStatus.HOT
     else -> CabinTemperatureStatus.NORMAL
 }

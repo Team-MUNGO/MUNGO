@@ -461,11 +461,13 @@ fun MungoVoiceHint(
             .padding(end = MungoSpacing.space32),
         verticalAlignment = Alignment.CenterVertically
     ) {
+        // 음성 안내가 꺼져 있으면 회색 · 누를 수 없음
         MungoIconButton(
             icon = MungoIcon.MIC,
             onClick = onMicClick,
             style = MungoIconButtonStyle.ACCENT,
             size = 76.dp,
+            enabled = com.example.poco.core.designsystem.LocalVoiceEnabled.current,
             contentDescription = "음성으로 답하기"
         )
         Spacer(Modifier.width(MungoSpacing.space20))

@@ -23,4 +23,6 @@ class NaviRepositoryImpl @Inject constructor(private val naviDataSource: NaviDat
 
     // A Navi outage simply ends route tracking; waypoint guidance then stays silent (no guessed ETA).
     override fun observeRoute() = naviDataSource.observeRoute().catch { }
+
+    override fun observePlace() = naviDataSource.observePlace().catch { }
 }

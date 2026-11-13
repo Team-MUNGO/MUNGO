@@ -59,6 +59,10 @@ data class DrivingSessionState(
     val windowPercent: Reading<Double> = Reading.Unknown,
     val canCloseWindow: Boolean = false,
     val windowWarning: Boolean = false,
+    /** 실내 온도가 위험 기준 이상: "에어컨을 켜 주세요" 팝업 (닫거나 온도가 내려가면 false) */
+    val temperatureDanger: Boolean = false,
+    /** 주의(더움) 이상이 3분 넘게 이어졌다: 음성 카드에 휴식 제안을 띄워 둔다 (쾌적 · 추움이면 false) */
+    val temperatureRestSuggested: Boolean = false,
     val closeStatus: WindowCloseStatus = WindowCloseStatus.IDLE,
     val closeError: String? = null,
     val ttsSpeaking: Boolean = false,

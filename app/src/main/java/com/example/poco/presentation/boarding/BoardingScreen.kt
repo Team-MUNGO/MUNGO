@@ -94,7 +94,7 @@ fun BoardingRoute(
             onSelectActivePet = viewModel::selectActivePet,
             onToggleCheck = viewModel::toggleCheck,
             onCloseLayoutDialog = viewModel::closeLayoutDialog,
-            onPickLayout = viewModel::startDriving
+            onConfirmLayoutGuide = viewModel::confirmLayoutGuide
         )
     )
 }
@@ -110,7 +110,7 @@ class BoardingActions(
     val onSelectActivePet: (Long) -> Unit = {},
     val onToggleCheck: (CheckItem) -> Unit = {},
     val onCloseLayoutDialog: () -> Unit = {},
-    val onPickLayout: (DriveLayout) -> Unit = {}
+    val onConfirmLayoutGuide: (hideNextTime: Boolean) -> Unit = {}
 )
 
 @Composable
@@ -162,11 +162,8 @@ private fun BoardingScreen(
     }
     if (uiState.isLayoutDialogVisible) {
         DriveLayoutDialog(
-            isListening = uiState.isListening,
-            heardText = uiState.heardText,
-            onMic = actions.onMic,
             onDismiss = actions.onCloseLayoutDialog,
-            onPick = actions.onPickLayout
+            onConfirm = actions.onConfirmLayoutGuide
         )
     }
 }
@@ -341,20 +338,30 @@ internal fun VoiceRow(
     micSize: Dp = 64.dp
 ) {
     val colors = MungoTheme.colors
+    // 음성 안내가 꺼져 있으면 회색 · 누를 수 없음 (설정 > 음성 및 알림)
+    val voiceOn = com.example.poco.core.designsystem.LocalVoiceEnabled.current
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
                 .size(micSize)
                 .background(
-                    if (isListening) colors.bgAccent else colors.bgNeutralStrong,
+                    when {
+                        !voiceOn -> colors.bgNeutral
+                        isListening -> colors.bgAccent
+                        else -> colors.bgNeutralStrong
+                    },
                     CircleShape
                 )
-                .pressable(CircleShape, onClick = onMic),
+                .pressable(CircleShape, onClick = onMic.takeIf { voiceOn }),
             contentAlignment = Alignment.Center
         ) {
             MungoIconView(
                 MungoIcon.MIC,
-                tint = if (isListening) colors.textOnAccent else colors.textOnNeutralStrong,
+                tint = when {
+                    !voiceOn -> colors.textDisabled
+                    isListening -> colors.textOnAccent
+                    else -> colors.textOnNeutralStrong
+                },
                 size = micSize * 0.44f,
                 contentDescription = "말로 답하기"
             )
@@ -362,6 +369,7 @@ internal fun VoiceRow(
         Spacer(Modifier.width(20.dp))
         Text(
             text = when {
+                !voiceOn -> "음성 안내가 꺼져 있어요"
                 isListening -> "듣고 있어요…"
                 heardText != null -> "“ $heardText ”"
                 else -> "“ $example ”"

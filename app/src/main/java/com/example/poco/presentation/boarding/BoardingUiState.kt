@@ -73,7 +73,8 @@ data class BoardingUiState(
     /** 마지막으로 알아들은 말 (화면에 그대로 보여 준다) */
     val heardText: String? = null,
     val isLayoutDialogVisible: Boolean = false,
-    val layout: DriveLayout = DriveLayout.THREE,
+    /** 주행 화면은 2분할로 시작 (내비가 필요하면 주행 화면에서 드래그해 3분할) */
+    val layout: DriveLayout = DriveLayout.TWO,
     val isSaving: Boolean = false,
     /** 주행 화면으로 */
     val isDone: Boolean = false
@@ -147,14 +148,14 @@ fun temperatureNote(pets: List<Pet>): TemperatureNote? {
     return TemperatureNote(title = title, body = "이번 이동은 실내 ${range}를 기준으로 지켜볼게요")
 }
 
-/** 온도에 예민한 이유. 더위가 더 위험해서 더위 이유를 먼저 */
+/**
+ * 온도에 예민한 이유: 온도 위험군(단두종 · 노령견 · 어린 강아지)일 때만.
+ * 그 외는 모두 일반 반려견 기준(20~25°C)이라 따로 이유를 말하지 않는다
+ */
 private fun reasonFor(pet: Pet, types: Set<PetType>): String? = when {
     PetType.BRACHYCEPHALIC in types -> "단두종이라 더위에 약해요"
-    PetType.DOUBLE_COAT in types -> "털이 두꺼워 더위에 약해요"
-    PetType.CAT in types -> "고양이라 온도에 예민해요"
     PetType.SENIOR_PUPPY in types ->
-        if ((pet.ageYears ?: 0) < 1) "어려서 더위·추위에 약해요" else "나이가 많아 더위·추위에 약해요"
-    PetType.SMALL_SHORT_COAT in types -> "몸이 작아 추위에 약해요"
+        if ((pet.ageYears ?: 0) < 1) "어려서 더위·추위에 약해요" else "노령견이라 더위·추위에 약해요"
     else -> null
 }
 

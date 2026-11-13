@@ -55,6 +55,7 @@ class SessionViewModel @Inject constructor(
 
     fun end() = session.end()
     fun dismissWarning() = session.dismissWindowWarning()
+    fun dismissTemperatureDanger() = session.dismissTemperatureDanger()
     fun closeWindow() = session.closeWindow()
     fun startRest() = session.startRest()
     fun readyToDepart() = session.readyToDepart()

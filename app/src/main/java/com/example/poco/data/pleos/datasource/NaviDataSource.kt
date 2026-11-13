@@ -16,6 +16,15 @@ sealed interface NaviRouteUpdate {
     data object RouteEnded : NaviRouteUpdate
 }
 
+/**
+ * 내비가 알려 주는 지금 위치 이름.
+ * [landmark] = 300m 안쪽 IC · JC · 톨게이트 · 휴게소 이름 (길 안내 중일 때만), [address] = 구 · 동 이름
+ */
+data class NaviPlaceHint(val landmark: String?, val address: String?, val atEpoch: Long) {
+    /** 꿀팁 · 기록에 쓸 이름: 랜드마크가 있으면 그것, 없으면 주소 */
+    val name: String? get() = landmark ?: address
+}
+
 interface NaviDataSource {
     /**
      * NaviHelper SDK 안내 이벤트. 경로 안내 중에만 의미 있는 값이 온다.
@@ -31,4 +40,7 @@ interface NaviDataSource {
 
     /** 주행 세션용: 경유지 · 경유지 도착 · 경로 종료 */
     fun observeRoute(): Flow<NaviRouteUpdate>
+
+    /** 주행 세션용: 이벤트 기록에 붙일 지금 위치 이름 (주기적으로 내비에 묻는다) */
+    fun observePlace(): Flow<NaviPlaceHint> = kotlinx.coroutines.flow.emptyFlow()
 }

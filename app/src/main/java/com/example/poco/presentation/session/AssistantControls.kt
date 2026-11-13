@@ -56,21 +56,32 @@ internal fun AssistantControls(
                 color = DrivingInk
             )
         }
+        // 음성 안내가 꺼져 있으면 음성 질문 버튼은 회색 · 누를 수 없음
+        val voiceOn = com.example.poco.core.designsystem.LocalVoiceEnabled.current
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(
                 onClick = if (state.phase == AssistantPhase.IDLE) onAsk else onCancel,
-                enabled = active && !blocked,
+                enabled = active && !blocked && voiceOn,
                 colors = ButtonDefaults.buttonColors(
                     containerColor = Color.White,
                     contentColor = DrivingInk
                 ),
                 modifier = Modifier.heightIn(min = 56.dp)
             ) {
-                Image(painterResource(R.drawable.driving_mic), null, Modifier.size(20.dp))
+                Image(
+                    painterResource(R.drawable.driving_mic),
+                    null,
+                    Modifier.size(20.dp),
+                    colorFilter = if (voiceOn) {
+                        null
+                    } else {
+                        androidx.compose.ui.graphics.ColorFilter.tint(DrivingMuted)
+                    }
+                )
                 Spacer(Modifier.width(8.dp))
                 Text(
                     when (state.phase) {
-                        AssistantPhase.IDLE -> "음성으로 질문"
+                        AssistantPhase.IDLE -> if (voiceOn) "음성으로 질문" else "음성 안내 꺼짐"
                         AssistantPhase.LISTENING -> "듣고 있어요 · 취소"
                         AssistantPhase.THINKING -> "답변 준비 중 · 취소"
                         AssistantPhase.CONNECTING -> "연결 중 · 취소"

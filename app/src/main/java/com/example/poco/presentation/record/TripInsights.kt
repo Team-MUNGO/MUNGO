@@ -2,11 +2,15 @@ package com.example.poco.presentation.record
 
 import androidx.compose.ui.graphics.vector.ImageVector
 import com.example.poco.core.driving.PetSeat
+import com.example.poco.core.util.eunNeun
+import com.example.poco.core.util.iGa
 import com.example.poco.data.record.MotionRecord
 import com.example.poco.data.record.MotionSign
 import com.example.poco.data.record.TripEntity
 import com.example.poco.data.record.TripEventEntity
 import com.example.poco.data.record.TripEventType
+import com.example.poco.domain.driving.MungoStandard
+import com.example.poco.domain.driving.TemperatureGroup
 import com.example.poco.domain.motion.InsightType
 import com.example.poco.domain.motion.MotionAnalysis
 import com.example.poco.domain.motion.MotionInsight
@@ -78,7 +82,13 @@ data class TimelineItem(
     val type: String,
     val scoreAfter: Int?,
     val scoreBefore: Int? = null,
-    val snapshot: TripEventEntity? = null
+    val snapshot: TripEventEntity? = null,
+    /** 꿀팁에 채울 숫자 (평온 유지 분, 오래 달림 분 등) */
+    val minutes: Int? = null,
+    /** 꿀팁에 채울 기준값 (온도 기준 °C) */
+    val limit: Float? = null,
+    /** 꿀팁에 채울 장소 이름 (내비가 알려 준 휴게소 등) */
+    val place: String? = null
 )
 
 private fun penaltyInfo(reason: String?): Pair<String, ImageVector> = when (reason) {
@@ -122,7 +132,8 @@ fun timelineItems(trip: TripEntity, events: List<TripEventEntity>): List<Timelin
                 scoreBefore = calmAfter?.minus(
                     calmGain
                 ),
-                snapshot = calmSnapshot
+                snapshot = calmSnapshot,
+                minutes = minutes.toInt()
             )
         calmStart = null
         calmGain = 0
@@ -159,7 +170,8 @@ fun timelineItems(trip: TripEntity, events: List<TripEventEntity>): List<Timelin
                     "REST",
                     e.scoreAfter,
                     scoreBefore = start.scoreBefore,
-                    snapshot = start
+                    snapshot = start,
+                    minutes = minutes.toInt()
                 )
                 restStart = null
             }
@@ -228,40 +240,144 @@ fun timelineItems(trip: TripEntity, events: List<TripEventEntity>): List<Timelin
             }
             TripEventType.TEMPERATURE_OUT_OF_RANGE -> {
                 flushCalm()
-                val (status, value) = (e.detail ?: "").split(":").let {
-                    it.getOrNull(0) to
-                        it.getOrNull(1)
-                }
+                // "HOT:27.5:25.0" (예전 기록은 기준 없이 "HOT:27.5")
+                val parts = (e.detail ?: "").split(":")
+                val hot = parts.getOrNull(0) != "COLD"
+                val value = parts.getOrNull(1)
                 out += TimelineItem(
-                    e.atEpoch, ItemKind.ALERT, MgIcons.Sun,
-                    if (status == "HOT") "실내 온도 높음" else "실내 온도 낮음",
+                    e.atEpoch, ItemKind.ALERT, if (hot) MgIcons.Sun else MgIcons.Thermo,
+                    if (hot) "실내 온도 높음" else "실내 온도 낮음",
                     value?.let {
                         "실내 $it°C · 기준 범위 밖"
                     } ?: "기준 범위 밖",
-                    0, "TEMPERATURE", null, snapshot = e
+                    0, if (hot) "TEMPERATURE_HOT" else "TEMPERATURE_COLD", null, snapshot = e,
+                    limit = parts.getOrNull(2)?.toFloatOrNull()
                 )
             }
         }
     }
     flushCalm()
+    out += longDriveItems(trip, sorted)
+    motionItem(trip)?.let { out += it }
+    return out.sortedBy { it.at }
+}
+
+/**
+ * 오래 달림: 출발(또는 휴식 끝)부터 다음 휴식(또는 도착)까지가 휴식 간격을 넘긴 구간마다 하나.
+ * 휴게소 이름은 그 뒤에 내비가 알려 준 경유지 도착 이름이 있으면 쓴다
+ */
+private fun longDriveItems(trip: TripEntity, sorted: List<TripEventEntity>): List<TimelineItem> {
+    val interval = trip.startRestIntervalMinutes.takeIf { it > 0 } ?: return emptyList()
+    val end = trip.endedAtEpoch ?: return emptyList()
+    val out = mutableListOf<TimelineItem>()
+    var segmentStart = trip.startedAtEpoch
+    val stops = sorted.filter {
+        it.type == TripEventType.REST_STARTED ||
+            it.type == TripEventType.REST_COMPLETED ||
+            it.type == TripEventType.REST_CANCELLED
+    }
+    fun check(segmentEnd: Long) {
+        val minutes = ((segmentEnd - segmentStart) / 60_000).toInt()
+        if (minutes <= interval) return
+        val at = segmentStart + interval * 60_000L
+        val place = sorted.firstOrNull {
+            it.type == TripEventType.WAYPOINT_ARRIVED && it.atEpoch >= segmentStart
+        }?.detail?.takeIf { it.isNotBlank() }
+        out += TimelineItem(
+            at, ItemKind.ALERT, MgIcons.Clock, "휴식 없이 ${koreanMinutes(minutes)}",
+            "휴식 간격 ${intervalText(interval)}을 넘겨 달렸어요",
+            0, "LONG_DRIVE", null,
+            snapshot = sorted.lastOrNull { it.atEpoch <= at && it.latitude != null },
+            minutes = interval,
+            place = place
+        )
+    }
+    for (e in stops) {
+        if (e.type == TripEventType.REST_STARTED) check(e.atEpoch) else segmentStart = e.atEpoch
+    }
+    if (stops.lastOrNull()?.type != TripEventType.REST_STARTED) check(end)
     return out
 }
+
+/** 멀미 징후: 보호자가 도착 후 체크한 경우에만, 도착 시각에 하나 */
+private fun motionItem(trip: TripEntity): TimelineItem? {
+    val record = MotionRecord.decode(trip.motionSicknessSigns) ?: return null
+    if (record.total <= 0) return null
+    val names = record.counts.keys.sortedBy { it.ordinal }.joinToString(" · ") { it.label }
+    val drivingMinutes = ((trip.drivingMs ?: tripDurationMs(trip)) / 60_000).toInt()
+    return TimelineItem(
+        trip.endedAtEpoch ?: trip.startedAtEpoch, ItemKind.ALERT, MgIcons.Yawn,
+        "멀미 징후 ${record.total}회",
+        "도착 후 체크 · $names",
+        0, "MOTION", null,
+        minutes = drivingMinutes
+    )
+}
+
+private fun koreanMinutes(minutes: Int): String = intervalText(minutes)
 
 private fun scoreDetail(before: Int?, after: Int?) =
     if (before != null && after != null) "점수 $before → $after" else "점수 변화 기록"
 
-fun tipFor(type: String): String = when (type) {
-    "RAPID_BRAKING" -> "앞차와 거리를 넉넉히 두고 천천히 멈춰 보세요."
-    "RAPID_ACCELERATION" -> "출발할 때는 천천히 가속해 보세요."
-    "SHARP_TURN" -> "커브에 들어가기 전에 속도를 줄여 보세요."
-    "REPEATED_TURNS" -> "연속 커브에서는 일정한 속도를 유지해 보세요."
-    "SPEED_BUMP" -> "과속방지턱 앞에서는 충분히 감속해 주세요."
-    "REST" -> "휴식 3분마다 점수가 1점씩 올라요."
-    "CALM" -> "평온하게 달리면 점수가 천천히 회복돼요."
-    "WINDOW" -> "반려견 쪽 창문은 20% 이하로 열어 주세요."
-    "TEMPERATURE" -> "에어컨이나 히터로 기준 온도를 맞춰 주세요."
-    else -> "천천히, 부드럽게 운전해 주세요."
+/**
+ * 이동기록_03 이벤트 기록의 꿀팁: 이벤트 1개 = 꿀팁 1개.
+ * 한 문장 · 행동 하나 + 펫 입장의 이유. 장소 · 숫자는 기록에서 채우고, 모르면 빼고 말한다.
+ * 숫자(방지턱 30km/h · 창문 20% · 온도 기준 · 휴식 간격)는 개발 기준표 값과 같이 움직인다
+ */
+fun eventTip(item: TimelineItem, petName: String, place: String? = null): String {
+    val subject = petName.ifBlank { "반려견" }
+    return when (item.type) {
+        "RAPID_BRAKING" ->
+            "${place ?: "이 구간"} 진입 ${BRAKE_EARLY_METERS}m 전부터 속도를 줄여 보세요."
+        "SPEED_BUMP" -> "방지턱 앞에서는 ${BUMP_KMH}km/h 아래로 천천히 넘어 주세요."
+        "REPEATED_TURNS" -> "커브가 이어지는 구간에서는 들어가기 전에 미리 속도를 줄여 주세요."
+        "RAPID_ACCELERATION" ->
+            "출발할 땐 ${GENTLE_START_SECONDS}초 동안 천천히 밟아 주세요. ${subject.iGa} 뒤로 쏠리지 않아요."
+        "SHARP_TURN" ->
+            "${place ?: "이 커브"}에서는 돌기 전에 속도를 줄이고 핸들을 천천히 돌려 주세요."
+        "WINDOW" ->
+            "창문은 ${WINDOW_SAFE_PERCENT}% 아래로만 열어 주세요. 얼굴을 내밀면 눈을 다칠 수 있어요."
+        "TEMPERATURE_HOT" -> {
+            val limit = (item.limit ?: GENERAL_HOT_LIMIT).toCelsius()
+            "${subject.eunNeun} $limit°C를 넘으면 힘들어해요. 출발 전에 에어컨을 미리 켜 두세요."
+        }
+        "TEMPERATURE_COLD" -> {
+            val limit = (item.limit ?: MungoStandard.COLD_BELOW_CELSIUS).toCelsius()
+            "$limit°C 아래로 내려가면 추울 수 있어요. 자리에 담요를 깔아 주세요."
+        }
+        "LONG_DRIVE" -> {
+            val every = intervalText(item.minutes ?: DEFAULT_REST_MINUTES)
+            val next = item.place?.let { "다음엔 ${it}에 들러 보세요." } ?: "다음엔 휴게소에 들러 보세요."
+            "${every}마다 한 번은 쉬어 가요. $next"
+        }
+        "REST" -> if (item.delta > 0) {
+            "잘 쉬었어요! 휴식 뒤 점수가 ${item.delta}점 올랐어요. 다음에도 물부터 챙겨 주세요."
+        } else {
+            "잘 쉬었어요! 다음에도 물부터 챙겨 주세요."
+        }
+        "CALM" -> "${item.minutes ?: 1}분 동안 흔들림이 없었어요. 지금처럼만 운전해 주세요."
+        "MOTION" -> if ((item.minutes ?: 0) > 60) {
+            "1시간 넘게 달린 날 징후가 늘었어요. 다음엔 1시간 30분마다 쉬어 보세요."
+        } else {
+            "멀미 징후가 보였어요. 다음엔 1시간 30분마다 쉬어 보세요."
+        }
+        else -> NO_EVENT_TIP_SUFFIX
+    }
 }
+
+/** 이벤트가 하나도 없을 때의 꿀팁 */
+fun noEventTip(petName: String): String =
+    "오늘은 흔들림이 거의 없었어요. ${petName.ifBlank { "반려견" }.iGa} 편안하게 다녀왔어요."
+
+private const val NO_EVENT_TIP_SUFFIX = "천천히, 부드럽게 운전해 주세요."
+private const val BRAKE_EARLY_METERS = 300
+private const val BUMP_KMH = 30
+private const val GENTLE_START_SECONDS = 3
+private const val WINDOW_SAFE_PERCENT = 20
+private const val DEFAULT_REST_MINUTES = 120
+
+/** 예전 기록(기준값 없이 저장)은 일반 반려견 기준으로 */
+private val GENERAL_HOT_LIMIT = TemperatureGroup.GENERAL.comfort.endInclusive
 
 /** Measured cabin temperature closest before [at] (within 5 minutes), never interpolated. */
 fun temperatureAt(events: List<TripEventEntity>, at: Long): String? = events.filter {
@@ -362,7 +478,7 @@ fun detailTip(
     previous: TripEntity?,
     currentInterval: Int,
     analysis: MotionAnalysis? = null
-): Tip {
+): Tip? {
     val now = MotionRecord.decode(trip.motionSicknessSigns)
     val before = previous?.let { MotionRecord.decode(it.motionSicknessSigns) }
     if (now != null && before != null && now.total > before.total) {
@@ -379,9 +495,18 @@ fun detailTip(
     return when {
         brakes >= 2 -> Tip("급정거가 ${brakes}번 있었어요.", "앞차와 거리를 넉넉히 두면 ${trip.petName}가 덜 놀라요.")
         turnCount(trip) >= 2 -> Tip("급회전이 ${turnCount(trip)}번 있었어요.", "커브에 들어가기 전에 속도를 미리 줄여 보세요.")
+        // 비정상 종료 · 점수 없음 · 너무 짧은 이동은 "평온했다"고 말할 근거가 없다
+        !isCalmJudgeable(trip) -> null
         else -> Tip("평온한 이동이었어요.", "지금처럼 ${intervalText(currentInterval)}마다 쉬어 가요.")
     }
 }
+
+/** 평온했다고 말하려면 정상 종료 · 점수 있음 · 실제로 [CALM_TIP_MIN_DRIVING_MS] 이상 달렸어야 한다 */
+fun isCalmJudgeable(trip: TripEntity): Boolean = trip.status != "INTERRUPTED" &&
+    trip.finalScore != null &&
+    (trip.drivingMs ?: tripDurationMs(trip)) >= CALM_TIP_MIN_DRIVING_MS
+
+private const val CALM_TIP_MIN_DRIVING_MS = 10 * 60_000L
 
 /** Analysis window mapped back to stored trips,
 oldest first,

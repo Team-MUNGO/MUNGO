@@ -576,16 +576,23 @@ fun MungoInput(
                             it()
                         }
                         onMicClick?.let { onMic ->
+                            // 음성 안내가 꺼져 있으면 마이크만 회색 · 누를 수 없음
+                            val micEnabled = enabled &&
+                                com.example.poco.core.designsystem.LocalVoiceEnabled.current
                             Spacer(Modifier.width(MungoSpacing.space12))
                             Box(
                                 modifier = Modifier
                                     .size(MungoSize.touchMin)
-                                    .pressable(CircleShape, enabled, onMic),
+                                    .pressable(CircleShape, micEnabled, onMic),
                                 contentAlignment = Alignment.Center
                             ) {
                                 MungoIconView(
                                     MungoIcon.MIC,
-                                    tint = if (enabled) colors.textPrimary else colors.textDisabled,
+                                    tint = if (micEnabled) {
+                                        colors.textPrimary
+                                    } else {
+                                        colors.textDisabled
+                                    },
                                     size = 32.dp,
                                     contentDescription = "음성으로 입력"
                                 )

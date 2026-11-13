@@ -27,12 +27,14 @@ class PetDrivingProfile @Inject constructor(private val pets: PetRepository) {
 
 /** Comfort range comes from the mungo standard for this pet (breed · weight · age). */
 fun Pet.toDrivingSettings(): DrivingSettings? = runCatching {
-    val comfort = temperatureStandard.comfort
+    val standard = temperatureStandard
+    val comfort = standard.comfort
     DrivingSettings(
         petName = name.trim(),
         seat = PetSeat.valueOf(seat.name),
         minTemperatureC = comfort.start,
         maxTemperatureC = comfort.endInclusive,
+        dangerTemperatureC = standard.dangerAt,
         weightTenths = weightKg?.let { (it * 10).roundToInt() }?.takeIf { it in 1..1500 },
         windowAlerts = windowAlertEnabled,
         restSuggestions = restSuggestionEnabled

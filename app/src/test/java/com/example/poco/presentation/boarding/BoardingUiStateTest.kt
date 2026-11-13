@@ -39,11 +39,11 @@ class BoardingUiStateTest {
     }
 
     @Test
-    fun `단두종은 더위 이유와 합친 온도 범위를 보여 준다`() {
-        // 시츄(단두종 19~23) + 소형(21~25) → 21~23
+    fun `단두종은 더위 이유와 위험군 온도 범위를 보여 준다`() {
+        // 시츄(단두종) → 위험군 쾌적 20~24
         val note = temperatureNote(listOf(pet(1, "현댕이", breed = "시츄", age = 5, kg = 7f)))!!
         assertEquals("현댕이는 단두종이라 더위에 약해요", note.title)
-        assertEquals("이번 이동은 실내 21~23°C를 기준으로 지켜볼게요", note.body)
+        assertEquals("이번 이동은 실내 20~24°C를 기준으로 지켜볼게요", note.body)
     }
 
     @Test

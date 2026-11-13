@@ -1,8 +1,6 @@
 package com.example.poco.presentation.record
 
-import android.content.ActivityNotFoundException
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -224,9 +222,10 @@ fun TripDetailRoute(
                     }
                     MotionSummaryCard(t, previous, onMotion, Modifier.weight(432f).fillMaxHeight())
                 }
-                Spacer(Modifier.height(27.dp))
-                val tip = detailTip(t, previous, interval, motion)
-                BulbCard(tip.title, tip.body, Modifier.fillMaxWidth().height(123.dp))
+                detailTip(t, previous, interval, motion)?.let { tip ->
+                    Spacer(Modifier.height(27.dp))
+                    BulbCard(tip.title, tip.body, Modifier.fillMaxWidth().height(123.dp))
+                }
             }
         }
     }
@@ -471,7 +470,6 @@ private fun MotionSummaryCard(
                                 color = Color(0xFF4E5968)
                             )
                         }
-                        Text("${now.count(sign)}회", style = Mg.bold(40, 50), color = Mg.Ink)
                     }
                 }
             }
@@ -500,7 +498,6 @@ fun TripEventsRoute(
     val events by viewModel.events.collectAsStateWithLifecycle()
     var filter by rememberSaveable { mutableStateOf<String?>(null) }
     var selectedAt by rememberSaveable { mutableStateOf<Long?>(null) }
-    val context = LocalContext.current
     val t = trip
     PageScaffold(
         "이벤트 기록",
@@ -614,6 +611,11 @@ fun TripEventsRoute(
                 Modifier.weight(651f).fillMaxHeight().verticalScroll(rememberScrollState()),
                 padding = PaddingValues(horizontal = 37.dp, vertical = 37.dp)
             ) {
+                if (all.isEmpty()) {
+                    // 이벤트가 하나도 없을 때도 꿀팁은 보여 준다
+                    TipBox(t.petName, noEventTip(t.petName))
+                    return@MgCard
+                }
                 if (selected == null) {
                     Text("이벤트를 고르면 자세히 보여 드려요", style = Mg.Body, color = Mg.Muted)
                     return@MgCard
@@ -670,41 +672,6 @@ fun TripEventsRoute(
                 Spacer(Modifier.height(20.dp))
                 Text(selected.detail, style = Mg.Body, color = Mg.Muted)
                 Spacer(Modifier.height(24.dp))
-                val position = eventLocationText(selected)
-                Column(
-                    Modifier.fillMaxWidth().background(Mg.Chip, RoundedCornerShape(20.dp))
-                        .then(
-                            if (position != null) {
-                                Modifier.clickable {
-                                    val lat = selected.snapshot?.latitude
-                                    val lon = selected.snapshot?.longitude
-                                    val uri = Uri.parse("geo:$lat,$lon?q=$lat,$lon")
-                                    try {
-                                        context.startActivity(Intent(Intent.ACTION_VIEW, uri))
-                                    } catch (
-                                        _: ActivityNotFoundException
-                                    ) {
-                                        android.widget.Toast.makeText(
-                                            context,
-                                            "위치를 열 지도 앱이 없어요.",
-                                            android.widget.Toast.LENGTH_SHORT
-                                        ).show()
-                                    }
-                                }
-                            } else {
-                                Modifier
-                            }
-                        ).padding(24.dp)
-                ) {
-                    Text("이벤트 발생 위치", style = Mg.bold(24, 32), color = Mg.Ink)
-                    Spacer(Modifier.height(8.dp))
-                    Text(position ?: "위치 기록 없음", style = Mg.Body, color = Mg.Muted)
-                    if (position != null) {
-                        Spacer(Modifier.height(8.dp))
-                        Text("지도에서 위치 보기 ›", style = Mg.semi(22, 30), color = Mg.OrangeText)
-                    }
-                }
-                Spacer(Modifier.height(24.dp))
                 Text("그때 ${t.petName}는?", style = Mg.semi(23, 30), color = Mg.Muted)
                 Spacer(Modifier.height(14.dp))
                 Row {
@@ -731,24 +698,31 @@ fun TripEventsRoute(
                 Spacer(Modifier.height(8.dp))
                 Text(selected.snapshot?.guidanceText ?: "안내 기록 없음", style = Mg.Body, color = Mg.Ink)
                 Spacer(Modifier.height(24.dp))
-                Column(
-                    Modifier.fillMaxWidth().background(
-                        Mg.Yellow,
-                        RoundedCornerShape(20.dp)
-                    ).padding(horizontal = 32.dp, vertical = 26.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(12.dp)
-                    ) {
-                        MgIcon(MgIcons.Bulb, Mg.OrangeText, 22.dp)
-                        Text("${t.petName}의 꿀 TIP", style = Mg.semi(24, 32), color = Mg.OrangeText)
-                    }
-                    Spacer(Modifier.height(16.dp))
-                    Text(tipFor(selected.type), style = Mg.semi(25, 33), color = Mg.Ink)
-                }
+                // 장소 이름은 이벤트 때 내비에서 받아 둔 것 ("판교IC" · "수정구 시흥동")
+                TipBox(t.petName, eventTip(selected, t.petName, selected.snapshot?.placeName))
             }
         }
+    }
+}
+
+/** "{펫}의 꿀 TIP" 노란 상자 */
+@Composable
+private fun TipBox(petName: String, tip: String) {
+    Column(
+        Modifier.fillMaxWidth().background(
+            Mg.Yellow,
+            RoundedCornerShape(20.dp)
+        ).padding(horizontal = 32.dp, vertical = 26.dp)
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            MgIcon(MgIcons.Bulb, Mg.OrangeText, 22.dp)
+            Text("${petName}의 꿀 TIP", style = Mg.semi(24, 32), color = Mg.OrangeText)
+        }
+        Spacer(Modifier.height(16.dp))
+        Text(tip, style = Mg.semi(25, 33), color = Mg.Ink)
     }
 }
 

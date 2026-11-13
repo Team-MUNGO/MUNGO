@@ -1,7 +1,6 @@
 package com.example.poco.presentation.onboarding
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -11,7 +10,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.safeDrawingPadding
 import androidx.compose.foundation.layout.size
@@ -22,7 +20,6 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -102,17 +99,6 @@ private fun OnboardingScreen(
                 modifier = Modifier.fillMaxWidth(),
                 verticalArrangement = Arrangement.spacedBy(MungoSpacing.space24)
             ) {
-                Text(
-                    text = "건너뛰기",
-                    style = MungoTheme.typography.title2.copy(fontWeight = FontWeight.Bold),
-                    color = colors.textPrimary,
-                    modifier = Modifier
-                        .align(Alignment.End)
-                        .clip(RoundedCornerShape(MungoRadius.sm))
-                        .clickable(onClick = onSkip)
-                        .heightIn(min = 64.dp)
-                        .padding(horizontal = MungoSpacing.space16, vertical = MungoSpacing.space12)
-                )
                 features.forEachIndexed { index, feature ->
                     FeatureCard(number = index + 1, feature = feature)
                 }

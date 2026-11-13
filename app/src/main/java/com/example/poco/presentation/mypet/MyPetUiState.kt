@@ -63,16 +63,19 @@ fun PetTrait.careLabel(breed: String = ""): String = when (this) {
 private fun isBrachycephalic(breed: String): Boolean =
     PetType.BRACHYCEPHALIC in MungoStandard.petTypes(breed, null, null)
 
-/** 정보로 알 수 있는 케어 기준: 8살 이상 → 노령견, 단두종 → 더위에 약해요 */
+/**
+ * 정보로 알 수 있는 케어 기준: 노령견(소형 10살 · 중대형 8살 · 초대형 6살부터) → 노령견,
+ * 단두종 → 더위에 약해요
+ */
 fun derivedCareTraits(breed: String, weightKg: Float?, ageYears: Int?): Set<PetTrait> = buildSet {
-    if ((ageYears ?: 0) >= SENIOR_AGE) add(PetTrait.SENIOR)
+    if (MungoStandard.isSenior(breed, weightKg, ageYears)) add(PetTrait.SENIOR)
     if (PetType.BRACHYCEPHALIC in MungoStandard.petTypes(breed, weightKg, ageYears)) {
         add(PetTrait.HEAT_SENSITIVE)
     }
 }
 
 /**
- * 저장할 성향: 고른 것 + 이번에 새로 해당하게 된 것 (예: 나이를 8살로 바꿈).
+ * 저장할 성향: 고른 것 + 이번에 새로 해당하게 된 것 (예: 나이를 노령견 나이로 바꿈).
  * 원래부터 해당했는데 운전자가 끈 건 다시 켜지 않는다
  */
 fun PetForm.withDerivedCare(original: Pet?): PetForm {
@@ -108,5 +111,3 @@ fun Pet.listSummary(): String = listOfNotNull(
     breed.takeIf { it.isNotBlank() },
     ageYears?.let { "${it}살" }
 ).joinToString(" | ")
-
-private const val SENIOR_AGE = 8

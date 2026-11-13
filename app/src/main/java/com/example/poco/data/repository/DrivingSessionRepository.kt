@@ -22,6 +22,9 @@ interface DrivingSessionRepository {
     fun start(settings: DrivingSettings)
     fun end()
     fun dismissWindowWarning()
+
+    /** 온도 위험 팝업 닫기 (온도가 다시 위험해지면 또 뜬다) */
+    fun dismissTemperatureDanger() {}
     fun closeWindow()
     fun updateGleoResponse(text: String?)
     fun startRest()

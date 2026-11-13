@@ -54,9 +54,12 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
 
-/** 설정 left menu (Figma 471:56978 · 470:56154 · 470:56789). "음성 및 알림" is shown as 알림 only. */
+/**
+ * 설정 left menu (Figma 488:11027 · 470:56154 · 470:56789).
+ * "음성 및 알림"은 음성 안내 토글 하나 + 알림 항목을 한 목록으로 붙여 보여 준다.
+ */
 enum class SettingsPage(val label: String, val icon: ImageVector) {
-    ALERTS("알림", MgIcons.Bell),
+    ALERTS("음성 및 알림", MgIcons.Speaker),
     VEHICLE("차량 연동 관리", MgIcons.Car),
     APP_INFO("앱 정보", MgIcons.Info)
 }
@@ -96,7 +99,9 @@ fun SettingsRoute(
                 onRest = viewModel::setRestSuggestion,
                 onWindow = viewModel::setWindowAlert,
                 onArrival = viewModel::setArrivalSummary,
-                onOpenInterval = onOpenInterval
+                onOpenInterval = onOpenInterval,
+                voice = voice,
+                onVoice = viewModel::setVoice
             )
             SettingsPage.VEHICLE -> VehiclePage(
                 link,
@@ -146,7 +151,7 @@ internal fun SettingsScreen(
                 ).fillMaxHeight().padding(start = 43.dp, end = 43.dp, top = 52.dp, bottom = 24.dp)
             ) {
                 Text(
-                    if (page == SettingsPage.ALERTS) "알림" else page.label,
+                    page.label,
                     style = Mg.bold(40, 54),
                     color = Mg.Ink
                 )
@@ -186,16 +191,38 @@ private fun MenuItem(item: SettingsPage, selected: Boolean, onClick: () -> Unit)
     }
 }
 
-// region 알림 (Figma 471:56978 "알림" section only)
+// region 음성 및 알림 (Figma 488:11027 기준, 안내 빈도 · 말투 없이 음성 안내 토글 하나 + 알림을 한 목록으로)
 
+/**
+ * '멍고 음성 안내'를 끄면 TTS(말하기)와 STT(마이크 듣기)가 모두 꺼진다
+ * (TtsRepositoryImpl · SttRepositoryImpl이 같은 설정을 본다).
+ */
 @Composable
 internal fun AlertsPage(
     alerts: AlertSettings,
     onRest: (Boolean) -> Unit,
     onWindow: (Boolean) -> Unit,
     onArrival: (Boolean) -> Unit,
-    onOpenInterval: () -> Unit
+    onOpenInterval: () -> Unit,
+    voice: Boolean = true,
+    onVoice: (Boolean) -> Unit = {}
 ) {
+    // 음성 안내 · 알림 두 묶음을 소제목으로 나눈다 (Figma 488:11027 배치, 사이 간격은 일반 소제목 간격)
+    SettingsSectionLabel("음성 안내", first = true)
+    Column(verticalArrangement = Arrangement.spacedBy(15.dp)) {
+        ToggleRow(
+            MgIcons.Speaker,
+            "멍고 음성 안내",
+            if (voice) {
+                "주행 중 ${alerts.petName ?: "반려견"} 상태를 말로 알려 줘요"
+            } else {
+                "꺼 두면 음성 안내와 음성 인식을 모두 쓰지 않아요"
+            },
+            checked = voice,
+            onChange = onVoice
+        )
+    }
+    SettingsSectionLabel("알림")
     Column(verticalArrangement = Arrangement.spacedBy(15.dp)) {
         ToggleRow(
             MgIcons.Cup,
@@ -222,10 +249,25 @@ internal fun AlertsPage(
             onChange = onArrival
         )
     }
-    if (!alerts.hasPet) {
-        Spacer(Modifier.height(20.dp))
-        Note("반려견을 등록하면 휴식 · 창문 알림을 바꿀 수 있어요")
-    }
+    Spacer(Modifier.height(20.dp))
+    Note(
+        if (alerts.hasPet) {
+            "주행 중에는 소리로 먼저 알려 드리고, 화면 조작은 최소로 해요"
+        } else {
+            "반려견을 등록하면 휴식 · 창문 알림을 바꿀 수 있어요"
+        }
+    )
+}
+
+/** 음성 및 알림 소제목 (Figma 488:11095 '음성 안내' · 488:11135 '알림') */
+@Composable
+private fun SettingsSectionLabel(text: String, first: Boolean = false) {
+    Text(
+        text,
+        style = Mg.bold(23, 31),
+        color = Mg.Muted,
+        modifier = Modifier.padding(start = 8.dp, top = if (first) 0.dp else 24.dp, bottom = 12.dp)
+    )
 }
 
 @Composable

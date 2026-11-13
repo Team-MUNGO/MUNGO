@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -61,6 +62,7 @@ import com.example.poco.presentation.design.MgIcon
 import com.example.poco.presentation.design.MgIcons
 import com.example.poco.presentation.design.Pill
 import com.example.poco.presentation.design.PrimaryButton
+import com.example.poco.presentation.design.ScrimDialog
 import com.example.poco.presentation.design.SecondaryButton
 import com.example.poco.presentation.session.component.ComfortCardFull
 import com.example.poco.presentation.session.component.ComfortCardSplit
@@ -71,11 +73,13 @@ import com.example.poco.presentation.session.component.RestOrWaypointTile
 import com.example.poco.presentation.session.component.RestPlaceCard
 import com.example.poco.presentation.session.component.RestSummaryFull
 import com.example.poco.presentation.session.component.RestTimerSplit
+import com.example.poco.presentation.session.component.TemperatureDangerPopup
 import com.example.poco.presentation.session.component.TemperatureTile
 import com.example.poco.presentation.session.component.TileSize
 import com.example.poco.presentation.session.component.WindowTile
 import com.example.poco.presentation.session.component.WindowWarningPanel
 import com.example.poco.presentation.session.component.WindowWarningPopup
+import com.example.poco.presentation.session.component.isPlainGleo
 import com.example.poco.presentation.session.component.windowWarningBusy
 
 @Composable
@@ -166,7 +170,8 @@ fun SessionRoute(
         onReadyToDepart = viewModel::readyToDepart,
         onOpenHistory = onOpenHistory,
         onOpenSettings = onOpenSettings,
-        onAllowLocation = assistant::requestRestLocation
+        onAllowLocation = assistant::requestRestLocation,
+        onDismissTemperature = viewModel::dismissTemperatureDanger
     )
     if (showAiSetup) {
         AssistantConnectionDialog(
@@ -227,7 +232,8 @@ fun SessionScreen(
     onReadyToDepart: () -> Unit = {},
     onOpenHistory: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
-    onAllowLocation: () -> Unit = {}
+    onAllowLocation: () -> Unit = {},
+    onDismissTemperature: () -> Unit = {}
 ) {
     val state = uiState.session
     var confirmEnd by rememberSaveable { mutableStateOf(false) }
@@ -270,6 +276,11 @@ fun SessionScreen(
             }
             if (state.windowWarning && !split) {
                 WindowWarningDialog(state, onDismissWarning, onCloseWindow)
+            }
+            if (state.temperatureDanger && !state.windowWarning) {
+                ScrimDialog(onDismiss = onDismissTemperature) {
+                    TemperatureDangerPopup(state, onDismissTemperature)
+                }
             }
         }
         if (confirmEnd) {
@@ -351,11 +362,20 @@ private fun HeaderLink(text: String, onClick: () -> Unit) {
 private fun GleoButton(state: DrivingSessionState, ai: AssistantUiState, actions: SessionActions) {
     val ready = ai.configured && ai.consented && (ai.connected || ai.anonymousAuth)
     val listening = ai.phase != AssistantPhase.IDLE
+    // 음성 안내가 꺼져 있으면 회색 · 누를 수 없음 (설정 > 음성 및 알림)
+    val voiceOn = com.example.poco.core.designsystem.LocalVoiceEnabled.current
     Box(
         Modifier.size(
             60.dp
-        ).clip(CircleShape).background(if (listening) Mg.Orange else Color.White, CircleShape)
-            .clickable {
+        ).clip(CircleShape).background(
+            when {
+                !voiceOn -> Mg.Chip
+                listening -> Mg.Orange
+                else -> Color.White
+            },
+            CircleShape
+        )
+            .clickable(enabled = voiceOn) {
                 when {
                     listening -> actions.onCancelAi()
                     !ready -> actions.onSetupAi()
@@ -365,7 +385,15 @@ private fun GleoButton(state: DrivingSessionState, ai: AssistantUiState, actions
             },
         contentAlignment = Alignment.Center
     ) {
-        MgIcon(MgIcons.Mic, if (listening) Color.White else Mg.Ink, 24.dp)
+        MgIcon(
+            MgIcons.Mic,
+            when {
+                !voiceOn -> Mg.BarGrey
+                listening -> Color.White
+                else -> Mg.Ink
+            },
+            24.dp
+        )
     }
 }
 
@@ -474,10 +502,15 @@ private fun SplitDrivingLayout(
             Spacer(Modifier.height(20.dp))
             RestDepartButton(state, actions, Modifier.fillMaxWidth().height(96.dp))
         } else {
-            ComfortCardSplit(state, Modifier.fillMaxWidth().height(196.dp))
+            // 음성 안내 카드만 있을 땐 카드는 내용 높이, 남는 높이는 위쪽 칸들이 나눠 쓴다.
+            // 경유지 제안처럼 버튼이 있는 카드가 뜨면 위쪽 칸은 기본 높이로 줄어든다
+            val plain = isPlainGleo(state, ai)
+            fun Modifier.share(base: Float) =
+                if (plain) heightIn(min = base.dp).weight(base) else height(base.dp)
+            ComfortCardSplit(state, Modifier.fillMaxWidth().share(196f))
             Spacer(Modifier.height(16.dp))
             Row(
-                Modifier.fillMaxWidth().height(150.dp),
+                Modifier.fillMaxWidth().share(150f),
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 RestOrWaypointTile(state, TileSize.Split, Modifier.weight(1f).fillMaxHeight())
@@ -485,7 +518,7 @@ private fun SplitDrivingLayout(
             }
             Spacer(Modifier.height(16.dp))
             Row(
-                Modifier.fillMaxWidth().height(150.dp),
+                Modifier.fillMaxWidth().share(150f),
                 horizontalArrangement = Arrangement.spacedBy(14.dp)
             ) {
                 TemperatureTile(state, TileSize.Split, Modifier.weight(1f).fillMaxHeight())
@@ -497,7 +530,9 @@ private fun SplitDrivingLayout(
                 ai,
                 actions,
                 compact = true,
-                modifier = Modifier.fillMaxWidth().weight(1f)
+                modifier = Modifier.fillMaxWidth().then(
+                    if (plain) Modifier else Modifier.weight(1f)
+                )
             )
         }
     }
@@ -545,10 +580,7 @@ private fun WindowWarningDialog(
 /** 주행 종료 확인: 피그마에 없는 화면이라 창문 경고 팝업과 같은 멍고 카드 · 버튼 스타일로 맞춘다. */
 @Composable
 private fun EndConfirmDialog(onDismiss: () -> Unit, onEnd: () -> Unit) {
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
+    ScrimDialog(onDismiss) {
         Column(
             Modifier.width(
                 620.dp

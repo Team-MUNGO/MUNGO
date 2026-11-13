@@ -77,7 +77,9 @@ data class TripEventEntity(
     val temperatureC: Float? = null,
     val windowPercent: Double? = null,
     val seat: String? = null,
-    val guidanceText: String? = null
+    val guidanceText: String? = null,
+    /** 내비가 알려 준 그때 위치 이름 ("판교IC" · "수정구 시흥동"). 못 받았으면 null */
+    val placeName: String? = null
 )
 
 @Dao
@@ -138,7 +140,7 @@ interface TripDao {
     suspend fun setOneLine(id: String, text: String)
 }
 
-@Database(entities = [TripEntity::class, TripEventEntity::class], version = 3, exportSchema = true)
+@Database(entities = [TripEntity::class, TripEventEntity::class], version = 4, exportSchema = true)
 abstract class TripDatabase : RoomDatabase() {
     abstract fun trips(): TripDao
 }
@@ -154,6 +156,13 @@ val TRIP_MIGRATION_1_2 = object : Migration(1, 2) {
         db.execSQL("ALTER TABLE trip_events ADD COLUMN windowPercent REAL")
         db.execSQL("ALTER TABLE trip_events ADD COLUMN seat TEXT")
         db.execSQL("ALTER TABLE trip_events ADD COLUMN guidanceText TEXT")
+    }
+}
+
+/** 이벤트 위치 이름 (내비 주소 · IC 이름). 예전 기록은 null → 꿀팁은 "이 구간" */
+val TRIP_MIGRATION_3_4 = object : Migration(3, 4) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE trip_events ADD COLUMN placeName TEXT")
     }
 }
 

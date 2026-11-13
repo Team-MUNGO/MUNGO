@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Figma 탑승준비_05 안내 팝업 · icon · arrowr -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="35.22dp"
+    android:height="30.76dp"
+    android:viewportWidth="35.2223"
+    android:viewportHeight="30.7638">
+    <path
+        android:pathData="M2.00633,15.3819H33.216M19.8404,28.7575L33.216,15.3819L19.8404,2.00633"
+        android:strokeWidth="4.01267"
+        android:strokeColor="#B0B8C1"
+        android:strokeLineCap="round"
+        android:strokeLineJoin="round" />
+</vector>
