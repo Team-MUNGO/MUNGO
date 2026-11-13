@@ -2,6 +2,8 @@ package com.example.poco.data.repositoryimpl
 
 import ai.pleos.playground.vehicle.api.model.area.SeatArea
 import ai.pleos.playground.vehicle.constant.area.SeatValue
+import com.example.poco.core.driving.PetSeat as SessionSeat
+import com.example.poco.core.driving.Reading
 import com.example.poco.core.util.suspendRunCatching
 import com.example.poco.data.model.PetSeat
 import com.example.poco.data.pleos.datasource.HvacDataSource
@@ -27,6 +29,10 @@ class HvacRepositoryImpl @Inject constructor(private val hvacDataSource: HvacDat
             emitAll(hvacDataSource.observeTemperature(SeatArea(seat.candidateZones().last())))
         }
     }
+
+    override fun observeInteriorTemperature(seat: SessionSeat): Flow<Reading<Float>> =
+        hvacDataSource.observeInteriorTemperature(seat)
+            .catch { emit(Reading.Unavailable(it.message ?: "실내 온도 수신 실패")) }
 
     /** 뒷좌석 독립 공조가 없는 차(듀얼 존)도 있으므로 가까운 존부터 차례로 시도한다 */
     private suspend fun firstWorkingZone(

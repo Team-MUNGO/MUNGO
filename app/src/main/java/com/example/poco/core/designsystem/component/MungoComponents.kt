@@ -37,8 +37,8 @@ import com.example.poco.core.designsystem.MungoIcon
 import com.example.poco.core.designsystem.MungoIconView
 import com.example.poco.core.theme.MungoRadius
 import com.example.poco.core.theme.MungoSize
-import com.example.poco.core.theme.POCOTheme
-import com.example.poco.core.theme.PocoSpacing
+import com.example.poco.core.theme.MungoSpacing
+import com.example.poco.core.theme.MungoTheme
 
 /*
  * mungo 디자인 시스템 · Components (피그마 "반려동물 동승 앱 · Components")
@@ -58,7 +58,7 @@ internal fun Modifier.pressable(
     if (onClick == null) return this
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
-    val overlay = POCOTheme.colors.statePressed
+    val overlay = MungoTheme.colors.statePressed
     return this
         .clip(shape)
         .clickable(
@@ -77,10 +77,10 @@ fun MungoCard(
     raised: Boolean = false,
     shape: Shape = RoundedCornerShape(MungoRadius.lg),
     onClick: (() -> Unit)? = null,
-    contentPadding: Dp = PocoSpacing.space32,
+    contentPadding: Dp = MungoSpacing.space32,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Column(
         modifier = modifier
             .then(
@@ -124,7 +124,7 @@ fun MungoIconButton(
     enabled: Boolean = true,
     contentDescription: String? = null
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val (container, content) = when {
         !enabled -> colors.bgNeutral to colors.textDisabled
         style == MungoIconButtonStyle.ACCENT -> colors.bgAccent to colors.textOnAccent
@@ -166,7 +166,7 @@ enum class MungoStatus {
 
 @Composable
 fun MungoStatusChip(text: String, status: MungoStatus, modifier: Modifier = Modifier) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val (background, content) = when (status) {
         MungoStatus.CALM -> colors.statusCalmSubtle to colors.statusCalm
         MungoStatus.REST -> colors.statusRestSubtle to colors.statusRest
@@ -177,7 +177,7 @@ fun MungoStatusChip(text: String, status: MungoStatus, modifier: Modifier = Modi
         modifier = modifier
             .heightIn(min = 56.dp)
             .background(background, CircleShape)
-            .padding(horizontal = PocoSpacing.space20),
+            .padding(horizontal = MungoSpacing.space20),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -185,8 +185,8 @@ fun MungoStatusChip(text: String, status: MungoStatus, modifier: Modifier = Modi
                 .size(10.dp)
                 .background(content, CircleShape)
         )
-        Spacer(Modifier.width(PocoSpacing.space8))
-        Text(text = text, style = POCOTheme.typography.title2, color = content)
+        Spacer(Modifier.width(MungoSpacing.space8))
+        Text(text = text, style = MungoTheme.typography.title2, color = content)
     }
 }
 
@@ -200,7 +200,7 @@ fun MungoPetAvatar(
     size: Dp = MungoSize.avatarLarge,
     photo: (@Composable () -> Unit)? = null
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Box(
         modifier = modifier
             .size(size)
@@ -230,18 +230,18 @@ fun MungoSectionHeader(
     Row(modifier = modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         Text(
             text = title,
-            style = POCOTheme.typography.title1,
-            color = POCOTheme.colors.textPrimary,
+            style = MungoTheme.typography.title1,
+            color = MungoTheme.colors.textPrimary,
             modifier = Modifier.weight(1f)
         )
         if (actionText != null && onAction != null) {
             Text(
                 text = actionText,
-                style = POCOTheme.typography.title2,
-                color = POCOTheme.colors.textAccent,
+                style = MungoTheme.typography.title2,
+                color = MungoTheme.colors.textAccent,
                 modifier = Modifier
                     .pressable(RoundedCornerShape(MungoRadius.sm), onClick = onAction)
-                    .padding(horizontal = PocoSpacing.space12, vertical = PocoSpacing.space8)
+                    .padding(horizontal = MungoSpacing.space12, vertical = MungoSpacing.space8)
             )
         }
     }
@@ -250,11 +250,11 @@ fun MungoSectionHeader(
 /** 막대 + "1 / 4" 글자 */
 @Composable
 fun MungoStepIndicator(current: Int, total: Int, modifier: Modifier = Modifier) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Row(
         modifier = modifier,
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(PocoSpacing.space8)
+        horizontalArrangement = Arrangement.spacedBy(MungoSpacing.space8)
     ) {
         repeat(total) { index ->
             Box(
@@ -266,10 +266,10 @@ fun MungoStepIndicator(current: Int, total: Int, modifier: Modifier = Modifier) 
                     )
             )
         }
-        Spacer(Modifier.width(PocoSpacing.space12))
+        Spacer(Modifier.width(MungoSpacing.space12))
         Text(
             text = "$current / $total",
-            style = POCOTheme.typography.body2,
+            style = MungoTheme.typography.body2,
             color = colors.textSecondary
         )
     }
@@ -293,16 +293,16 @@ fun MungoOnboardingHeader(
                 size = 76.dp,
                 contentDescription = "뒤로"
             )
-            Spacer(Modifier.width(PocoSpacing.space24))
+            Spacer(Modifier.width(MungoSpacing.space24))
             MungoStepIndicator(current = step, total = totalSteps)
         }
-        Spacer(Modifier.height(PocoSpacing.space32))
-        Text(text = title, style = POCOTheme.typography.h1, color = POCOTheme.colors.textPrimary)
-        Spacer(Modifier.height(PocoSpacing.space16))
+        Spacer(Modifier.height(MungoSpacing.space32))
+        Text(text = title, style = MungoTheme.typography.h1, color = MungoTheme.colors.textPrimary)
+        Spacer(Modifier.height(MungoSpacing.space16))
         Text(
             text = description,
-            style = POCOTheme.typography.body1,
-            color = POCOTheme.colors.textSecondary
+            style = MungoTheme.typography.body1,
+            color = MungoTheme.colors.textSecondary
         )
     }
 }
@@ -320,7 +320,7 @@ fun MungoSelectionTile(
     icon: MungoIcon = MungoIcon.PAW_FILLED,
     size: Dp = MungoSize.selectionTile
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val shape = RoundedCornerShape(MungoRadius.lg)
     Box(
         modifier = modifier
@@ -342,10 +342,10 @@ fun MungoSelectionTile(
                 tint = if (selected) colors.textPrimary else colors.textSecondary,
                 size = 56.dp
             )
-            Spacer(Modifier.height(PocoSpacing.space16))
+            Spacer(Modifier.height(MungoSpacing.space16))
             Text(
                 text = label,
-                style = POCOTheme.typography.body1,
+                style = MungoTheme.typography.body1,
                 color = if (selected) colors.textAccent else colors.textPrimary
             )
         }
@@ -353,7 +353,7 @@ fun MungoSelectionTile(
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(PocoSpacing.space16)
+                    .padding(MungoSpacing.space16)
                     .size(40.dp)
                     .background(colors.bgAccent, CircleShape),
                 contentAlignment = Alignment.Center
@@ -380,22 +380,22 @@ fun MungoChip(
     size: MungoChipSize = MungoChipSize.MEDIUM,
     onClick: (() -> Unit)? = null
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val isMedium = size == MungoChipSize.MEDIUM
     Row(
         modifier = modifier
             .height(if (isMedium) MungoSize.chipMedium else MungoSize.chipSmall)
             .background(if (selected) colors.bgAccent else colors.bgNeutral, CircleShape)
             .pressable(CircleShape, onClick = onClick)
-            .padding(horizontal = if (isMedium) PocoSpacing.space24 else PocoSpacing.space16),
+            .padding(horizontal = if (isMedium) MungoSpacing.space24 else MungoSpacing.space16),
         verticalAlignment = Alignment.CenterVertically
     ) {
         val content = if (selected) colors.textOnAccent else colors.textSecondary
         MungoIconView(MungoIcon.CHECK, tint = content, size = if (isMedium) 24.dp else 20.dp)
-        Spacer(Modifier.width(PocoSpacing.space8))
+        Spacer(Modifier.width(MungoSpacing.space8))
         Text(
             text = text,
-            style = if (isMedium) POCOTheme.typography.title2 else POCOTheme.typography.body3,
+            style = if (isMedium) MungoTheme.typography.title2 else MungoTheme.typography.body3,
             color = content
         )
     }
@@ -410,7 +410,7 @@ fun MungoCheckRow(
     modifier: Modifier = Modifier,
     description: String? = null
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val shape = RoundedCornerShape(MungoRadius.lg)
     Row(
         modifier = modifier
@@ -418,7 +418,7 @@ fun MungoCheckRow(
             .heightIn(min = MungoSize.checkRow)
             .background(colors.bgSurface, shape)
             .pressable(shape) { onCheckedChange(!checked) }
-            .padding(horizontal = PocoSpacing.space24, vertical = PocoSpacing.space16),
+            .padding(horizontal = MungoSpacing.space24, vertical = MungoSpacing.space16),
         verticalAlignment = Alignment.CenterVertically
     ) {
         val boxShape = RoundedCornerShape(MungoRadius.sm)
@@ -431,15 +431,15 @@ fun MungoCheckRow(
         ) {
             if (checked) MungoIconView(MungoIcon.CHECK, tint = colors.textOnAccent, size = 26.dp)
         }
-        Spacer(Modifier.width(PocoSpacing.space24))
+        Spacer(Modifier.width(MungoSpacing.space24))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = POCOTheme.typography.title2,
+                style = MungoTheme.typography.title2,
                 color = if (checked) colors.textSecondary else colors.textPrimary
             )
             description?.let {
-                Text(text = it, style = POCOTheme.typography.body2, color = colors.textTertiary)
+                Text(text = it, style = MungoTheme.typography.body2, color = colors.textTertiary)
             }
         }
     }
@@ -453,12 +453,12 @@ fun MungoVoiceHint(
     title: String = "말로 답해도 돼요",
     onMicClick: () -> Unit = {}
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Row(
         modifier = modifier
             .background(colors.bgAccentSubtle, CircleShape)
-            .padding(PocoSpacing.space12)
-            .padding(end = PocoSpacing.space32),
+            .padding(MungoSpacing.space12)
+            .padding(end = MungoSpacing.space32),
         verticalAlignment = Alignment.CenterVertically
     ) {
         MungoIconButton(
@@ -468,12 +468,12 @@ fun MungoVoiceHint(
             size = 76.dp,
             contentDescription = "음성으로 답하기"
         )
-        Spacer(Modifier.width(PocoSpacing.space20))
+        Spacer(Modifier.width(MungoSpacing.space20))
         Column {
-            Text(text = title, style = POCOTheme.typography.title2, color = colors.textAccent)
+            Text(text = title, style = MungoTheme.typography.title2, color = colors.textAccent)
             Text(
                 text = "\"$example\"",
-                style = POCOTheme.typography.body1,
+                style = MungoTheme.typography.body1,
                 color = colors.textSecondary
             )
         }
@@ -487,15 +487,15 @@ fun MungoVoiceHint(
 /** 정차 중 홈의 요약 타일. 숫자는 크게, 설명은 짧게 */
 @Composable
 fun MungoInfoTile(icon: MungoIcon, label: String, value: String, modifier: Modifier = Modifier) {
-    val colors = POCOTheme.colors
-    MungoCard(modifier = modifier, contentPadding = PocoSpacing.space28) {
+    val colors = MungoTheme.colors
+    MungoCard(modifier = modifier, contentPadding = MungoSpacing.space28) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             MungoIconView(icon, tint = colors.textSecondary, size = 24.dp)
-            Spacer(Modifier.width(PocoSpacing.space8))
-            Text(text = label, style = POCOTheme.typography.body1, color = colors.textSecondary)
+            Spacer(Modifier.width(MungoSpacing.space8))
+            Text(text = label, style = MungoTheme.typography.body1, color = colors.textSecondary)
         }
-        Spacer(Modifier.height(PocoSpacing.space16))
-        Text(text = value, style = POCOTheme.typography.h2, color = colors.textPrimary)
+        Spacer(Modifier.height(MungoSpacing.space16))
+        Text(text = value, style = MungoTheme.typography.h2, color = colors.textPrimary)
     }
 }
 
@@ -509,7 +509,7 @@ fun MungoListItem(
     trailingText: String? = null,
     onClick: (() -> Unit)? = null
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val shape = RoundedCornerShape(MungoRadius.md)
     Row(
         modifier = modifier
@@ -517,7 +517,7 @@ fun MungoListItem(
             .heightIn(min = MungoSize.listItem)
             .background(colors.bgSurface, shape)
             .pressable(shape, onClick = onClick)
-            .padding(horizontal = PocoSpacing.space24),
+            .padding(horizontal = MungoSpacing.space24),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
@@ -528,28 +528,28 @@ fun MungoListItem(
         ) {
             MungoIconView(icon, tint = colors.textAccent, size = 28.dp)
         }
-        Spacer(Modifier.width(PocoSpacing.space20))
+        Spacer(Modifier.width(MungoSpacing.space20))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = POCOTheme.typography.title2,
+                style = MungoTheme.typography.title2,
                 color = colors.textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
             )
             Text(
                 text = subtitle,
-                style = POCOTheme.typography.body2,
+                style = MungoTheme.typography.body2,
                 color = colors.textSecondary,
                 maxLines = 1
             )
         }
         trailingText?.let {
-            Spacer(Modifier.width(PocoSpacing.space16))
-            Text(text = it, style = POCOTheme.typography.title2, color = colors.textSecondary)
+            Spacer(Modifier.width(MungoSpacing.space16))
+            Text(text = it, style = MungoTheme.typography.title2, color = colors.textSecondary)
         }
         if (onClick != null) {
-            Spacer(Modifier.width(PocoSpacing.space12))
+            Spacer(Modifier.width(MungoSpacing.space12))
             MungoIconView(MungoIcon.CHEVRON_RIGHT, tint = colors.textSecondary, size = 28.dp)
         }
     }
@@ -572,46 +572,46 @@ fun MungoDriveStatusCard(
     actionText: String? = null,
     onAction: (() -> Unit)? = null
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     MungoCard(modifier = modifier) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             MungoPetAvatar(size = 56.dp)
-            Spacer(Modifier.width(PocoSpacing.space16))
+            Spacer(Modifier.width(MungoSpacing.space16))
             Text(
                 text = petName,
-                style = POCOTheme.typography.h3,
+                style = MungoTheme.typography.h3,
                 color = colors.textPrimary,
                 modifier = Modifier.weight(1f)
             )
             MungoStatusChip(text = statusText, status = status)
         }
-        Spacer(Modifier.height(PocoSpacing.space32))
-        Text(text = label, style = POCOTheme.typography.body1, color = colors.textSecondary)
+        Spacer(Modifier.height(MungoSpacing.space32))
+        Text(text = label, style = MungoTheme.typography.body1, color = colors.textSecondary)
         Text(
             text = value,
-            style = POCOTheme.typography.display2.copy(fontWeight = FontWeight.Bold),
+            style = MungoTheme.typography.display2.copy(fontWeight = FontWeight.Bold),
             color = colors.textPrimary
         )
         if (footerText != null) {
-            Spacer(Modifier.height(PocoSpacing.space16))
+            Spacer(Modifier.height(MungoSpacing.space16))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 footerIcon?.let {
                     MungoIconView(it, tint = colors.textSecondary, size = 28.dp)
-                    Spacer(Modifier.width(PocoSpacing.space8))
+                    Spacer(Modifier.width(MungoSpacing.space8))
                 }
                 Text(
                     text = footerText,
-                    style = POCOTheme.typography.body1,
+                    style = MungoTheme.typography.body1,
                     color = colors.textSecondary
                 )
             }
         }
         if (actionText != null && onAction != null) {
-            Spacer(Modifier.height(PocoSpacing.space24))
-            PocoButton(
+            Spacer(Modifier.height(MungoSpacing.space24))
+            MungoButton(
                 text = actionText,
                 onClick = onAction,
-                size = PocoButtonSize.LARGE,
+                size = MungoButtonSize.LARGE,
                 mungoIcon = MungoIcon.REST_AREA,
                 modifier = Modifier.fillMaxWidth()
             )
@@ -631,7 +631,7 @@ fun MungoSuggestionCard(
     onLater: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     MungoCard(modifier = modifier, raised = true) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -642,53 +642,53 @@ fun MungoSuggestionCard(
             ) {
                 MungoIconView(MungoIcon.REST_AREA, tint = colors.textPrimary, size = 32.dp)
             }
-            Spacer(Modifier.width(PocoSpacing.space20))
+            Spacer(Modifier.width(MungoSpacing.space20))
             Column {
-                Text(text = title, style = POCOTheme.typography.h3, color = colors.textPrimary)
+                Text(text = title, style = MungoTheme.typography.h3, color = colors.textPrimary)
                 Text(
                     text = reason,
-                    style = POCOTheme.typography.body1,
+                    style = MungoTheme.typography.body1,
                     color = colors.textSecondary
                 )
             }
         }
-        Spacer(Modifier.height(PocoSpacing.space24))
+        Spacer(Modifier.height(MungoSpacing.space24))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .background(colors.bgSurfaceSunken, RoundedCornerShape(MungoRadius.md))
-                .padding(PocoSpacing.space24),
+                .padding(MungoSpacing.space24),
             verticalAlignment = Alignment.CenterVertically
         ) {
             MungoIconView(MungoIcon.MAP_PIN, tint = colors.textAccent, size = 28.dp)
-            Spacer(Modifier.width(PocoSpacing.space16))
+            Spacer(Modifier.width(MungoSpacing.space16))
             Column {
                 Text(
                     text = placeName,
-                    style = POCOTheme.typography.title1,
+                    style = MungoTheme.typography.title1,
                     color = colors.textPrimary
                 )
                 Text(
                     text = placeDetail,
-                    style = POCOTheme.typography.body2,
+                    style = MungoTheme.typography.body2,
                     color = colors.textSecondary
                 )
             }
         }
-        Spacer(Modifier.height(PocoSpacing.space24))
-        Row(horizontalArrangement = Arrangement.spacedBy(PocoSpacing.space16)) {
-            PocoButton(
+        Spacer(Modifier.height(MungoSpacing.space24))
+        Row(horizontalArrangement = Arrangement.spacedBy(MungoSpacing.space16)) {
+            MungoButton(
                 text = "경유하기 ($countdownSeconds)",
                 onClick = onAccept,
-                size = PocoButtonSize.LARGE,
+                size = MungoButtonSize.LARGE,
                 mungoIcon = MungoIcon.REST_AREA,
                 modifier = Modifier.weight(1.4f)
             )
-            PocoButton(
+            MungoButton(
                 text = "나중에",
                 onClick = onLater,
-                style = PocoButtonStyle.SECONDARY,
-                size = PocoButtonSize.LARGE,
+                style = MungoButtonStyle.SECONDARY,
+                size = MungoButtonSize.LARGE,
                 modifier = Modifier.weight(1f)
             )
         }

@@ -1,9 +1,10 @@
 package com.example.poco.presentation.home
 
+import com.example.poco.core.driving.RestIntervalPolicy
 import com.example.poco.data.model.Pet
 import com.example.poco.data.model.TripSummary
+import com.example.poco.domain.driving.MungoStandard
 import com.example.poco.domain.driving.PetType
-import com.example.poco.domain.driving.PocoStandard
 import com.example.poco.domain.driving.temperatureStandard
 
 data class HomeUiState(
@@ -23,7 +24,13 @@ data class HomeUiState(
     val isVoiceGuideEnabled: Boolean = true,
     val isRearTempWatchEnabled: Boolean = true,
     /** 기어 P → D 전환 감지 → 주행 화면으로 자동 이동 */
-    val shouldStartDriving: Boolean = false
+    val shouldStartDriving: Boolean = false,
+    /** 설정 > 차량 연동 관리에서 해지하면 false: 차량 값은 비우고 '다시 연결하기'를 보여 준다 */
+    val isVehicleLinked: Boolean = true,
+    /** 차가 알려 준 차종 (예: 그랜저). 연동 중에 한 번 읽어 두고, 해지 후에도 이름만 보여 준다 */
+    val vehicleName: String? = null,
+    /** 설정한 휴식 간격 (분) - 연동 해지 홈의 '휴식 추천 간격' 카드 */
+    val restIntervalMinutes: Int = RestIntervalPolicy.DEFAULT_MINUTES
 ) {
     val mealStatus: CheckStatus
         get() = when {
@@ -39,7 +46,7 @@ data class HomeUiState(
             val temperature = seatTemperature ?: return CheckStatus.UNKNOWN
             // mungo 기준점 ①: 견종 유형별 더움 · 추움 기준 (펫이 없으면 기본 유형)
             val standard = pet?.temperatureStandard
-                ?: PocoStandard.temperature(setOf(PetType.BASIC))
+                ?: MungoStandard.temperature(setOf(PetType.BASIC))
             val isOff = standard.isHot(temperature) || standard.isCold(temperature)
             return if (isOff) CheckStatus.WARNING else CheckStatus.OK
         }

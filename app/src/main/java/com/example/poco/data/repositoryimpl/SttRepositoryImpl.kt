@@ -11,4 +11,7 @@ class SttRepositoryImpl @Inject constructor(private val sttDataSource: SttDataSo
     override suspend fun listenOnce(timeoutMs: Long): Result<String?> = suspendRunCatching {
         withTimeoutOrNull(timeoutMs) { sttDataSource.listenOnce() }
     }
+
+    override suspend fun recognize(onPartial: (String) -> Unit): String =
+        sttDataSource.recognize(onPartial)
 }

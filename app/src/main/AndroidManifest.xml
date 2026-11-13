@@ -21,6 +21,8 @@
     <uses-permission android:name="pleos.car.permission.NAVI_ROUTE" />
     <!-- NaviHelper SDK: 목적지 설정용 내비 화면 열기 (requestNavigationScreen) -->
     <uses-permission android:name="pleos.car.permission.NAVI_CUSTOM_MAP" />
+    <!-- NaviHelper SDK: 쉬어 갈 곳을 경유지로 추가 · 취소 (addWaypoint / removeWaypoint) -->
+    <uses-permission android:name="pleos.car.permission.NAVI_ROUTE_SEARCH" />
 
     <!-- 펫 사진: 앱 안에서 큰 사진 목록으로 고르기 (시스템 사진 선택기는 차량 화면에서 너무 작음) -->
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
@@ -36,9 +38,16 @@
     <uses-permission android:name="pleos.car.permission.TTS_SERVICE" />
     <uses-permission android:name="pleos.car.permission.STT_SERVICE" />
 
+    <uses-feature android:name="android.hardware.type.automotive" android:required="false" />
+
+    <!-- FusedLocation SDK 서비스 바인딩 (Android 11+ 패키지 가시성) -->
+    <queries>
+        <package android:name="ai.pleos.playground.service.location.fused" />
+    </queries>
+
 
     <application
-        android:name=".PocoApplication"
+        android:name=".MungoApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -46,7 +55,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.POCO">
+        android:theme="@style/Theme.Mungo">
         <uses-library
             android:name="android.car"
             android:required="false" />
@@ -55,9 +64,10 @@
             android:name=".presentation.main.MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.POCO"
-            android:screenOrientation="landscape"
+            android:theme="@style/Theme.Mungo"
             android:windowSoftInputMode="adjustResize">
+            <!-- 방향을 고정하지 않는다: Pleos 화면 분할(2분할 · 3분할)에서 앱 창이 세로로 좁아져도
+                 "창 크기를 넓게 조정하세요"로 막히지 않도록 -->
             <!-- 주행 중(기어 D)에도 화면을 띄울 수 있도록 "주의 분산 최적화" 선언.
                  없으면 AAOS가 주행 중 앱을 가린다 (주행 모드 화면 필수) -->
             <meta-data

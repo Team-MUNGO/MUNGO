@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -51,14 +50,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.intl.LocaleList
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -69,21 +71,23 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.poco.core.designsystem.MungoIcon
 import com.example.poco.core.designsystem.MungoIconView
 import com.example.poco.core.designsystem.PetPhoto
-import com.example.poco.core.designsystem.component.PocoButton
-import com.example.poco.core.designsystem.component.PocoButtonSize
-import com.example.poco.core.designsystem.component.PocoButtonStyle
-import com.example.poco.core.designsystem.component.PocoToggle
+import com.example.poco.core.designsystem.clearFocusOnTap
+import com.example.poco.core.designsystem.component.MungoButton
+import com.example.poco.core.designsystem.component.MungoButtonSize
+import com.example.poco.core.designsystem.component.MungoButtonStyle
+import com.example.poco.core.designsystem.component.MungoToggle
 import com.example.poco.core.theme.MungoLayout
 import com.example.poco.core.theme.MungoRadius
 import com.example.poco.core.theme.MungoSize
-import com.example.poco.core.theme.POCOTheme
-import com.example.poco.core.theme.PocoSpacing
+import com.example.poco.core.theme.MungoSpacing
+import com.example.poco.core.theme.MungoTheme
 import com.example.poco.core.util.eunNeun
 import com.example.poco.core.util.waGwa
 import com.example.poco.data.model.PetSize
 import com.example.poco.data.model.PetSpecies
 import com.example.poco.data.model.PetTrait
-import com.example.poco.domain.driving.PocoStandard
+import com.example.poco.domain.driving.MungoStandard
+import com.example.poco.presentation.design.Mg
 import com.example.poco.presentation.petprofile.PetForm
 import com.example.poco.presentation.petprofile.PetPhotoPickerDialog
 import com.example.poco.presentation.petprofile.label
@@ -190,11 +194,12 @@ private fun ProfileSetupScreen(
     actions: ProfileSetupActions,
     modifier: Modifier = Modifier
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Box(
         modifier = modifier
             .fillMaxSize()
             .background(colors.bgCanvas)
+            .clearFocusOnTap()
             .safeDrawingPadding()
             .padding(MungoLayout.screenPadding)
     ) {
@@ -217,7 +222,16 @@ private fun ProfileSetupScreen(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
-                        .padding(horizontal = 76.dp),
+                        // Figma: 기본 정보(488:7387)는 x 685 ~ 1605, 성향 · 알림(488:8778 · 8873)은 x 635 ~ 1657
+                        .then(
+                            if (uiState.step ==
+                                ProfileStep.BASIC
+                            ) {
+                                Modifier.padding(start = 101.dp, end = 71.dp)
+                            } else {
+                                Modifier.padding(start = 51.dp, end = 19.dp)
+                            }
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     when (uiState.step) {
@@ -240,7 +254,7 @@ private fun StepPanel(
     actions: ProfileSetupActions,
     modifier: Modifier = Modifier
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val form = uiState.form
     val (title, description) = when (uiState.step) {
         ProfileStep.BASIC ->
@@ -253,23 +267,24 @@ private fun StepPanel(
     Column(
         modifier = modifier
             .background(colors.bgSurface, RoundedCornerShape(MungoRadius.xl))
-            .padding(horizontal = 56.dp, vertical = 48.dp)
+            // Figma 488:7389: 글자 시작 x 82 · 위 72 → 패널 안쪽 53 / 45
+            .padding(start = 53.dp, end = 59.dp, top = 45.dp, bottom = 45.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = "프로필 만들기",
-                style = POCOTheme.typography.body2,
+                style = MungoTheme.typography.body2,
                 color = colors.textTertiary,
                 modifier = Modifier.weight(1f)
             )
             Text(
                 text = "${uiState.step.number} / ${ProfileStep.TOTAL}",
-                style = POCOTheme.typography.body2,
+                style = MungoTheme.typography.body2,
                 color = colors.textTertiary
             )
         }
-        Spacer(Modifier.height(PocoSpacing.space16))
-        Row(horizontalArrangement = Arrangement.spacedBy(PocoSpacing.space12)) {
+        Spacer(Modifier.height(MungoSpacing.space16))
+        Row(horizontalArrangement = Arrangement.spacedBy(MungoSpacing.space12)) {
             repeat(ProfileStep.TOTAL) { index ->
                 Box(
                     Modifier
@@ -288,49 +303,51 @@ private fun StepPanel(
                 )
             }
         }
-        Spacer(Modifier.height(72.dp))
+        Spacer(Modifier.height(76.dp))
         Text(
             text = title,
-            style = POCOTheme.typography.h2.copy(lineHeight = 72.sp),
+            style = Mg.bold(60, 78),
             color = colors.textPrimary
         )
-        Spacer(Modifier.height(PocoSpacing.space32))
-        Text(text = description, style = POCOTheme.typography.body2, color = colors.textSecondary)
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(36.dp))
+        Text(text = description, style = Mg.regular(26, 38), color = colors.textSecondary)
+        // Figma: 설명 → 구분선 34, 남는 높이는 요약 목록과 버튼 사이로 간다
+        Spacer(Modifier.height(34.dp))
         HorizontalDivider(thickness = 2.dp, color = colors.borderDefault)
-        Spacer(Modifier.height(PocoSpacing.space40))
+        Spacer(Modifier.height(39.dp))
         Text(
             text = "지금까지 입력한 정보",
-            style = POCOTheme.typography.body3,
+            style = MungoTheme.typography.body3,
             color = colors.textTertiary
         )
-        Spacer(Modifier.height(PocoSpacing.space16))
+        Spacer(Modifier.height(23.dp))
         SummaryRow("이름", form.name.trim())
         SummaryRow("종류", form.species.label())
         SummaryRow("품종", form.breed.trim())
         SummaryRow("나이", form.ageText.toIntOrNull()?.let { "${it}살" }.orEmpty())
         SummaryRow("몸무게", form.weightKg?.let { "${it.toWeightLabel()}kg" }.orEmpty())
         uiState.errorMessage?.let {
-            Spacer(Modifier.height(PocoSpacing.space12))
-            Text(text = it, style = POCOTheme.typography.body3, color = colors.statusAlert)
+            Spacer(Modifier.height(MungoSpacing.space12))
+            Text(text = it, style = MungoTheme.typography.body3, color = colors.statusAlert)
         }
-        Spacer(Modifier.height(PocoSpacing.space40))
-        Row(horizontalArrangement = Arrangement.spacedBy(PocoSpacing.space20)) {
-            PocoButton(
+        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(MungoSpacing.space24))
+        Row(horizontalArrangement = Arrangement.spacedBy(MungoSpacing.space20)) {
+            MungoButton(
                 text = "이전",
                 onClick = actions.onBack,
-                style = PocoButtonStyle.OUTLINE,
-                size = PocoButtonSize.LARGE,
+                style = MungoButtonStyle.OUTLINE,
+                size = MungoButtonSize.LARGE,
                 shape = CircleShape,
                 modifier = Modifier
                     .width(160.dp)
                     .height(96.dp)
             )
-            PocoButton(
+            MungoButton(
                 text = "완료",
                 onClick = actions.onNext,
                 enabled = uiState.canGoNext,
-                size = PocoButtonSize.LARGE,
+                size = MungoButtonSize.LARGE,
                 shape = CircleShape,
                 modifier = Modifier
                     .weight(1f)
@@ -345,19 +362,19 @@ private fun SummaryRow(label: String, value: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp),
+            .height(60.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
             text = label,
-            style = POCOTheme.typography.body2,
-            color = POCOTheme.colors.textSecondary,
+            style = Mg.medium(26, 34),
+            color = MungoTheme.colors.textSecondary,
             modifier = Modifier.weight(1f)
         )
         Text(
             text = value.ifEmpty { "-" },
-            style = POCOTheme.typography.title3.copy(fontWeight = FontWeight.Bold),
-            color = with(POCOTheme.colors) { if (value.isEmpty()) textDisabled else textPrimary }
+            style = Mg.bold(26, 34),
+            color = with(MungoTheme.colors) { if (value.isEmpty()) textDisabled else textPrimary }
         )
     }
 }
@@ -368,11 +385,9 @@ private fun SummaryRow(label: String, value: String) {
 
 @Composable
 private fun BasicInfoContent(form: PetForm, actions: ProfileSetupActions) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(PocoSpacing.space24)
-    ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(PocoSpacing.space40)) {
+    // Figma 488:7387: 칸 사이 29 · 37 · 38, 이름/종류 간격 42, 나이/몸무게 카드 간격 24
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(horizontalArrangement = Arrangement.spacedBy(42.dp)) {
             LabeledField("이름", Modifier.weight(1f)) {
                 SetupTextField(
                     value = form.name,
@@ -384,6 +399,7 @@ private fun BasicInfoContent(form: PetForm, actions: ProfileSetupActions) {
                 SpeciesDropdown(selected = form.species, onSelect = actions.onSpeciesSelect)
             }
         }
+        Spacer(Modifier.height(29.dp))
         LabeledField("품종") {
             SetupTextField(
                 value = form.breed,
@@ -392,7 +408,8 @@ private fun BasicInfoContent(form: PetForm, actions: ProfileSetupActions) {
                 trailingIcon = MungoIcon.SEARCH
             )
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(PocoSpacing.space24)) {
+        Spacer(Modifier.height(37.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(MungoSpacing.space24)) {
             StepperCard(
                 label = "나이",
                 text = form.ageText,
@@ -414,7 +431,8 @@ private fun BasicInfoContent(form: PetForm, actions: ProfileSetupActions) {
                 modifier = Modifier.weight(1f)
             )
         }
-        LabeledField("크기") {
+        Spacer(Modifier.height(38.dp))
+        LabeledField("크기", gap = 23.dp) {
             SizeSegment(selected = form.size)
         }
     }
@@ -424,22 +442,23 @@ private fun BasicInfoContent(form: PetForm, actions: ProfileSetupActions) {
 private fun LabeledField(
     label: String,
     modifier: Modifier = Modifier,
+    gap: Dp = 16.dp,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column(modifier = modifier) {
         Text(
             text = label,
-            style = POCOTheme.typography.body3.copy(fontWeight = FontWeight.Bold),
-            color = POCOTheme.colors.textSecondary
+            style = Mg.bold(24, 32),
+            color = MungoTheme.colors.textSecondary
         )
-        Spacer(Modifier.height(PocoSpacing.space12))
+        Spacer(Modifier.height(gap))
         content()
     }
 }
 
 private val KoreanLocales = LocaleList(Locale("ko-KR"))
 
-/** 흰 입력칸 (높이 88 · 라운드 16). 포커스되면 망고 테두리 */
+/** 흰 입력칸 (높이 94 · 라운드 16). 포커스되면 망고 테두리 */
 @Composable
 internal fun SetupTextField(
     value: String,
@@ -447,11 +466,12 @@ internal fun SetupTextField(
     placeholder: String,
     trailingIcon: MungoIcon? = null
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
+    val focusManager = LocalFocusManager.current
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val shape = RoundedCornerShape(MungoRadius.md)
-    val textStyle = POCOTheme.typography.title2.copy(fontWeight = FontWeight.Bold)
+    val textStyle = Mg.bold(30, 40)
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
@@ -460,6 +480,7 @@ internal fun SetupTextField(
         textStyle = textStyle.copy(color = colors.textPrimary),
         cursorBrush = SolidColor(colors.bgAccent),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done, hintLocales = KoreanLocales),
+        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
         decorationBox = { inner ->
             Row(
                 modifier = Modifier
@@ -492,7 +513,7 @@ internal fun SetupTextField(
 
 @Composable
 internal fun SpeciesDropdown(selected: PetSpecies, onSelect: (PetSpecies) -> Unit) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     var expanded by remember { mutableStateOf(false) }
     val shape = RoundedCornerShape(MungoRadius.md)
     Box {
@@ -508,7 +529,7 @@ internal fun SpeciesDropdown(selected: PetSpecies, onSelect: (PetSpecies) -> Uni
         ) {
             Text(
                 text = selected.label(),
-                style = POCOTheme.typography.title2.copy(fontWeight = FontWeight.Bold),
+                style = MungoTheme.typography.title2.copy(fontWeight = FontWeight.Bold),
                 color = colors.textPrimary,
                 modifier = Modifier.weight(1f)
             )
@@ -525,7 +546,7 @@ internal fun SpeciesDropdown(selected: PetSpecies, onSelect: (PetSpecies) -> Uni
                     text = {
                         Text(
                             text = species.label(),
-                            style = POCOTheme.typography.title2,
+                            style = MungoTheme.typography.title2,
                             color = if (species ==
                                 selected
                             ) {
@@ -560,15 +581,21 @@ private fun StepperCard(
     onPlus: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val focusManager = LocalFocusManager.current
-    val numberStyle = POCOTheme.typography.display1.copy(fontSize = 112.sp, lineHeight = 112.sp)
+    val numberStyle = MungoTheme.typography.display1.copy(fontSize = 120.sp, lineHeight = 132.sp)
+    // 숫자 칸 너비는 지금 글자(비었으면 "-") 폭으로 직접 잰다.
+    // width(IntrinsicSize.Min)은 +/-로 값이 바뀌어도 너비가 갱신되지 않아 숫자가 안 보였다
+    val numberWidth = rememberNumberWidth(text.ifEmpty { "-" }, numberStyle)
+    // Figma 488:7416: 448 × 440, 라벨 위 38 · 버튼 170 × 94 (간격 26) · 아래 32
     Column(
         modifier = modifier
+            .height(440.dp)
             .background(colors.bgSurface, RoundedCornerShape(MungoRadius.lg))
-            .padding(horizontal = 40.dp, vertical = 36.dp)
+            .padding(start = 40.dp, end = 40.dp, top = 38.dp, bottom = 32.dp)
     ) {
-        Text(text = label, style = POCOTheme.typography.title2, color = colors.textSecondary)
+        Text(text = label, style = MungoTheme.typography.title2, color = colors.textSecondary)
+        Spacer(Modifier.weight(1f))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -597,36 +624,54 @@ private fun StepperCard(
                 },
                 modifier = Modifier
                     .alignByBaseline()
-                    .width(IntrinsicSize.Min)
-                    .widthIn(min = 64.dp)
+                    .width(numberWidth)
                     .semantics { contentDescription = "$label 입력" }
             )
-            Spacer(Modifier.width(PocoSpacing.space4))
+            Spacer(Modifier.width(MungoSpacing.space4))
             Text(
                 text = unit,
-                style = POCOTheme.typography.title1,
+                style = Mg.bold(40, 50),
                 color = colors.textPrimary,
                 modifier = Modifier.alignByBaseline()
             )
         }
-        Spacer(Modifier.height(PocoSpacing.space16))
-        Row(horizontalArrangement = Arrangement.spacedBy(PocoSpacing.space24)) {
+        Spacer(Modifier.weight(1f))
+        Row(horizontalArrangement = Arrangement.spacedBy(26.dp)) {
             RepeatButton(MungoIcon.MINUS, "$label 줄이기", onMinus)
             RepeatButton(MungoIcon.PLUS, "$label 늘리기", onPlus)
         }
     }
 }
 
+/** 숫자 입력칸 너비 = 글자 폭 + 커서 자리. 화면 축소(FitWideWindow) 밀도도 그대로 따른다 */
+@Composable
+internal fun rememberNumberWidth(text: String, style: TextStyle): Dp {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    return remember(text, style, density) {
+        val px = measurer.measure(
+            text,
+            style,
+            maxLines = 1,
+            softWrap = false,
+            density = density
+        ).size.width
+        with(density) { px.toDp() } + NUMBER_CURSOR_ROOM
+    }
+}
+
+private val NUMBER_CURSOR_ROOM = 6.dp
+
 /** 한 번 누르면 1번, 길게 누르면 0.4초 뒤부터 계속 */
 @Composable
 private fun RowScope.RepeatButton(icon: MungoIcon, description: String, onStep: () -> Unit) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val currentOnStep by rememberUpdatedState(onStep)
     var pressed by remember { mutableStateOf(false) }
     Box(
         modifier = Modifier
             .weight(1f)
-            .height(MungoSize.buttonLarge)
+            .height(94.dp)
             .clip(CircleShape)
             .background(if (pressed) colors.statePressed else colors.bgSurface)
             .border(2.dp, colors.borderDefault, CircleShape)
@@ -667,7 +712,7 @@ private const val REPEAT_INTERVAL_MS = 70L
 /** 크기: 몸무게로 자동 (소형 10kg 미만 · 중형 25kg 미만 · 대형). 누를 수 없음 */
 @Composable
 private fun SizeSegment(selected: PetSize?) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -678,7 +723,7 @@ private fun SizeSegment(selected: PetSize?) {
         PetSize.entries.forEach { size ->
             Text(
                 text = size.label(),
-                style = POCOTheme.typography.title2.copy(
+                style = MungoTheme.typography.title2.copy(
                     fontWeight = if (size == selected) FontWeight.Bold else FontWeight.Medium
                 ),
                 color = if (size == selected) colors.textAccent else colors.textDisabled,
@@ -706,12 +751,13 @@ private fun PetTrait.icon(): MungoIcon = when (this) {
 
 @Composable
 private fun TraitsContent(selected: Set<PetTrait>, actions: ProfileSetupActions) {
+    // Figma 488:8778: 카드 300 · 가로 23 · 세로 22 간격, 안내 바까지 33
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(PocoSpacing.space20)
+        verticalArrangement = Arrangement.spacedBy(22.dp)
     ) {
         ONBOARDING_TRAITS.chunked(3).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(PocoSpacing.space20)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(23.dp)) {
                 row.forEach { trait ->
                     TraitCard(
                         trait = trait,
@@ -722,7 +768,7 @@ private fun TraitsContent(selected: Set<PetTrait>, actions: ProfileSetupActions)
                 }
             }
         }
-        Spacer(Modifier.height(PocoSpacing.space12))
+        Spacer(Modifier.height(11.dp))
         InfoBar("고른 모습은 마이펫 > 케어 기준에서 언제든 바꿀 수 있어요.")
     }
 }
@@ -734,7 +780,7 @@ private fun TraitCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val shape = RoundedCornerShape(MungoRadius.lg)
     Box(
         modifier = modifier
@@ -748,7 +794,7 @@ private fun TraitCard(
             checked = selected,
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .padding(PocoSpacing.space24)
+                .padding(MungoSpacing.space24)
         )
         Column(
             modifier = Modifier.align(Alignment.Center),
@@ -765,16 +811,16 @@ private fun TraitCard(
             ) {
                 MungoIconView(trait.icon(), tint = colors.textAccent, size = 36.dp)
             }
-            Spacer(Modifier.height(PocoSpacing.space24))
+            Spacer(Modifier.height(MungoSpacing.space24))
             Text(
                 text = trait.title(),
-                style = POCOTheme.typography.title1,
+                style = Mg.bold(27, 35),
                 color = colors.textPrimary
             )
-            Spacer(Modifier.height(PocoSpacing.space8))
+            Spacer(Modifier.height(MungoSpacing.space8))
             Text(
                 text = trait.description(),
-                style = POCOTheme.typography.body3,
+                style = MungoTheme.typography.body3,
                 color = colors.textSecondary
             )
         }
@@ -783,7 +829,7 @@ private fun TraitCard(
 
 @Composable
 private fun CheckSquare(checked: Boolean, modifier: Modifier = Modifier) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val shape = RoundedCornerShape(MungoRadius.sm)
     Box(
         modifier = modifier
@@ -799,19 +845,19 @@ private fun CheckSquare(checked: Boolean, modifier: Modifier = Modifier) {
 /** 흰 알약 안내 바: (i) + 한 줄 */
 @Composable
 private fun InfoBar(text: String) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .heightIn(min = 80.dp)
             .background(colors.bgSurface, CircleShape)
-            .padding(horizontal = PocoSpacing.space32),
+            .padding(horizontal = MungoSpacing.space32),
         horizontalArrangement = Arrangement.Center,
         verticalAlignment = Alignment.CenterVertically
     ) {
         MungoIconView(MungoIcon.INFO, tint = colors.textSecondary, size = 26.dp)
-        Spacer(Modifier.width(PocoSpacing.space12))
-        Text(text = text, style = POCOTheme.typography.body2, color = colors.textSecondary)
+        Spacer(Modifier.width(MungoSpacing.space12))
+        Text(text = text, style = MungoTheme.typography.body2, color = colors.textSecondary)
     }
 }
 
@@ -823,18 +869,18 @@ private fun InfoBar(text: String) {
 private fun AlertsContent(uiState: ProfileSetupUiState, actions: ProfileSetupActions) {
     val form = uiState.form
     val comfort = remember(form.breed, form.weightKg, form.ageText) {
-        PocoStandard.temperature(
-            PocoStandard.petTypes(form.breed, form.weightKg, form.ageText.toIntOrNull())
+        MungoStandard.temperature(
+            MungoStandard.petTypes(form.breed, form.weightKg, form.ageText.toIntOrNull())
         ).comfort
     }
     val name = form.name.trim()
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(PocoSpacing.space20)
+        verticalArrangement = Arrangement.spacedBy(MungoSpacing.space20)
     ) {
         AlertRow(
             icon = MungoIcon.SPEAKER,
-            title = "글레오 음성 안내",
+            title = "mungo 음성 안내",
             description = "급제동 · 급커브가 있으면 음성으로 알려 드려요.",
             checked = form.voiceGuideEnabled,
             onCheckedChange = actions.onVoiceGuideChange
@@ -863,7 +909,7 @@ private fun AlertsContent(uiState: ProfileSetupUiState, actions: ProfileSetupAct
             onCheckedChange = actions.onRestSuggestionChange,
             recommended = uiState.isRestRecommended
         )
-        Spacer(Modifier.height(PocoSpacing.space12))
+        Spacer(Modifier.height(MungoSpacing.space12))
         InfoBar("앞에서 선택한 모습에 맞춰 설정을 추천드려요.")
     }
 }
@@ -877,12 +923,13 @@ private fun AlertRow(
     onCheckedChange: (Boolean) -> Unit,
     recommended: Boolean = false
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val shape = RoundedCornerShape(MungoRadius.lg)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(136.dp)
+            // Figma 488:8881: 1020 × 142, 간격 20
+            .height(142.dp)
             .clip(shape)
             .background(colors.bgSurface)
             .clickable { onCheckedChange(!checked) }
@@ -897,34 +944,34 @@ private fun AlertRow(
         ) {
             MungoIconView(icon, tint = colors.textAccent, size = 32.dp)
         }
-        Spacer(Modifier.width(PocoSpacing.space24))
+        Spacer(Modifier.width(MungoSpacing.space24))
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = title, style = POCOTheme.typography.title1, color = colors.textPrimary)
+                Text(text = title, style = Mg.bold(27, 35), color = colors.textPrimary)
                 if (recommended) {
-                    Spacer(Modifier.width(PocoSpacing.space12))
+                    Spacer(Modifier.width(MungoSpacing.space12))
                     Text(
                         text = "추천",
-                        style = POCOTheme.typography.body3.copy(fontWeight = FontWeight.Bold),
+                        style = Mg.bold(24, 32),
                         color = colors.textAccent,
                         modifier = Modifier
                             .background(colors.bgAccentSubtle, CircleShape)
                             .padding(
-                                horizontal = PocoSpacing.space16,
-                                vertical = PocoSpacing.space4
+                                horizontal = MungoSpacing.space16,
+                                vertical = MungoSpacing.space4
                             )
                     )
                 }
             }
-            Spacer(Modifier.height(PocoSpacing.space4))
+            Spacer(Modifier.height(MungoSpacing.space4))
             Text(
                 text = description,
-                style = POCOTheme.typography.body2,
+                style = Mg.regular(21, 29),
                 color = colors.textSecondary
             )
         }
-        Spacer(Modifier.width(PocoSpacing.space24))
-        PocoToggle(checked = checked, onCheckedChange = onCheckedChange)
+        Spacer(Modifier.width(MungoSpacing.space24))
+        MungoToggle(checked = checked, onCheckedChange = onCheckedChange)
     }
 }
 
@@ -938,7 +985,7 @@ private fun CompleteContent(
     actions: ProfileSetupActions,
     modifier: Modifier = Modifier
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val form = uiState.form
     val name = form.name.trim()
     Column(
@@ -953,23 +1000,24 @@ private fun CompleteContent(
         ) {
             MungoIconView(MungoIcon.CHECK, tint = colors.textOnAccent, size = 64.dp)
         }
-        Spacer(Modifier.height(PocoSpacing.space40))
+        Spacer(Modifier.height(MungoSpacing.space40))
         Text(
             text = "${name}의 프로필을 완성했어요",
-            style = POCOTheme.typography.h2,
+            style = Mg.bold(56, 70),
             color = colors.textPrimary
         )
-        Spacer(Modifier.height(PocoSpacing.space16))
+        Spacer(Modifier.height(18.dp))
         Text(
             text = "입력하신 정보가 맞는지 확인해주세요.",
-            style = POCOTheme.typography.body1,
+            style = MungoTheme.typography.body1,
             color = colors.textSecondary
         )
-        Spacer(Modifier.height(PocoSpacing.space48))
+        Spacer(Modifier.height(MungoSpacing.space48))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(248.dp)
+                // Figma 488:7465: 860 × 250
+                .height(250.dp)
                 .background(colors.bgSurface, RoundedCornerShape(MungoRadius.xl))
                 .padding(horizontal = 40.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -980,34 +1028,34 @@ private fun CompleteContent(
                 isLoading = uiState.isImportingPhoto,
                 onClick = actions.onPhotoClick
             )
-            Spacer(Modifier.width(PocoSpacing.space48))
+            Spacer(Modifier.width(MungoSpacing.space48))
             Text(
                 text = name,
-                style = POCOTheme.typography.h3,
+                style = Mg.bold(44, 55),
                 color = colors.textPrimary,
                 modifier = Modifier.weight(1f)
             )
             Column(horizontalAlignment = Alignment.End) {
                 Text(
                     text = form.summaryLine(),
-                    style = POCOTheme.typography.body1,
+                    style = MungoTheme.typography.body1,
                     color = colors.textSecondary
                 )
                 if (form.traits.isNotEmpty()) {
-                    Spacer(Modifier.height(PocoSpacing.space12))
-                    Row(horizontalArrangement = Arrangement.spacedBy(PocoSpacing.space8)) {
+                    Spacer(Modifier.height(MungoSpacing.space12))
+                    Row(horizontalArrangement = Arrangement.spacedBy(MungoSpacing.space8)) {
                         form.traits.sortedBy { it.ordinal }.forEach { trait ->
                             Text(
                                 text = trait.shortLabel(),
-                                style = POCOTheme.typography.title3.copy(
+                                style = MungoTheme.typography.title3.copy(
                                     fontWeight = FontWeight.Bold
                                 ),
                                 color = colors.textAccent,
                                 modifier = Modifier
                                     .background(colors.bgAccentSubtle, CircleShape)
                                     .padding(
-                                        horizontal = PocoSpacing.space20,
-                                        vertical = PocoSpacing.space8
+                                        horizontal = MungoSpacing.space20,
+                                        vertical = MungoSpacing.space8
                                     )
                             )
                         }
@@ -1016,30 +1064,32 @@ private fun CompleteContent(
             }
         }
         uiState.errorMessage?.let {
-            Spacer(Modifier.height(PocoSpacing.space16))
-            Text(text = it, style = POCOTheme.typography.body2, color = colors.statusAlert)
+            Spacer(Modifier.height(MungoSpacing.space16))
+            Text(text = it, style = MungoTheme.typography.body2, color = colors.statusAlert)
         }
-        Spacer(Modifier.height(PocoSpacing.space48))
-        Row(horizontalArrangement = Arrangement.spacedBy(PocoSpacing.space40)) {
-            PocoButton(
-                text = "이전",
-                onClick = actions.onBack,
-                style = PocoButtonStyle.OUTLINE,
-                size = PocoButtonSize.LARGE,
-                shape = CircleShape,
+        Spacer(Modifier.height(60.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(41.dp)) {
+            // Figma 488:7474: 테두리 없는 흰 알약 + B28 회색 글자
+            Box(
                 modifier = Modifier
                     .weight(1f)
-                    .height(96.dp)
-            )
-            PocoButton(
+                    .height(94.dp)
+                    .clip(CircleShape)
+                    .background(colors.bgSurface)
+                    .clickable(onClick = actions.onBack),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = "이전", style = Mg.bold(28, 34), color = colors.textTertiary)
+            }
+            MungoButton(
                 text = if (uiState.isSaving) "저장 중…" else "시작하기",
                 onClick = actions.onFinish,
                 enabled = !uiState.isSaving,
-                size = PocoButtonSize.LARGE,
+                size = MungoButtonSize.LARGE,
                 shape = CircleShape,
                 modifier = Modifier
                     .weight(1f)
-                    .height(96.dp)
+                    .height(94.dp)
             )
         }
     }
@@ -1054,7 +1104,7 @@ private fun PhotoAvatar(
     onClick: () -> Unit,
     size: Dp = 156.dp
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Box(
         modifier = Modifier
             .size(size)
@@ -1100,16 +1150,16 @@ private val previewForm = PetForm(
 
 @Preview(widthDp = 1700, heightDp = 1184)
 @Composable
-private fun BasicPreview() {
-    POCOTheme(darkTheme = false) {
+internal fun BasicPreview() {
+    MungoTheme(darkTheme = false) {
         ProfileSetupScreen(ProfileSetupUiState(form = previewForm), ProfileSetupActions.Preview)
     }
 }
 
 @Preview(widthDp = 1700, heightDp = 1184)
 @Composable
-private fun TraitsPreview() {
-    POCOTheme(darkTheme = false) {
+internal fun TraitsPreview() {
+    MungoTheme(darkTheme = false) {
         ProfileSetupScreen(
             ProfileSetupUiState(step = ProfileStep.TRAITS, form = previewForm),
             ProfileSetupActions.Preview
@@ -1119,8 +1169,8 @@ private fun TraitsPreview() {
 
 @Preview(widthDp = 1700, heightDp = 1184)
 @Composable
-private fun AlertsPreview() {
-    POCOTheme(darkTheme = false) {
+internal fun AlertsPreview() {
+    MungoTheme(darkTheme = false) {
         ProfileSetupScreen(
             ProfileSetupUiState(step = ProfileStep.ALERTS, form = previewForm),
             ProfileSetupActions.Preview
@@ -1130,8 +1180,8 @@ private fun AlertsPreview() {
 
 @Preview(widthDp = 1700, heightDp = 1184)
 @Composable
-private fun CompletePreview() {
-    POCOTheme(darkTheme = false) {
+internal fun CompletePreview() {
+    MungoTheme(darkTheme = false) {
         ProfileSetupScreen(
             ProfileSetupUiState(step = ProfileStep.COMPLETE, form = previewForm),
             ProfileSetupActions.Preview

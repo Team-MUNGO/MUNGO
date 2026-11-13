@@ -110,7 +110,7 @@ class ComfortTracker(private val startedAtMillis: Long, private val thresholdFac
         if (dtSec > MAX_ACCEL_WINDOW_SEC) return null
 
         val accelMps2 = (speedKmh - reference.second) / KMH_PER_MPS / dtSec
-        val grade = PocoStandard.longitudinalGrade(accelMps2, thresholdFactor)
+        val grade = MungoStandard.longitudinalGrade(accelMps2, thresholdFactor)
         val isBrake = accelMps2 < 0
         // 페달 없이 줄어든 속도(내리막 · 센서 튐)는 급제동으로 보지 않는다
         if (isBrake && !isBrakingNow(nowMillis)) return null
@@ -146,7 +146,7 @@ class ComfortTracker(private val startedAtMillis: Long, private val thresholdFac
         val speedMps = (currentSpeedKmh ?: return null) / KMH_PER_MPS
         val wheelRad = Math.toRadians((abs(angleDeg) / STEERING_RATIO).toDouble())
         val lateralMps2 = (speedMps * speedMps * tan(wheelRad) / WHEELBASE_M).toFloat()
-        val grade = PocoStandard.lateralGrade(lateralMps2, thresholdFactor)
+        val grade = MungoStandard.lateralGrade(lateralMps2, thresholdFactor)
         if (grade == ShakeGrade.CALM) steeringArmed = true
         if (!steeringArmed || isTooSlowForTurn()) return null
         return onLateral(nowMillis, grade)?.also { steeringArmed = false }
@@ -190,7 +190,7 @@ class ComfortTracker(private val startedAtMillis: Long, private val thresholdFac
         val speedMps = (currentSpeedKmh ?: return null) / KMH_PER_MPS
         val lateralMps2 = abs(speedMps * yawRateRad)
 
-        val grade = PocoStandard.lateralGrade(lateralMps2, thresholdFactor)
+        val grade = MungoStandard.lateralGrade(lateralMps2, thresholdFactor)
         if (grade == ShakeGrade.CALM) lateralArmed = true
         if (!lateralArmed || isTooSlowForTurn()) return null
         return onLateral(nowMillis, grade)?.also { lateralArmed = false }

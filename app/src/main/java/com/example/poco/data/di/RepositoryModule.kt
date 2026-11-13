@@ -1,5 +1,6 @@
 package com.example.poco.data.di
 
+import com.example.poco.data.record.RecordTripRepository
 import com.example.poco.data.repository.BatteryRepository
 import com.example.poco.data.repository.DepartureRepository
 import com.example.poco.data.repository.GearRepository
@@ -20,7 +21,6 @@ import com.example.poco.data.repositoryimpl.NaviRepositoryImpl
 import com.example.poco.data.repositoryimpl.OnboardingRepositoryImpl
 import com.example.poco.data.repositoryimpl.PetRepositoryImpl
 import com.example.poco.data.repositoryimpl.SttRepositoryImpl
-import com.example.poco.data.repositoryimpl.TripRepositoryImpl
 import com.example.poco.data.repositoryimpl.TtsRepositoryImpl
 import com.example.poco.data.repositoryimpl.VehicleMotionRepositoryImpl
 import com.example.poco.data.repositoryimpl.WindowRepositoryImpl
@@ -71,7 +71,8 @@ abstract class RepositoryModule {
 
     @Binds
     @Singleton
-    abstract fun bindTripRepository(impl: TripRepositoryImpl): TripRepository
+    // 이동 기록 저장소는 하나: 주행 세션이 쓰는 poco_trips.db (이전 poco.db 기록은 한 번 옮겨 온다)
+    abstract fun bindTripRepository(impl: RecordTripRepository): TripRepository
 
     @Binds
     @Singleton

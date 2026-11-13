@@ -18,7 +18,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.poco.R
-import com.example.poco.core.theme.POCOTheme
+import com.example.poco.core.theme.MungoTheme
 
 /*
  * mungo 아이콘 · 로고
@@ -263,6 +263,15 @@ enum class MungoIcon(internal val paths: List<String>, internal val filled: Bool
             "M6 10v4",
             "M10 10v4"
         )
+    ),
+
+    /** 꼬리표 (휴식 추천 이유) */
+    TAG(
+        listOf(
+            "M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414" +
+                "l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z",
+            "M7 7.5a.5.5 0 1 0 1 0a.5.5 0 1 0 -1 0"
+        )
     )
 }
 
@@ -294,7 +303,7 @@ val MungoIcon.imageVector: ImageVector
 fun MungoIconView(
     icon: MungoIcon,
     modifier: Modifier = Modifier,
-    tint: Color = POCOTheme.colors.textPrimary,
+    tint: Color = MungoTheme.colors.textPrimary,
     size: Dp = 24.dp,
     contentDescription: String? = null
 ) {
@@ -317,7 +326,11 @@ fun MungoIconView(
 fun MungoLogo(modifier: Modifier = Modifier, height: Dp = 40.dp) {
     Image(
         painter = painterResource(
-            if (POCOTheme.colors.isDark) R.drawable.mungo_logo_dark else R.drawable.mungo_logo_light
+            if (MungoTheme.colors.isDark) {
+                R.drawable.mungo_logo_dark
+            } else {
+                R.drawable.mungo_logo_light
+            }
         ),
         contentDescription = "mungo",
         contentScale = ContentScale.Fit,

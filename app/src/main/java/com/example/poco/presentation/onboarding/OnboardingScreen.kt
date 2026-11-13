@@ -26,16 +26,16 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.poco.core.designsystem.MungoIcon
 import com.example.poco.core.designsystem.MungoIconView
 import com.example.poco.core.designsystem.MungoLogo
-import com.example.poco.core.designsystem.component.PocoButton
-import com.example.poco.core.designsystem.component.PocoButtonSize
+import com.example.poco.core.designsystem.component.MungoButton
+import com.example.poco.core.designsystem.component.MungoButtonSize
 import com.example.poco.core.theme.MungoLayout
 import com.example.poco.core.theme.MungoRadius
-import com.example.poco.core.theme.POCOTheme
-import com.example.poco.core.theme.PocoSpacing
+import com.example.poco.core.theme.MungoSpacing
+import com.example.poco.core.theme.MungoTheme
+import com.example.poco.presentation.design.Mg
 
 /** 온보딩 1페이지에서 소개하는 기능 */
 private data class OnboardingFeature(
@@ -77,7 +77,7 @@ private fun OnboardingScreen(
     onSkip: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Row(
         modifier = modifier
             .fillMaxSize()
@@ -100,18 +100,18 @@ private fun OnboardingScreen(
         ) {
             Column(
                 modifier = Modifier.fillMaxWidth(),
-                verticalArrangement = Arrangement.spacedBy(PocoSpacing.space24)
+                verticalArrangement = Arrangement.spacedBy(MungoSpacing.space24)
             ) {
                 Text(
                     text = "건너뛰기",
-                    style = POCOTheme.typography.title2.copy(fontWeight = FontWeight.Bold),
+                    style = MungoTheme.typography.title2.copy(fontWeight = FontWeight.Bold),
                     color = colors.textPrimary,
                     modifier = Modifier
                         .align(Alignment.End)
                         .clip(RoundedCornerShape(MungoRadius.sm))
                         .clickable(onClick = onSkip)
                         .heightIn(min = 64.dp)
-                        .padding(horizontal = PocoSpacing.space16, vertical = PocoSpacing.space12)
+                        .padding(horizontal = MungoSpacing.space16, vertical = MungoSpacing.space12)
                 )
                 features.forEachIndexed { index, feature ->
                     FeatureCard(number = index + 1, feature = feature)
@@ -124,7 +124,7 @@ private fun OnboardingScreen(
 /** 왼쪽 흰 패널: 로고 · 제목 · 설명 · 시작하기 */
 @Composable
 private fun IntroPanel(onStart: () -> Unit, modifier: Modifier = Modifier) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Column(
         modifier = modifier
             .background(colors.bgSurface, RoundedCornerShape(MungoRadius.xl))
@@ -134,20 +134,20 @@ private fun IntroPanel(onStart: () -> Unit, modifier: Modifier = Modifier) {
         Spacer(Modifier.height(80.dp))
         Text(
             text = "반려동물과\n드라이브, 이제 더\n편안하게 떠나요",
-            style = POCOTheme.typography.h2.copy(lineHeight = 72.sp),
+            style = Mg.bold(60, 72),
             color = colors.textPrimary
         )
-        Spacer(Modifier.height(PocoSpacing.space32))
+        Spacer(Modifier.height(MungoSpacing.space32))
         Text(
             text = "운전 습관과 차내 환경을 살펴\n우리 아이 컨디션을 지켜 드려요.",
-            style = POCOTheme.typography.body2,
+            style = Mg.regular(26, 36),
             color = colors.textSecondary
         )
         Spacer(Modifier.weight(1f))
-        PocoButton(
+        MungoButton(
             text = "시작하기",
             onClick = onStart,
-            size = PocoButtonSize.LARGE,
+            size = MungoButtonSize.LARGE,
             shape = CircleShape,
             modifier = Modifier
                 .fillMaxWidth()
@@ -159,7 +159,7 @@ private fun IntroPanel(onStart: () -> Unit, modifier: Modifier = Modifier) {
 /** 기능 소개 카드: 망고 아이콘 타일 · 제목 · 설명 · 번호(01) */
 @Composable
 private fun FeatureCard(number: Int, feature: OnboardingFeature, modifier: Modifier = Modifier) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Row(
         modifier = modifier
             .fillMaxWidth()
@@ -176,23 +176,23 @@ private fun FeatureCard(number: Int, feature: OnboardingFeature, modifier: Modif
         ) {
             MungoIconView(feature.icon, tint = colors.bgAccent, size = 40.dp)
         }
-        Spacer(Modifier.width(PocoSpacing.space32))
+        Spacer(Modifier.width(MungoSpacing.space32))
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = feature.title,
-                style = POCOTheme.typography.title1,
+                style = MungoTheme.typography.title1,
                 color = colors.textPrimary
             )
-            Spacer(Modifier.height(PocoSpacing.space8))
+            Spacer(Modifier.height(MungoSpacing.space8))
             Text(
                 text = feature.description,
-                style = POCOTheme.typography.body2,
+                style = Mg.regular(26, 36),
                 color = colors.textSecondary
             )
         }
         Text(
             text = "%02d".format(number),
-            style = POCOTheme.typography.title3.copy(fontWeight = FontWeight.Bold),
+            style = MungoTheme.typography.title3.copy(fontWeight = FontWeight.Bold),
             color = colors.textDisabled,
             modifier = Modifier
                 .align(Alignment.Top)
@@ -204,11 +204,11 @@ private fun FeatureCard(number: Int, feature: OnboardingFeature, modifier: Modif
 @Preview(widthDp = 1700, heightDp = 1184)
 @Composable
 private fun OnboardingScreenPreview() {
-    POCOTheme(darkTheme = false) { OnboardingScreen(onStart = {}, onSkip = {}) }
+    MungoTheme(darkTheme = false) { OnboardingScreen(onStart = {}, onSkip = {}) }
 }
 
 @Preview(widthDp = 1700, heightDp = 1184)
 @Composable
 private fun OnboardingScreenDarkPreview() {
-    POCOTheme(darkTheme = true) { OnboardingScreen(onStart = {}, onSkip = {}) }
+    MungoTheme(darkTheme = true) { OnboardingScreen(onStart = {}, onSkip = {}) }
 }

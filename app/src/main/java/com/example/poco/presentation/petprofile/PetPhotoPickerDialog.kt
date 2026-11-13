@@ -52,14 +52,14 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import com.example.poco.R
-import com.example.poco.core.designsystem.PocoIcon
-import com.example.poco.core.designsystem.PocoIconView
-import com.example.poco.core.designsystem.component.PocoButton
-import com.example.poco.core.designsystem.component.PocoButtonStyle
-import com.example.poco.core.theme.POCOTheme
-import com.example.poco.core.theme.PocoRadius
-import com.example.poco.core.theme.PocoSize
-import com.example.poco.core.theme.PocoSpacing
+import com.example.poco.core.designsystem.MungoBaseIcon
+import com.example.poco.core.designsystem.MungoBaseIconView
+import com.example.poco.core.designsystem.component.MungoButton
+import com.example.poco.core.designsystem.component.MungoButtonStyle
+import com.example.poco.core.theme.MungoBaseRadius
+import com.example.poco.core.theme.MungoBaseSize
+import com.example.poco.core.theme.MungoSpacing
+import com.example.poco.core.theme.MungoTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -91,30 +91,30 @@ fun PetPhotoPickerDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        val colors = POCOTheme.colors
+        val colors = MungoTheme.colors
         Column(
             modifier = Modifier
                 .fillMaxWidth(0.86f)
                 .fillMaxSize(0.88f)
-                .background(colors.backgroundCard, RoundedCornerShape(PocoRadius.r36))
-                .padding(PocoSpacing.space48)
+                .background(colors.backgroundCard, RoundedCornerShape(MungoBaseRadius.r36))
+                .padding(MungoSpacing.space48)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "펫 사진 고르기",
-                    style = POCOTheme.typography.headingL,
+                    style = MungoTheme.typography.headingL,
                     color = colors.textPrimary,
                     modifier = Modifier.weight(1f)
                 )
-                PocoButton(
+                MungoButton(
                     text = "기본 선택기",
                     onClick = onOpenSystemPicker,
-                    style = PocoButtonStyle.SECONDARY
+                    style = MungoButtonStyle.SECONDARY
                 )
-                Spacer(Modifier.size(PocoSpacing.space16))
-                PocoButton(text = "닫기", onClick = onDismiss, style = PocoButtonStyle.SECONDARY)
+                Spacer(Modifier.size(MungoSpacing.space16))
+                MungoButton(text = "닫기", onClick = onDismiss, style = MungoButtonStyle.SECONDARY)
             }
-            Spacer(Modifier.height(PocoSpacing.space32))
+            Spacer(Modifier.height(MungoSpacing.space32))
             PhotoGrid(
                 hasPermission = hasPermission,
                 askedPermission = askedPermission,
@@ -153,16 +153,16 @@ private fun PhotoGrid(
         note?.let {
             Text(
                 text = it,
-                style = POCOTheme.typography.bodyL,
-                color = POCOTheme.colors.textSecondary
+                style = MungoTheme.typography.bodyL,
+                color = MungoTheme.colors.textSecondary
             )
-            Spacer(Modifier.height(PocoSpacing.space24))
+            Spacer(Modifier.height(MungoSpacing.space24))
         }
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = PHOTO_TILE_MIN),
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(PocoSpacing.space24),
-            verticalArrangement = Arrangement.spacedBy(PocoSpacing.space24)
+            horizontalArrangement = Arrangement.spacedBy(MungoSpacing.space24),
+            verticalArrangement = Arrangement.spacedBy(MungoSpacing.space24)
         ) {
             item(key = "sample") {
                 PhotoTile(uri = sample, label = "예시 사진", onClick = { onPicked(sample.toString()) })
@@ -180,12 +180,12 @@ private fun PhotoTile(uri: Uri, onClick: () -> Unit, label: String? = null) {
     val bitmap by produceState<ImageBitmap?>(initialValue = null, uri) {
         value = withContext(Dispatchers.IO) { context.loadThumbnail(uri) }
     }
-    val shape = RoundedCornerShape(PocoRadius.r24)
+    val shape = RoundedCornerShape(MungoBaseRadius.r24)
     Box(
         modifier = Modifier
             .aspectRatio(1f)
             .clip(shape)
-            .background(POCOTheme.colors.fieldBackground, shape)
+            .background(MungoTheme.colors.fieldBackground, shape)
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center
     ) {
@@ -200,13 +200,13 @@ private fun PhotoTile(uri: Uri, onClick: () -> Unit, label: String? = null) {
         label?.let {
             Text(
                 text = it,
-                style = POCOTheme.typography.caption,
-                color = POCOTheme.colors.onAccentFill,
+                style = MungoTheme.typography.caption,
+                color = MungoTheme.colors.onAccentFill,
                 modifier = Modifier
                     .align(Alignment.TopStart)
-                    .padding(PocoSpacing.space12)
-                    .background(POCOTheme.colors.accentFill, CircleShape)
-                    .padding(horizontal = PocoSpacing.space16, vertical = PocoSpacing.space4)
+                    .padding(MungoSpacing.space12)
+                    .background(MungoTheme.colors.accentFill, CircleShape)
+                    .padding(horizontal = MungoSpacing.space16, vertical = MungoSpacing.space4)
             )
         }
     }
@@ -218,11 +218,11 @@ private fun Context.samplePhotoUri(): Uri =
 
 @Composable
 private fun EmptyMessage(title: String, description: String) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(PocoSpacing.space32),
+            .padding(MungoSpacing.space32),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
@@ -232,18 +232,18 @@ private fun EmptyMessage(title: String, description: String) {
                 .background(colors.fieldBackground, CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            PocoIconView(
-                PocoIcon.CAMERA,
+            MungoBaseIconView(
+                MungoBaseIcon.CAMERA,
                 tint = colors.textSecondary,
                 modifier = Modifier.size(56.dp)
             )
         }
-        Spacer(Modifier.height(PocoSpacing.space32))
-        Text(text = title, style = POCOTheme.typography.headingM, color = colors.textPrimary)
-        Spacer(Modifier.height(PocoSpacing.space12))
+        Spacer(Modifier.height(MungoSpacing.space32))
+        Text(text = title, style = MungoTheme.typography.headingM, color = colors.textPrimary)
+        Spacer(Modifier.height(MungoSpacing.space12))
         Text(
             text = description,
-            style = POCOTheme.typography.bodyL,
+            style = MungoTheme.typography.bodyL,
             color = colors.textSecondary,
             textAlign = TextAlign.Center
         )
@@ -254,8 +254,8 @@ private fun EmptyMessage(title: String, description: String) {
 private fun Loading() {
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
         CircularProgressIndicator(
-            color = POCOTheme.colors.accentFill,
-            modifier = Modifier.size(PocoSize.touchMin)
+            color = MungoTheme.colors.accentFill,
+            modifier = Modifier.size(MungoBaseSize.touchMin)
         )
     }
 }

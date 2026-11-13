@@ -28,8 +28,8 @@ import com.example.poco.data.repository.WindowRepository
 import com.example.poco.domain.driving.ComfortTracker
 import com.example.poco.domain.driving.DrivingEvent
 import com.example.poco.domain.driving.DrivingEventType
+import com.example.poco.domain.driving.MungoStandard
 import com.example.poco.domain.driving.PetType
-import com.example.poco.domain.driving.PocoStandard
 import com.example.poco.domain.driving.RoadContext
 import com.example.poco.domain.driving.VoiceReply
 import com.example.poco.domain.driving.shakeThresholdFactor
@@ -71,7 +71,7 @@ class DrivingViewModel @Inject constructor(
     private var voiceFrequency = VoiceFrequency.NORMAL
 
     /** mungo 기준점 ①: 견종 유형별 온도 기준 (펫이 없으면 기본 유형) */
-    private var temperatureStandard = PocoStandard.temperature(setOf(PetType.BASIC))
+    private var temperatureStandard = MungoStandard.temperature(setOf(PetType.BASIC))
 
     private val lastSpokenAt = mutableMapOf<VoiceKey, Long>()
     private var lastRoutineSpokenAt = 0L
@@ -641,7 +641,7 @@ class DrivingViewModel @Inject constructor(
     }
 
     companion object {
-        const val TARGET_CELSIUS = PocoStandard.SUGGEST_CELSIUS
+        const val TARGET_CELSIUS = MungoStandard.SUGGEST_CELSIUS
         private const val WINDOW_ALERT_SPEED_KMH = 30f
         private const val VENT_PERCENT = 10
         private const val SAME_LINE_INTERVAL_MS = 3 * 60_000L

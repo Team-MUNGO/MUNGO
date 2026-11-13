@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -19,7 +18,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -52,10 +50,11 @@ import com.example.poco.core.designsystem.MungoIcon
 import com.example.poco.core.designsystem.MungoIconView
 import com.example.poco.core.designsystem.component.pressable
 import com.example.poco.core.theme.MungoRadius
-import com.example.poco.core.theme.POCOTheme
+import com.example.poco.core.theme.MungoTheme
 import com.example.poco.data.model.PetSize
 import com.example.poco.presentation.onboarding.SetupTextField
 import com.example.poco.presentation.onboarding.SpeciesDropdown
+import com.example.poco.presentation.onboarding.rememberNumberWidth
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -65,7 +64,7 @@ import kotlinx.coroutines.launch
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun PetEditor(uiState: MyPetUiState, actions: MyPetActions) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val form = uiState.form
     val isAdd = uiState.mode == MyPetMode.ADD
     Column(modifier = Modifier.fillMaxSize()) {
@@ -89,7 +88,7 @@ internal fun PetEditor(uiState: MyPetUiState, actions: MyPetActions) {
             }
             Text(
                 text = if (isAdd) "반려견 추가" else "프로필 수정",
-                style = POCOTheme.typography.h3,
+                style = MungoTheme.typography.h3,
                 color = colors.textPrimary,
                 modifier = Modifier.weight(1f)
             )
@@ -191,21 +190,21 @@ internal fun PetEditor(uiState: MyPetUiState, actions: MyPetActions) {
                 }
             }
             uiState.errorMessage?.let {
-                Text(text = it, style = POCOTheme.typography.body2, color = colors.statusAlert)
+                Text(text = it, style = MungoTheme.typography.body2, color = colors.statusAlert)
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 MungoIconView(MungoIcon.INFO, tint = colors.textTertiary, size = 24.dp)
                 Spacer(Modifier.width(10.dp))
                 Text(
                     text = "바뀐 내용은 다음 이동부터 반영돼요.",
-                    style = POCOTheme.typography.body3,
+                    style = MungoTheme.typography.body3,
                     color = colors.textTertiary,
                     modifier = Modifier.weight(1f)
                 )
                 if (!isAdd) {
                     Text(
                         text = "${form.name.ifBlank { "이 반려견" }} 삭제",
-                        style = POCOTheme.typography.title3,
+                        style = MungoTheme.typography.title3,
                         color = colors.statusAlert,
                         modifier = Modifier
                             .clip(RoundedCornerShape(MungoRadius.md))
@@ -228,7 +227,7 @@ private fun EditablePhoto(
     isLoading: Boolean,
     onClick: () -> Unit
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     // pressable은 동그랗게 잘라내므로 사진에만 걸고, 카메라 뱃지는 바깥에 둔다
     Box {
         Box(modifier = Modifier.pressable(CircleShape, enabled = !isLoading, onClick = onClick)) {
@@ -267,8 +266,8 @@ private fun Field(label: String, modifier: Modifier = Modifier, content: @Compos
     Column(modifier = modifier) {
         Text(
             text = label,
-            style = POCOTheme.typography.body3,
-            color = POCOTheme.colors.textSecondary
+            style = MungoTheme.typography.body3,
+            color = MungoTheme.colors.textSecondary
         )
         Spacer(Modifier.height(12.dp))
         content()
@@ -287,15 +286,17 @@ private fun NumberStepper(
     step: Int,
     modifier: Modifier = Modifier
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val focusManager = LocalFocusManager.current
-    val numberStyle = POCOTheme.typography.h1
+    val numberStyle = MungoTheme.typography.h1
+    // IntrinsicSize.Min은 +/-로 값이 바뀌어도 너비가 갱신되지 않아 숫자가 안 보인다 → 글자 폭을 직접 잰다
+    val numberWidth = rememberNumberWidth(text.ifEmpty { "-" }, numberStyle)
     Column(
         modifier = modifier
             .background(colors.bgSurface, RoundedCornerShape(MungoRadius.xl))
             .padding(horizontal = 36.dp, vertical = 28.dp)
     ) {
-        Text(text = label, style = POCOTheme.typography.body3, color = colors.textSecondary)
+        Text(text = label, style = MungoTheme.typography.body3, color = colors.textSecondary)
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Row(modifier = Modifier.weight(1f), verticalAlignment = Alignment.Bottom) {
@@ -322,14 +323,13 @@ private fun NumberStepper(
                         }
                     },
                     modifier = Modifier
-                        .width(IntrinsicSize.Min)
-                        .widthIn(min = 48.dp)
+                        .width(numberWidth)
                         .semantics { contentDescription = "$label 입력" }
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
                     text = unit,
-                    style = POCOTheme.typography.title2.copy(fontWeight = FontWeight.Bold),
+                    style = MungoTheme.typography.title2.copy(fontWeight = FontWeight.Bold),
                     color = colors.textPrimary,
                     modifier = Modifier.padding(bottom = 10.dp)
                 )
@@ -344,7 +344,7 @@ private fun NumberStepper(
 /** 한 번 누르면 1번, 길게 누르면 0.4초 뒤부터 계속 */
 @Composable
 private fun RepeatCircle(icon: MungoIcon, description: String, onStep: () -> Unit) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val currentOnStep by rememberUpdatedState(onStep)
     var pressed by remember { mutableStateOf(false) }
     Box(
@@ -386,7 +386,7 @@ private fun RepeatCircle(icon: MungoIcon, description: String, onStep: () -> Uni
 /** 몸 크기: 몸무게로 자동 (누를 수 없음) */
 @Composable
 private fun SizeSegment(selected: PetSize?) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -417,7 +417,7 @@ private fun SizeSegment(selected: PetSize?) {
             ) {
                 Text(
                     text = size.rangeLabel(),
-                    style = POCOTheme.typography.body2.copy(
+                    style = MungoTheme.typography.body2.copy(
                         fontWeight = if (isOn) FontWeight.Bold else FontWeight.Normal
                     ),
                     color = if (isOn) colors.textPrimary else colors.textSecondary

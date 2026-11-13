@@ -30,10 +30,13 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -46,11 +49,12 @@ import com.example.poco.core.designsystem.PetPhoto
 import com.example.poco.core.designsystem.component.pressable
 import com.example.poco.core.designsystem.hasFullPetImage
 import com.example.poco.core.theme.MungoRadius
-import com.example.poco.core.theme.POCOTheme
+import com.example.poco.core.theme.MungoTheme
 import com.example.poco.core.util.irang
 import com.example.poco.data.model.MotionSensitivity
 import com.example.poco.data.model.Pet
 import com.example.poco.data.model.PetSeat
+import com.example.poco.presentation.design.Mg
 
 /*
  * 탑승 준비 (mungo 시안 · 1700×1184). 정차 중에만 진행
@@ -115,7 +119,7 @@ private fun BoardingScreen(
     actions: BoardingActions,
     modifier: Modifier = Modifier
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Column(
         modifier = modifier
             .fillMaxSize()
@@ -169,7 +173,7 @@ private fun BoardingScreen(
 
 @Composable
 private fun TopBar(title: String, onClose: () -> Unit) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -187,11 +191,11 @@ private fun TopBar(title: String, onClose: () -> Unit) {
             MungoIconView(MungoIcon.CLOSE, size = 32.dp, contentDescription = "닫기")
         }
         Spacer(Modifier.width(24.dp))
-        Text(text = title, style = POCOTheme.typography.title1, color = colors.textPrimary)
+        Text(text = title, style = Mg.semi(35, 45), color = colors.textPrimary)
         Spacer(Modifier.weight(1f))
         MungoIconView(MungoIcon.LOCK, tint = colors.textTertiary, size = 26.dp)
         Spacer(Modifier.width(10.dp))
-        Text(text = "정차 중에만 진행해요", style = POCOTheme.typography.body2, color = colors.textTertiary)
+        Text(text = "정차 중에만 진행해요", style = MungoTheme.typography.body2, color = colors.textTertiary)
     }
 }
 
@@ -208,7 +212,7 @@ private fun LeftPanel(
             StepHeader(uiState.step)
             Spacer(Modifier.height(56.dp))
         } else {
-            Spacer(Modifier.height(32.dp))
+            Spacer(Modifier.height(59.dp)) // Figma 470:54958: 제목 y 216
         }
         Column(modifier = Modifier.weight(1f)) {
             when (uiState.step) {
@@ -235,14 +239,15 @@ private fun LeftPanel(
 
 @Composable
 private fun StepHeader(step: BoardingStep) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Row {
-        Text(text = "안전동승체크", style = POCOTheme.typography.body2, color = colors.textTertiary)
+        // Figma 470:54513: M24 #9CA7B4 · 막대 높이 8
+        Text(text = "안전동승체크", style = Mg.medium(24, 32), color = Color(0xFF9CA7B4))
         Spacer(Modifier.weight(1f))
         Text(
             text = "${step.number} / ${BoardingStep.TOTAL}",
-            style = POCOTheme.typography.body2,
-            color = colors.textTertiary
+            style = Mg.medium(24, 32),
+            color = Color(0xFF9CA7B4)
         )
     }
     Spacer(Modifier.height(16.dp))
@@ -251,7 +256,7 @@ private fun StepHeader(step: BoardingStep) {
             Box(
                 Modifier
                     .weight(1f)
-                    .height(7.dp)
+                    .height(8.dp)
                     .background(
                         if (index < step.number) colors.bgAccent else colors.borderDefault,
                         CircleShape
@@ -264,22 +269,23 @@ private fun StepHeader(step: BoardingStep) {
 /** 질문 제목 (+ 설명) */
 @Composable
 internal fun StepTitle(title: String, description: String? = null) {
-    val colors = POCOTheme.colors
-    Text(text = title, style = POCOTheme.typography.h2, color = colors.textPrimary)
+    val colors = MungoTheme.colors
+    // Figma 470:54519: B60 · 줄 간격 78 / 설명 R26 · 줄 간격 37
+    Text(text = title, style = Mg.bold(60, 78), color = colors.textPrimary)
     description?.let {
         Spacer(Modifier.height(28.dp))
-        Text(text = it, style = POCOTheme.typography.body2, color = colors.textSecondary)
+        Text(text = it, style = Mg.regular(26, 37), color = colors.textSecondary)
     }
 }
 
 /** 구분선 + 작은 제목 */
 @Composable
-internal fun SectionLabel(text: String) {
-    val colors = POCOTheme.colors
+internal fun SectionLabel(text: String, topGap: Dp = 41.dp) {
+    val colors = MungoTheme.colors
     HorizontalDivider(color = colors.borderDefault)
-    Spacer(Modifier.height(32.dp))
-    Text(text = text, style = POCOTheme.typography.body2, color = colors.textTertiary)
-    Spacer(Modifier.height(16.dp))
+    Spacer(Modifier.height(topGap))
+    Text(text = text, style = Mg.medium(24, 32), color = Color(0xFF9CA7B4))
+    Spacer(Modifier.height(24.dp))
 }
 
 @Composable
@@ -290,7 +296,7 @@ private fun BottomButtons(
     onBack: () -> Unit,
     onNext: () -> Unit
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Row(horizontalArrangement = Arrangement.spacedBy(20.dp)) {
         if (showBack) {
             Box(
@@ -301,7 +307,11 @@ private fun BottomButtons(
                     .pressable(CircleShape, onClick = onBack),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = "이전", style = POCOTheme.typography.title1, color = colors.textSecondary)
+                Text(
+                    text = "이전",
+                    style = MungoTheme.typography.title1,
+                    color = colors.textSecondary
+                )
             }
         }
         Box(
@@ -314,7 +324,7 @@ private fun BottomButtons(
         ) {
             Text(
                 text = nextText,
-                style = POCOTheme.typography.title1,
+                style = MungoTheme.typography.title1,
                 color = if (enabled) colors.textOnAccent else colors.textDisabled
             )
         }
@@ -330,7 +340,7 @@ internal fun VoiceRow(
     onMic: () -> Unit,
     micSize: Dp = 64.dp
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
@@ -356,8 +366,8 @@ internal fun VoiceRow(
                 heardText != null -> "“ $heardText ”"
                 else -> "“ $example ”"
             },
-            style = POCOTheme.typography.body2,
-            color = colors.textSecondary,
+            style = Mg.regular(25, 32),
+            color = colors.textPrimary,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
         )
@@ -371,14 +381,14 @@ internal fun VoiceRow(
 @Composable
 private fun ColumnScope.CompanionsLeft(uiState: BoardingUiState, actions: BoardingActions) {
     StepTitle("오늘은 누구와\n함께 이동하나요?")
-    Spacer(Modifier.height(72.dp))
+    Spacer(Modifier.height(108.dp))
     VoiceRow(
         isListening = uiState.isListening,
         heardText = uiState.heardText,
         example = uiState.pets.firstOrNull()?.name?.let { "${it.irang} 같이 탈거야" } ?: "같이 탈거야",
         onMic = actions.onMic
     )
-    Spacer(Modifier.height(32.dp))
+    Spacer(Modifier.height(45.dp))
     SectionLabel("함께 타는 친구")
     Column(
         modifier = Modifier
@@ -390,8 +400,8 @@ private fun ColumnScope.CompanionsLeft(uiState: BoardingUiState, actions: Boardi
         if (uiState.selectedPets.isEmpty()) {
             Text(
                 text = "함께 탈 반려견을 골라 주세요",
-                style = POCOTheme.typography.body2,
-                color = POCOTheme.colors.textSecondary
+                style = MungoTheme.typography.body2,
+                color = MungoTheme.colors.textSecondary
             )
         }
         uiState.selectedPets.forEach { CompanionRow(it) }
@@ -400,7 +410,7 @@ private fun ColumnScope.CompanionsLeft(uiState: BoardingUiState, actions: Boardi
 
 @Composable
 private fun CompanionRow(pet: Pet) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -413,7 +423,7 @@ private fun CompanionRow(pet: Pet) {
         Spacer(Modifier.width(18.dp))
         Text(
             text = pet.name,
-            style = POCOTheme.typography.title3,
+            style = Mg.semi(25, 32),
             color = colors.textPrimary,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -456,16 +466,25 @@ private fun CompanionPicker(uiState: BoardingUiState, actions: BoardingActions) 
                 }
             }
         }
-        uiState.temperatureNote?.let { note ->
-            Spacer(Modifier.height(48.dp))
-            TemperatureBar(note)
+        // Keep the note's measured space when selection is cleared, so the centered pet grid
+        // stays at the same position. Hidden content must not remain in accessibility output.
+        val note = uiState.temperatureNote
+        val reservedNote = note ?: temperatureNote(uiState.pets)
+        reservedNote?.let {
+            Spacer(Modifier.height(50.dp)) // Figma 488:7546: 카드 아래 50
+            Box(
+                Modifier.alpha(if (note != null) 1f else 0f)
+                    .then(if (note == null) Modifier.clearAndSetSemantics {} else Modifier)
+            ) {
+                TemperatureBar(it)
+            }
         }
     }
 }
 
 @Composable
 private fun RowScope.PetCard(pet: Pet, selected: Boolean, onClick: () -> Unit) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val shape = RoundedCornerShape(MungoRadius.xl)
     Box(
         modifier = Modifier
@@ -487,7 +506,7 @@ private fun RowScope.PetCard(pet: Pet, selected: Boolean, onClick: () -> Unit) {
             Spacer(Modifier.height(48.dp))
             Text(
                 text = pet.name,
-                style = POCOTheme.typography.h3,
+                style = MungoTheme.typography.h3,
                 color = colors.textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -498,7 +517,7 @@ private fun RowScope.PetCard(pet: Pet, selected: Boolean, onClick: () -> Unit) {
 
 @Composable
 private fun RowScope.AddPetCard(onClick: () -> Unit) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val dash = colors.borderStrong
     val shape = RoundedCornerShape(MungoRadius.xl)
     Column(
@@ -528,13 +547,13 @@ private fun RowScope.AddPetCard(onClick: () -> Unit) {
             MungoIconView(MungoIcon.PLUS, size = 36.dp)
         }
         Spacer(Modifier.height(36.dp))
-        Text(text = "반려견 추가", style = POCOTheme.typography.title2, color = colors.textPrimary)
+        Text(text = "반려견 추가", style = Mg.bold(24, 32), color = colors.textPrimary)
     }
 }
 
 @Composable
 private fun TemperatureBar(note: TemperatureNote) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -552,9 +571,13 @@ private fun TemperatureBar(note: TemperatureNote) {
         }
         Spacer(Modifier.width(28.dp))
         Column {
-            Text(text = note.title, style = POCOTheme.typography.title2, color = colors.textPrimary)
+            Text(text = note.title, style = Mg.bold(25, 35), color = colors.textPrimary)
             Spacer(Modifier.height(4.dp))
-            Text(text = note.body, style = POCOTheme.typography.body2, color = colors.textSecondary)
+            Text(
+                text = note.body,
+                style = MungoTheme.typography.body2,
+                color = colors.textSecondary
+            )
         }
     }
 }
@@ -566,7 +589,7 @@ private fun TemperatureBar(note: TemperatureNote) {
 /** 망고 원 + 체크 (선택됨 표시) */
 @Composable
 internal fun CheckBadge(modifier: Modifier = Modifier, size: Dp = 48.dp) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Box(
         modifier = modifier
             .size(size)
@@ -583,7 +606,7 @@ internal fun PetCircle(pet: Pet, size: Dp) {
     Box(
         modifier = Modifier
             .size(size)
-            .background(POCOTheme.colors.bgSurfaceSunken, CircleShape),
+            .background(MungoTheme.colors.bgSurfaceSunken, CircleShape),
         contentAlignment = Alignment.Center
     ) {
         PetPhoto(
@@ -627,24 +650,24 @@ private fun previewState(step: BoardingStep) = BoardingUiState(
 
 @Preview(widthDp = 1700, heightDp = 1184, name = "1/3 펫")
 @Composable
-private fun CompanionsPreview() {
-    POCOTheme(darkTheme = false) {
+internal fun CompanionsPreview() {
+    MungoTheme(darkTheme = false) {
         BoardingScreen(previewState(BoardingStep.COMPANIONS), BoardingActions())
     }
 }
 
 @Preview(widthDp = 1700, heightDp = 1184, name = "2/3 자리")
 @Composable
-private fun SeatPreview() {
-    POCOTheme(darkTheme = false) {
+internal fun SeatPreview() {
+    MungoTheme(darkTheme = false) {
         BoardingScreen(previewState(BoardingStep.SEAT), BoardingActions())
     }
 }
 
 @Preview(widthDp = 1700, heightDp = 1184, name = "3/3 확인")
 @Composable
-private fun ChecklistPreview() {
-    POCOTheme(darkTheme = false) {
+internal fun ChecklistPreview() {
+    MungoTheme(darkTheme = false) {
         BoardingScreen(previewState(BoardingStep.CHECKLIST), BoardingActions())
     }
 }
@@ -652,9 +675,26 @@ private fun ChecklistPreview() {
 @Preview(widthDp = 1700, heightDp = 1184, name = "출발 준비 + 분할")
 @Composable
 private fun ReadyPreview() {
-    POCOTheme(darkTheme = false) {
+    MungoTheme(darkTheme = false) {
         BoardingScreen(
             previewState(BoardingStep.READY).copy(isLayoutDialogVisible = true),
+            BoardingActions()
+        )
+    }
+}
+
+@Preview(widthDp = 1700, heightDp = 1184, name = "출발 준비")
+@Composable
+internal fun ReadyOnlyPreview() {
+    MungoTheme(darkTheme = false) {
+        // 품종 그림이 있는 펫으로 (그림 없는 품종은 작은 기본 마크)
+        val state = previewState(BoardingStep.READY)
+        BoardingScreen(
+            state.copy(
+                pets = state.pets.map {
+                    it.copy(breed = "몰티즈")
+                }
+            ),
             BoardingActions()
         )
     }
@@ -663,7 +703,7 @@ private fun ReadyPreview() {
 @Preview(widthDp = 1700, heightDp = 1184, name = "다크 모드")
 @Composable
 private fun DarkPreview() {
-    POCOTheme(darkTheme = true) {
+    MungoTheme(darkTheme = true) {
         BoardingScreen(previewState(BoardingStep.SEAT), BoardingActions())
     }
 }

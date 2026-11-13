@@ -9,4 +9,7 @@ class TtsRepositoryImpl @Inject constructor(private val ttsDataSource: TtsDataSo
     TtsRepository {
     override suspend fun speak(text: String): Result<Unit> =
         suspendRunCatching { ttsDataSource.speak(text) }
+
+    override suspend fun speak(text: String, onSpeaking: (Boolean) -> Unit) =
+        ttsDataSource.speak(text, onSpeaking)
 }

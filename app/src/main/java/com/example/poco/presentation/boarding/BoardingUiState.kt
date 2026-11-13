@@ -3,8 +3,8 @@ package com.example.poco.presentation.boarding
 import com.example.poco.core.util.eunNeun
 import com.example.poco.data.model.Pet
 import com.example.poco.data.model.PetSeat
+import com.example.poco.domain.driving.MungoStandard
 import com.example.poco.domain.driving.PetType
-import com.example.poco.domain.driving.PocoStandard
 import com.example.poco.domain.driving.TemperatureStandard
 import kotlin.math.roundToInt
 
@@ -84,8 +84,8 @@ data class BoardingUiState(
     val activePet: Pet? get() = selectedPets.firstOrNull { it.id == activePetId }
 
     val temperatureStandard: TemperatureStandard
-        get() = PocoStandard.temperature(
-            selectedPets.flatMap { PocoStandard.petTypes(it.breed, it.weightKg, it.ageYears) }
+        get() = MungoStandard.temperature(
+            selectedPets.flatMap { MungoStandard.petTypes(it.breed, it.weightKg, it.ageYears) }
                 .toSet()
         )
 
@@ -130,9 +130,9 @@ data class TemperatureNote(val title: String, val body: String)
 fun temperatureNote(pets: List<Pet>): TemperatureNote? {
     if (pets.isEmpty()) return null
     val typesByPet = pets.associateWith {
-        PocoStandard.petTypes(it.breed, it.weightKg, it.ageYears)
+        MungoStandard.petTypes(it.breed, it.weightKg, it.ageYears)
     }
-    val standard = PocoStandard.temperature(typesByPet.values.flatten().toSet())
+    val standard = MungoStandard.temperature(typesByPet.values.flatten().toSet())
     val (pet, reason) = typesByPet.entries
         .mapNotNull { (pet, types) -> reasonFor(pet, types)?.let { pet to it } }
         .firstOrNull()
@@ -175,7 +175,7 @@ fun matchPetsByVoice(heard: String?, pets: List<Pet>): Set<Long> {
         .toSet()
 }
 
-/** "Gleo, 다 확인했어" → true */
+/** "mungo, 다 확인했어" → true */
 fun isAllCheckedReply(heard: String?): Boolean {
     val text = heard?.replace(" ", "") ?: return false
     return ALL_CHECKED_WORDS.any { text.contains(it) }

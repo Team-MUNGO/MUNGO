@@ -14,6 +14,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -23,14 +24,23 @@ import com.example.poco.core.designsystem.MungoIconView
 import com.example.poco.core.designsystem.MungoPaw
 import com.example.poco.core.designsystem.component.pressable
 import com.example.poco.core.theme.MungoRadius
-import com.example.poco.core.theme.POCOTheme
+import com.example.poco.core.theme.MungoTheme
+import com.example.poco.presentation.design.Mg
 
 /** 왼쪽 메뉴 레일 탭 */
 enum class RailTab { HOME, RECORDS, MY_PET, SETTINGS }
 
 /**
+ * 이동 기록 · 설정 탭 이동. 화면마다 콜백을 넘기지 않도록 NavHost에서 한 번 제공한다.
+ * 제공하지 않으면(프리뷰 등) 두 탭은 누를 수 없다.
+ */
+data class RailActions(val onRecords: (() -> Unit)? = null, val onSettings: (() -> Unit)? = null)
+
+val LocalRailActions = staticCompositionLocalOf { RailActions() }
+
+/**
  * 홈 · 마이펫 등이 같이 쓰는 왼쪽 메뉴 레일.
- * 이동 기록 · 설정 · 마이크는 아직 화면이 없어 누를 수 없다
+ * 이동 기록 · 설정은 [LocalRailActions]로 이동한다. 마이크는 아직 누를 수 없다
  */
 @Composable
 fun MungoNavRail(
@@ -39,7 +49,7 @@ fun MungoNavRail(
     onMyPet: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Column(
         modifier = modifier
             .width(RAIL_WIDTH)
@@ -49,21 +59,32 @@ fun MungoNavRail(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         MungoPaw(modifier = Modifier.size(64.dp))
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(28.dp))
         RailItem(
             icon = MungoIcon.HOUSE,
             label = "홈",
             selected = selected == RailTab.HOME,
             onClick = onHome.takeIf { selected != RailTab.HOME }
         )
-        RailItem(icon = MungoIcon.CALENDAR, label = "이동 기록", selected = selected == RailTab.RECORDS)
+        val railActions = LocalRailActions.current
+        RailItem(
+            icon = MungoIcon.CALENDAR,
+            label = "이동 기록",
+            selected = selected == RailTab.RECORDS,
+            onClick = railActions.onRecords.takeIf { selected != RailTab.RECORDS }
+        )
         RailItem(
             icon = MungoIcon.PAW,
             label = "마이펫",
             selected = selected == RailTab.MY_PET,
             onClick = onMyPet.takeIf { selected != RailTab.MY_PET }
         )
-        RailItem(icon = MungoIcon.SETTINGS, label = "설정", selected = selected == RailTab.SETTINGS)
+        RailItem(
+            icon = MungoIcon.SETTINGS,
+            label = "설정",
+            selected = selected == RailTab.SETTINGS,
+            onClick = railActions.onSettings.takeIf { selected != RailTab.SETTINGS }
+        )
         Spacer(Modifier.weight(1f))
         Box(
             modifier = Modifier
@@ -83,12 +104,12 @@ private fun RailItem(
     selected: Boolean = false,
     onClick: (() -> Unit)? = null
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val shape = RoundedCornerShape(MungoRadius.lg)
     val content = if (selected) colors.textOnNeutralStrong else colors.textSecondary
     Column(
         modifier = Modifier
-            .padding(vertical = 6.dp)
+            .padding(vertical = 10.dp) // Figma 470:55153 메뉴 간격 132
             .size(width = 104.dp, height = 112.dp)
             .background(if (selected) colors.bgNeutralStrong else Color.Transparent, shape)
             .pressable(shape = shape, onClick = onClick),
@@ -97,7 +118,12 @@ private fun RailItem(
     ) {
         MungoIconView(icon, tint = content, size = 36.dp)
         Spacer(Modifier.height(8.dp))
-        Text(text = label, style = POCOTheme.typography.body3, color = content, maxLines = 1)
+        Text(
+            text = label,
+            style = if (selected) Mg.semi(23, 30) else Mg.regular(23, 30),
+            color = content,
+            maxLines = 1
+        )
     }
 }
 

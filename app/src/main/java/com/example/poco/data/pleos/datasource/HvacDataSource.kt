@@ -1,6 +1,8 @@
 package com.example.poco.data.pleos.datasource
 
 import ai.pleos.playground.vehicle.api.model.area.SeatArea
+import com.example.poco.core.driving.PetSeat
+import com.example.poco.core.driving.Reading
 import kotlinx.coroutines.flow.Flow
 
 interface HvacDataSource {
@@ -15,4 +17,7 @@ interface HvacDataSource {
 
     /** 해당 좌석의 설정 온도(℃) */
     fun observeTemperature(area: SeatArea): Flow<Float>
+
+    /** 주행 세션용: 반려견 자리 실내 온도. 읽을 수 없으면 Unavailable (추정값을 만들지 않는다). */
+    fun observeInteriorTemperature(seat: PetSeat): Flow<Reading<Float>>
 }

@@ -7,7 +7,7 @@ import androidx.compose.ui.unit.dp
  */
 
 /** 정수 px · 4 단위 기본, 2는 미세 조정용 */
-object PocoSpacing {
+object MungoSpacing {
     val space2 = 2.dp // 아이콘-글자 미세 간격
     val space4 = 4.dp // 라벨-값
     val space8 = 8.dp // 라벨-입력칸 · 칩 사이
@@ -23,7 +23,7 @@ object PocoSpacing {
 }
 
 /** 0.5px 단위 허용 */
-object PocoStroke {
+object MungoStroke {
     val card = 1.5.dp // 카드 외곽 · 표 구분선
     val control = 2.dp // 입력칸 · 칩 · 보조 버튼
     val dashed = 2.dp // 추가 버튼 · 빈 사진 (대시 8 / 간격 6)
@@ -34,7 +34,7 @@ object PocoStroke {
 }
 
 /** 정수 px */
-object PocoRadius {
+object MungoBaseRadius {
     val r8 = 8.dp // 게이지
     val r12 = 12.dp // PRND · 작은 버튼
     val r16 = 16.dp // 입력칸 · 아이콘 타일
@@ -47,7 +47,7 @@ object PocoRadius {
 }
 
 /** 터치 · 아이콘 · 컴포넌트 크기 */
-object PocoSize {
+object MungoBaseSize {
     val touchMin = 76.dp // 모든 버튼 · 칩 · 키 (Android for Cars 기준)
     val buttonHeight = 76.dp // 일반 버튼
     val buttonHeightLarge = 96.dp // 화면 상단 주요 버튼
@@ -74,7 +74,7 @@ object PocoSize {
 }
 
 /** 화면 레이아웃 */
-object PocoLayout {
+object MungoBaseLayout {
     // 정차 화면 (홈 · 펫 프로필, 전체 화면)
     val statusBarHeight = 88.dp
     val screenHorizontal = 96.dp // 좌우
@@ -97,7 +97,7 @@ object PocoLayout {
 
 /*
  * mungo 디자인 시스템 · Spacing / Radius / Touch & Icon Size
- * - 간격: LINE 규칙(4 배수 + 최소 2). 차량 화면에서는 24 이상을 주로 쓴다 → 기존 PocoSpacing 값 그대로 사용
+ * - 간격: LINE 규칙(4 배수 + 최소 2). 차량 화면에서는 24 이상을 주로 쓴다 → 기존 MungoSpacing 값 그대로 사용
  * - 모서리: LINE 3~12px는 차량에서 각져 보여 Pleos 카드 톤에 맞춰 키웠다
  */
 
@@ -121,8 +121,10 @@ object MungoSize {
     val iconLg = 32.dp
     val iconXl = 40.dp
     val iconButton = 88.dp
-    val input = 88.dp
-    val segment = 88.dp
+
+    /** Figma 페이지4 입력칸 · 세그먼트 높이 94 (488:7404 · 488:7405) */
+    val input = 94.dp
+    val segment = 94.dp
     val chipMedium = 64.dp
     val chipSmall = 40.dp
     val checkRow = 100.dp

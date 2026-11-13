@@ -1,5 +1,7 @@
 package com.example.poco.data.repository
 
+import com.example.poco.core.driving.PetSeat as SessionSeat
+import com.example.poco.core.driving.Reading
 import com.example.poco.data.model.PetSeat
 import kotlinx.coroutines.flow.Flow
 
@@ -12,4 +14,7 @@ interface HvacRepository {
 
     /** 반려동물 자리(또는 가까운 존) 설정 온도 변경 */
     suspend fun setSeatTemperature(seat: PetSeat, celsius: Float): Result<Float?>
+
+    /** 주행 세션용 실내 온도 (Reading으로 미지원/오류를 구분) */
+    fun observeInteriorTemperature(seat: SessionSeat): Flow<Reading<Float>>
 }

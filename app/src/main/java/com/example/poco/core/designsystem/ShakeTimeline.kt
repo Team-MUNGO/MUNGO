@@ -19,7 +19,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import com.example.poco.core.theme.POCOTheme
+import com.example.poco.core.theme.MungoTheme
 import com.example.poco.data.model.ShakeLevel
 import com.example.poco.data.model.TimelineBar
 
@@ -43,7 +43,7 @@ fun ShakeTimeline(
     modifier: Modifier = Modifier,
     showLegend: Boolean = false
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Column(modifier = modifier) {
         Row(
             modifier = Modifier
@@ -75,7 +75,7 @@ fun ShakeTimeline(
             labels.forEachIndexed { index, label ->
                 Text(
                     text = label,
-                    style = POCOTheme.typography.hmiCaption,
+                    style = MungoTheme.typography.hmiCaption,
                     color = colors.textSecondary,
                     textAlign = when (index) {
                         0 -> TextAlign.Start
@@ -108,8 +108,8 @@ private fun LegendItem(color: Color, label: String) {
         Spacer(Modifier.width(6.dp))
         Text(
             text = label,
-            style = POCOTheme.typography.hmiCaption,
-            color = POCOTheme.colors.textSecondary
+            style = MungoTheme.typography.hmiCaption,
+            color = MungoTheme.colors.textSecondary
         )
     }
 }

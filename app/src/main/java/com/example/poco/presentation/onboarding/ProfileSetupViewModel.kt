@@ -6,6 +6,7 @@ import com.example.poco.data.model.MotionSensitivity
 import com.example.poco.data.model.PetSpecies
 import com.example.poco.data.model.PetTrait
 import com.example.poco.data.model.VoiceFrequency
+import com.example.poco.data.repository.OnboardingRepository
 import com.example.poco.data.repository.PetRepository
 import com.example.poco.presentation.mypet.withDerivedCare
 import com.example.poco.presentation.petprofile.PetForm
@@ -25,8 +26,10 @@ import timber.log.Timber
  * (중간에 그만두면 반쪽짜리 펫이 남지 않게)
  */
 @HiltViewModel
-class ProfileSetupViewModel @Inject constructor(private val petRepository: PetRepository) :
-    ViewModel() {
+class ProfileSetupViewModel @Inject constructor(
+    private val petRepository: PetRepository,
+    private val onboardingRepository: OnboardingRepository
+) : ViewModel() {
     private val _uiState = MutableStateFlow(ProfileSetupUiState())
     val uiState = _uiState.asStateFlow()
 
@@ -157,6 +160,10 @@ class ProfileSetupViewModel @Inject constructor(private val petRepository: PetRe
             _uiState.update { it.copy(isSaving = true) }
             petRepository.savePet(form.toPet())
                 .onSuccess { id ->
+                    // 프로필 완성 → 바로 홈. 다음 실행부터 온보딩을 다시 보이지 않도록 첫 실행 완료로 남긴다
+                    // (차량 권한은 홈에 들어가서 시스템 창으로 한 번 요청한다)
+                    onboardingRepository.setPermissionCompleted()
+                        .onFailure { Timber.e(it, "첫 실행 완료 저장 실패") }
                     // 다시 돌아와 저장해도 같은 펫을 고치도록 id를 남긴다
                     _uiState.update {
                         it.copy(isSaving = false, isDone = true, form = it.form.copy(id = id))

@@ -18,8 +18,8 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.poco.core.theme.POCOTheme
-import com.example.poco.core.theme.PocoStroke
+import com.example.poco.core.theme.MungoStroke
+import com.example.poco.core.theme.MungoTheme
 import com.example.poco.data.model.PetSeat
 
 /**
@@ -38,7 +38,7 @@ fun CarSeatMap(
     photoPath: String? = null,
     breed: String? = null
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val height = width * 1.5f
     val seatW = 0.30f
     val seatH = 0.22f
@@ -61,7 +61,7 @@ fun CarSeatMap(
         Canvas(modifier = Modifier.fillMaxSize()) {
             val w = size.width
             val h = size.height
-            val line = PocoStroke.card.toPx()
+            val line = MungoStroke.card.toPx()
             val corner = CornerRadius(w * 0.06f)
 
             // 차체 · 앞/뒤 유리 · 차 앞 표시(▲)
@@ -129,12 +129,12 @@ fun CarSeatMap(
                     size = seatSize,
                     cornerRadius = corner,
                     style = Stroke(
-                        width = if (isPet) PocoStroke.control.toPx() else line,
+                        width = if (isPet) MungoStroke.control.toPx() else line,
                         pathEffect = if (isPrevious) {
                             PathEffect.dashPathEffect(
                                 floatArrayOf(
-                                    PocoStroke.DASH_ON * density,
-                                    PocoStroke.DASH_OFF * density
+                                    MungoStroke.DASH_ON * density,
+                                    MungoStroke.DASH_OFF * density
                                 )
                             )
                         } else {
@@ -199,8 +199,8 @@ private fun SeatLabel(
 ) {
     Text(
         text = text,
-        style = POCOTheme.typography.nano,
-        color = POCOTheme.colors.textSecondary,
+        style = MungoTheme.typography.nano,
+        color = MungoTheme.colors.textSecondary,
         textAlign = TextAlign.Center,
         modifier = Modifier
             .offset(x = width * origin.first, y = height * (origin.second + seatH * 0.45f) - 11.dp)
