@@ -32,7 +32,7 @@ import com.example.poco.core.theme.PocoSpacing
 import com.example.poco.core.theme.PocoStroke
 
 /*
- * POCO 피드백 컴포넌트 · DS-05 Content & Feedback
+ * mungo 피드백 컴포넌트 · DS-05 Content & Feedback
  * 상태 줄 · 알림 카드 · 음성 카드 · 통계 타일 · 권한 배너 · 토스트
  */
 
@@ -193,7 +193,7 @@ fun AlertCard(
 
 // region Voice card (높이 116 · 켜짐 = 라임 스피커 / 꺼짐 = 음성 켜기 버튼)
 
-/** 켜짐: POCO 음성 안내 + 말한 문장 그대로 / 꺼짐: 음성 안내 꺼짐 + [음성 켜기] */
+/** 켜짐: mungo 음성 안내 + 말한 문장 그대로 / 꺼짐: 음성 안내 꺼짐 + [음성 켜기] */
 @Composable
 fun VoiceCard(
     message: String?,
@@ -296,7 +296,7 @@ fun StatTile(label: String, value: String, dotColor: Color, modifier: Modifier =
 
 // region Permission banner (960 × 200~232 · 위쪽 가운데 오버레이)
 
-/** 예) [필수 권한] 창문 정보는 꼭 필요해요 / 이 항목을 켜야 POCO를 시작할 수 있어요. [확인] */
+/** 예) [필수 권한] 창문 정보는 꼭 필요해요 / 이 항목을 켜야 mungo를 시작할 수 있어요. [확인] */
 @Composable
 fun PermissionBanner(
     title: String,

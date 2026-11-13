@@ -211,7 +211,7 @@ private fun ListsAndLogo() {
             Label("Permission banner · 960")
             PermissionBanner(
                 title = "창문 정보는 꼭 필요해요",
-                description = "이 항목을 켜야 POCO를 시작할 수 있어요.",
+                description = "이 항목을 켜야 mungo를 시작할 수 있어요.",
                 onConfirm = {}
             )
         }

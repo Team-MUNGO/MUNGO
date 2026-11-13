@@ -145,17 +145,25 @@ private fun HomeScreen(
             ) {
                 ComfortCard(score = uiState.lastTrip?.comfortScore, modifier = cell())
                 WeekTripCard(counts = uiState.weekTripCounts, modifier = cell())
-                PetModeCard(
-                    temperature = uiState.seatTemperature,
-                    enabled = uiState.isRearTempWatchEnabled,
-                    onChange = onPetModeChange,
-                    onOpen = onOpenPetMode,
-                    modifier = cell()
-                )
+                if (SHOW_PET_MODE) {
+                    PetModeCard(
+                        temperature = uiState.seatTemperature,
+                        enabled = uiState.isRearTempWatchEnabled,
+                        onChange = onPetModeChange,
+                        onOpen = onOpenPetMode,
+                        modifier = cell()
+                    )
+                }
             }
         }
     }
 }
+
+/**
+ * 펫모드(보호자 외출 중 화면)는 스마트폰 연동(원격 확인 · 알림)이 없어 공모전 제출본에서는 숨긴다.
+ * 화면 · 경로 코드는 남겨 두었으니 다시 보이게 하려면 true로 바꾼다
+ */
+private const val SHOW_PET_MODE = false
 
 private fun RowScope.cell(): Modifier = Modifier.weight(1f).fillMaxHeight()
 
@@ -270,12 +278,21 @@ private fun PetPanel(uiState: HomeUiState, onOpenPet: () -> Unit, modifier: Modi
                 )
             }
             Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                StatusTile(
-                    icon = MungoIcon.PAW,
-                    label = "펫모드",
-                    value = if (petModeOn) "켜짐" else "대기",
-                    highlighted = petModeOn
-                )
+                if (SHOW_PET_MODE) {
+                    StatusTile(
+                        icon = MungoIcon.PAW,
+                        label = "펫모드",
+                        value = if (petModeOn) "켜짐" else "대기",
+                        highlighted = petModeOn
+                    )
+                } else {
+                    StatusTile(
+                        icon = MungoIcon.MIC,
+                        label = "음성 안내",
+                        value = if (uiState.isVoiceGuideEnabled) "켜짐" else "꺼짐",
+                        highlighted = uiState.isVoiceGuideEnabled
+                    )
+                }
                 // 공기 청정은 아직 Pleos SDK에서 읽지 않는다
                 StatusTile(icon = MungoIcon.FAN, label = "공기 청정", value = "—")
             }

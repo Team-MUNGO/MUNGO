@@ -4,7 +4,7 @@ import com.example.poco.data.model.Pet
 import com.example.poco.data.model.PetSize
 
 /**
- * POCO 기준점 v1 - 견종별 온도 · 흔들림(급가속 · 급제동 · 급회전) 판단 기준.
+ * mungo 기준점 v1 - 견종별 온도 · 흔들림(급가속 · 급제동 · 급회전) 판단 기준.
  *
  * 반려견 전용 가속도 기준 연구가 아직 없어서 사람 승객 · 운전 습관 연구값으로 시작하는 가설.
  * 근거: 개 열중립 범위 20~30°C(NRC) · 단모견 하한 15°C · 실내 사육 상한 29.5°C(USDA)
