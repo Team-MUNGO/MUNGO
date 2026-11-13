@@ -13,7 +13,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -26,8 +25,10 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -72,6 +73,7 @@ import java.util.Date
 import java.util.Locale
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.first
 
 // ---------- Text helpers (shared by full/split layouts and the trip screens) ----------
 
@@ -486,15 +488,6 @@ private fun isProposalVisible(state: DrivingSessionState, restMode: Boolean): Bo
             )
 }
 
-/**
- * 2분할에서 음성 안내 카드(문장 + 음성 질문)만 보이는지.
- * 이때는 카드가 내용 높이만 쓰고, 남는 높이는 위쪽 칸들이 나눠 가진다
- */
-fun isPlainGleo(state: DrivingSessionState, ai: AssistantUiState): Boolean = state.active &&
-    !(isProposalVisible(state, restMode = false) && ai.phase == AssistantPhase.IDLE) &&
-    state.waypoint !is WaypointUiState.Adding &&
-    state.waypoint !is WaypointUiState.Added
-
 @Composable
 fun GleoSlot(
     state: DrivingSessionState,
@@ -512,12 +505,16 @@ fun GleoSlot(
     val proposalVisible = isProposalVisible(state, restMode)
     val waypoint = state.waypoint
     val added = waypoint as? WaypointUiState.Added
-    // Figma 464:47342: the confirmation card returns to the Gleo card after 5 seconds.
-    var showAdded by remember(added?.name) { mutableStateOf(added != null) }
-    LaunchedEffect(added?.name) {
-        if (added != null) {
-            delay(5_000)
-            showAdded = false
+    // 경유지를 넣은 뒤에는 경유지 카드가 기본. 음성으로 묻는 동안 · 답을 말하는 동안만 mungo 안내 카드로 바꾼다
+    val speaking by rememberUpdatedState(state.ttsSpeaking)
+    var voiceMoment by remember { mutableStateOf(false) }
+    LaunchedEffect(ai.phase, ai.answerText, ai.error) {
+        if (ai.phase != AssistantPhase.IDLE) {
+            voiceMoment = true
+        } else if (voiceMoment) {
+            delay(VOICE_HOLD_MS)
+            snapshotFlow { speaking }.first { !it }
+            voiceMoment = false
         }
     }
     when {
@@ -534,9 +531,9 @@ fun GleoSlot(
         )
         !restMode &&
             added != null &&
-            (showAdded || added.cancelling || added.cancelError != null) &&
+            (!voiceMoment || added.cancelling || added.cancelError != null) &&
             (top == null || top.priority.rank > GuidancePriority.WAYPOINT_FIVE_MINUTES.rank) ->
-            WaypointAddedCard(added, showAdded, actions, compact, modifier)
+            WaypointAddedCard(added, actions, compact, modifier)
         else -> GleoCard(state, ai, actions, compact, restMode, modifier)
     }
 }
@@ -644,33 +641,32 @@ private fun GleoCard(
     // Figma Frame2 (513:33): 남색 음성 카드(왼쪽 "mungo" + 주황 스피커, 오른쪽 문장) 아래에
     // 음성 질문 알약이 따로 놓인다. 색 · 글자 크기는 앱 디자인 그대로
     Column(modifier) {
-        // 높이는 문장에 맞추고 위아래 여백을 넉넉히 (남는 높이로 늘리지 않는다)
+        // 남색 카드는 문장 높이만큼만. 음성 질문 알약은 바로 아래에 붙인다
         Row(
             Modifier.fillMaxWidth()
-                .heightIn(min = 168.dp)
                 .background(Mg.Ink, RoundedCornerShape(26.dp))
-                .padding(horizontal = 26.dp, vertical = 32.dp),
+                .padding(horizontal = 28.dp, vertical = 33.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Column(
                 horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.spacedBy(8.dp)
+                verticalArrangement = Arrangement.spacedBy(10.dp)
             ) {
                 Text("mungo", style = Mg.regular(22, 28), color = Mg.OnDarkMuted)
                 Box(
-                    Modifier.size(52.dp).background(Mg.Orange, CircleShape),
+                    Modifier.size(56.dp).background(Mg.Orange, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
-                    MgIcon(MgIcons.Speaker, Color.White, 24.dp)
+                    MgIcon(MgIcons.Speaker, Color.White, 26.dp)
                 }
             }
-            Spacer(Modifier.width(22.dp))
+            Spacer(Modifier.width(24.dp))
             Text(
                 text?.let(::quoted) ?: "듣고 있어요…",
                 Modifier.weight(1f),
                 style = Mg.bold(25, 38).copy(lineBreak = LineBreak.Heading),
                 color = if (text == null) Mg.OnDarkMuted else Color.White,
-                maxLines = 3,
+                maxLines = 4,
                 overflow = TextOverflow.Ellipsis
             )
         }
@@ -826,6 +822,10 @@ private fun AskHint(
     }
 }
 
+/**
+ * 휴식 쉼터 제안 (Figma 488:9828 "반려견 맞춤 제안"): 큰 두 줄 제목 + 오른쪽 위 칩,
+ * 짧은 설명, 아래 큰 버튼 두 개. 시간은 내비 ETA가 아니라 서버가 직선거리로 어림한 "약 N분"
+ */
 @Composable
 private fun ProposalCard(
     state: DrivingSessionState,
@@ -838,57 +838,100 @@ private fun ProposalCard(
     val place: AssistPlace? = response.recommended ?: response.places.firstOrNull()
     val adding = state.waypoint is WaypointUiState.Adding
     val failed = state.waypoint as? WaypointUiState.Failed
-    val minutes = state.rest.remainingMs?.takeIf { !state.rest.restDue }?.let { it / 60_000 }
-    val name = place?.name ?: "장소 정보 없음"
-    val title = when {
-        !proposal.automatic -> name
-        compact -> minutes?.let { "${it}분 뒤 · $name" } ?: name
-        else -> minutes?.let { "${it}분 뒤 · ${name}에서 쉬어 갈까요?" } ?: "${name}에서 쉬어 갈까요?"
-    }
+    val lead = place?.approxMinutes?.let { "약 ${it}분 거리" } ?: "주변 장소"
+    val ask = place?.let { "${it.name}에서 쉬어 갈까요?" } ?: "장소 정보 없음"
+    val title = if (compact) Mg.bold(30, 40) else Mg.bold(34, 48)
     MgCard(
         modifier,
-        padding = PaddingValues(start = 28.dp, end = 28.dp, top = 26.dp, bottom = 24.dp)
+        padding = if (compact) {
+            PaddingValues(start = 32.dp, end = 28.dp, top = 28.dp, bottom = 26.dp)
+        } else {
+            PaddingValues(start = 48.dp, end = 36.dp, top = 34.dp, bottom = 28.dp)
+        }
     ) {
-        Pill(
-            if (proposal.automatic) "반려견 맞춤 제안" else "주변 장소 추천",
-            background = Mg.Peach,
-            color = Mg.OrangeText,
-            height = 38.dp,
-            leading = { DrawableIcon(R.drawable.driving_paw, Mg.OrangeText, 16.dp) }
-        )
-        Spacer(Modifier.height(18.dp))
-        Text(
-            title,
-            style = Mg.semi(27, 36),
-            color = Mg.Ink,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis
-        )
-        Spacer(Modifier.height(8.dp))
-        Text(
-            response.displayText,
-            style = Mg.Body,
-            color = Mg.Muted,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis
-        )
-        Spacer(Modifier.height(10.dp))
-        if (state.ttsSpeaking) SpeakingLine("mungo가 같은 내용을 말하고 있어요")
-        // Google Maps attribution must accompany grounded place content.
-        Text(
-            "장소 정보: Google Maps · 운영 여부는 내비게이션에서 확인",
-            style = Mg.Caption,
-            color = Mg.Faint,
-            maxLines = 1
-        )
-        failed?.let { Text(it.message, style = Mg.Caption, color = Mg.OrangeText, maxLines = 2) }
+        val chip = @Composable {
+            Pill(
+                if (proposal.automatic) "반려견 맞춤 제안" else "주변 장소 추천",
+                background = Mg.Peach,
+                color = Mg.OrangeText,
+                height = 38.dp,
+                leading = { DrawableIcon(R.drawable.driving_paw, Mg.OrangeText, 16.dp) }
+            )
+        }
+        if (compact) {
+            // Figma 슬롯 D(488:12330): 칩 → "약 N분 · 장소" 큰 제목 → 주소 한 줄 → 말하는 중 → 버튼
+            chip()
+            Spacer(Modifier.height(16.dp))
+            Text(
+                place?.let { p -> p.approxMinutes?.let { "약 ${it}분 · ${p.name}" } ?: p.name }
+                    ?: "장소 정보 없음",
+                style = title,
+                color = Mg.Ink,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        } else {
+            Row(verticalAlignment = Alignment.Top) {
+                Column(Modifier.weight(1f)) {
+                    Text(lead, style = title, color = Mg.OrangeText, maxLines = 1)
+                    Text(
+                        ask,
+                        style = title,
+                        color = Mg.Ink,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+                Spacer(Modifier.width(16.dp))
+                chip()
+            }
+        }
+        // 분할 화면에서는 가볍게: 설명 문장 없이 시간 · 제목 · 주소 · 버튼만 (문장은 음성으로 들린다)
+        if (!compact) {
+            Spacer(Modifier.height(14.dp))
+            Text(
+                response.displayText,
+                style = Mg.regular(22, 31),
+                color = Mg.Muted,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Spacer(Modifier.height(if (compact) 4.dp else 6.dp))
+        // 주소(서버가 좌표로 확인한 한국어 주소)만 한 줄로 작게
+        place?.address?.let {
+            Text(
+                it,
+                style = if (compact) Mg.regular(24, 32) else Mg.Caption,
+                color = if (compact) Mg.Muted else Mg.Faint,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        // Figma 슬롯 D: 분할 화면은 이 줄을 늘 보여 준다 (제안이 뜰 때 mungo가 같은 내용을 읽어 준다)
+        if (compact || state.ttsSpeaking) {
+            Spacer(Modifier.height(if (compact) 12.dp else 4.dp))
+            SpeakingLine("mungo가 같은 내용을 말하고 있어요")
+        }
         Spacer(Modifier.weight(1f))
-        Row(horizontalArrangement = Arrangement.spacedBy(if (compact) 20.dp else 25.dp)) {
+        failed?.let {
+            Text(
+                it.message,
+                style = Mg.semi(20, 27),
+                color = Mg.OrangeText,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Spacer(Modifier.height(10.dp))
+        }
+        val buttonHeight = if (compact) 84.dp else 96.dp
+        Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
             SecondaryButton(
                 "나중에",
                 actions.onDismissProposal,
-                Modifier.weight(1f).height(96.dp),
-                enabled = !adding
+                Modifier.weight(1f).height(buttonHeight),
+                enabled = !adding,
+                style = Mg.bold(26, 34)
             )
             PrimaryButton(
                 when {
@@ -898,11 +941,16 @@ private fun ProposalCard(
                     else -> "경유지로 추가"
                 },
                 actions.onAddWaypoint,
-                Modifier.weight(if (compact) 1.75f else 2f).height(96.dp),
+                Modifier.weight(2f).height(buttonHeight),
+                icon = MgIcons.Route.takeIf {
+                    !adding &&
+                        failed == null &&
+                        place?.canAddWaypoint == true
+                },
+                style = Mg.bold(25, 34),
                 // Only Maps-verified coordinates can be submitted; failure/absence keeps it disabled.
                 enabled =
-                state.active && !state.windowWarning && place?.canAddWaypoint == true && !adding,
-                icon = MgIcons.Route
+                state.active && !state.windowWarning && place?.canAddWaypoint == true && !adding
             )
         }
     }
@@ -941,7 +989,6 @@ private fun WaypointAddingCard(name: String, compact: Boolean, modifier: Modifie
 @Composable
 private fun WaypointAddedCard(
     added: WaypointUiState.Added,
-    countingDown: Boolean,
     actions: SessionActions,
     compact: Boolean,
     modifier: Modifier
@@ -969,14 +1016,8 @@ private fun WaypointAddedCard(
             color = Mg.Muted
         )
         Spacer(Modifier.height(10.dp))
-        when {
-            added.cancelError != null -> Text(
-                added.cancelError,
-                style = Mg.Body,
-                color = Mg.OrangeText,
-                maxLines = 2
-            )
-            countingDown -> SpeakingLine("5초 뒤 mungo 안내로 돌아가요")
+        added.cancelError?.let {
+            Text(it, style = Mg.Body, color = Mg.OrangeText, maxLines = 2)
         }
         Spacer(Modifier.weight(1f))
         SecondaryButton(
@@ -987,6 +1028,9 @@ private fun WaypointAddedCard(
         )
     }
 }
+
+/** 음성 답을 다 말한 뒤 mungo 안내 카드를 더 보여 주는 시간. 그 뒤 경유지 카드로 돌아간다 */
+private const val VOICE_HOLD_MS = 6_000L
 
 // ---------- Resting ----------
 

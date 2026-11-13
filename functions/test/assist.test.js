@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { assist, validateAssist } from '../src/assist.js';
-import { verifiedPlaces } from '../src/maps.js';
+import { GEOCODE_URL, koreanAddress, verifiedPlaces } from '../src/maps.js';
 import { AssistantStore } from '../src/store.js';
 
 const gemini = obj => ({ ok:true, text:async () => JSON.stringify({ candidates:[{ finishReason:'STOP', content:{ parts:[{ text:JSON.stringify(obj) }] } }] }) });
@@ -13,9 +13,18 @@ const mapsBody = { places:[
 const ctx = { comfortScore:88, minutesToRest:18, petSize:'MEDIUM', temperatureStatus:'NORMAL' };
 const loc = { latitude:37.24, longitude:127.21, ageMs:1000 };
 
-function harness(replies, { mapsOk=true, maps=mapsBody } = {}) {
-  const calls = { gemini:[], maps:[] };
+const geocodeBody = latlng => ({ status:'OK', results:[{ formatted_address:`대한민국 경기도 이천시 마장면 ${latlng}` }] });
+
+function harness(replies, { mapsOk=true, maps=mapsBody, geocode=geocodeBody } = {}) {
+  const calls = { gemini:[], maps:[], geocode:[] };
   const fetchImpl = async (url, init) => {
+    if (url.startsWith(GEOCODE_URL)) {
+      const params = new URL(url).searchParams;
+      calls.geocode.push(Object.fromEntries(params));
+      assert.equal(params.get('key'), 'maps-key'); assert.equal(params.get('language'), 'ko');
+      const body = geocode(params.get('latlng'));
+      return body ? { ok:true, text:async () => JSON.stringify(body) } : { ok:false, text:async () => '' };
+    }
     if (url.includes('mapstools')) {
       calls.maps.push(JSON.parse(init.body));
       assert.equal(init.headers['X-Goog-Api-Key'], 'maps-key');
@@ -51,7 +60,9 @@ test('#21 follow-up with location: places come only from Maps; Gemini picks an I
   assert.equal(r.status, 'OK'); assert.equal(reserved, 1); assert.equal(calls.gemini.length, 1);
   assert.equal(r.recommendedPlaceId, 'ChIJsecondPlace0001');
   assert.deepEqual(r.places.map(p => [p.placeId, p.name, p.latitude, p.longitude, p.address, p.canAddWaypoint]),
-    [['ChIJvSMioIapZDURijUJ9O6phq8', '덕평휴게소 달려라코코', 37.241832, 127.389932, null, true], ['ChIJsecondPlace0001', '이천휴게소', 37.1, 127.1, null, true]]);
+    [['ChIJvSMioIapZDURijUJ9O6phq8', '덕평휴게소 달려라코코', 37.241832, 127.389932, '경기도 이천시 마장면 37.241832,127.389932', true],
+      ['ChIJsecondPlace0001', '이천휴게소', 37.1, 127.1, '경기도 이천시 마장면 37.1,127.1', true]]);
+  assert.equal(calls.geocode.length, 2); assert(r.places.every(p => p.originalName === undefined));
   assert.equal(calls.maps[0].pageSize, 5); assert.equal(calls.maps[0].includeExtendedDetails, undefined);
   assert.equal(calls.maps[0].locationBias.circle.center.latitude, 37.24);
   assert(!JSON.stringify(calls.gemini[0]).includes('127.21') && !JSON.stringify(calls.gemini[0]).includes('37.24'));
@@ -63,7 +74,7 @@ test('#21 invented place ID / ETA claims / missing name fall back to verified te
     const { opts } = harness([reply]);
     const r = await assist(validateAssist({ type:'REST_RECOMMENDATION', requestId:'r', eventId:'rest-cycle-1', context:ctx, location:loc }), opts);
     assert.equal(r.recommendedPlaceId, 'ChIJvSMioIapZDURijUJ9O6phq8');
-    assert.equal(r.displayText, '주변에서 덕평휴게소 달려라코코 후보를 찾았어요. 진입 방향과 운영 여부는 내비게이션에서 확인해 주세요.');
+    assert.equal(r.displayText, `덕평휴게소 달려라코코까지 약 ${r.places[0].approxMinutes}분 거리예요. 진입 방향과 운영 여부는 내비게이션에서 확인해 주세요.`);
     assert.equal(r.eventId, 'rest-cycle-1');
   }
 });
@@ -128,4 +139,87 @@ test('petName is accepted and validated', () => {
   const base = { type:'USER_QUESTION', requestId:'r1', question:'괜찮아?' };
   assert.equal(validateAssist({ ...base, context:{ petName:'현댕이' } }).context.petName, '현댕이');
   assert.throws(() => validateAssist({ ...base, context:{ petName:'x'.repeat(21) } }));
+});
+
+const englishMaps = { places:[
+  { place:'places/ChIJenglishPlace0001', id:'ChIJenglishPlace0001', location:{ latitude:37.3, longitude:127.3 }, attribution:{ title:'Happy Dog Park - Google Maps' } },
+  { place:'places/ChIJsecondPlace0001', id:'ChIJsecondPlace0001', location:{ latitude:37.1, longitude:127.1 }, attribution:{ title:'이천휴게소 - Google Maps' } }
+], summary:'' };
+const rest = () => validateAssist({ type:'REST_RECOMMENDATION', requestId:'r', eventId:'c1', context:ctx, location:loc });
+
+test('English Maps name becomes a Korean display name; Maps name and coordinates are kept', async () => {
+  const { opts } = harness([{ message:'해피 도그 파크에서 쉬어 가요.', recommendedPlaceId:'ChIJenglishPlace0001',
+    koreanNames:[{ placeId:'ChIJenglishPlace0001', name:'해피 도그 파크' }, { placeId:'ChIJsecondPlace0001', name:'바꾸면 안 됨' }] }], { maps:englishMaps });
+  const r = await assist(rest(), opts);
+  const [eng, kor] = r.places;
+  assert.equal(eng.name, '해피 도그 파크'); assert.equal(eng.originalName, 'Happy Dog Park');
+  assert.equal(eng.latitude, 37.3); assert.equal(eng.longitude, 127.3); assert.equal(eng.address, '경기도 이천시 마장면 37.3,127.3');
+  // Already-Korean names are never replaced by the model.
+  assert.equal(kor.name, '이천휴게소'); assert.equal(kor.originalName, undefined);
+  assert.equal(r.displayText, '해피 도그 파크에서 쉬어 가요.');
+});
+
+test('Korean name proposals without Hangul or for unknown places are ignored', async () => {
+  const { opts } = harness([{ message:'Happy Dog Park에서 쉬어 가요.', recommendedPlaceId:'ChIJenglishPlace0001',
+    koreanNames:[{ placeId:'ChIJenglishPlace0001', name:'Happy Dog Park' }, { placeId:'ChIJinvented00000', name:'가짜' }] }], { maps:englishMaps });
+  const r = await assist(rest(), opts);
+  assert.equal(r.places[0].name, 'Happy Dog Park'); assert.equal(r.places[0].originalName, undefined);
+});
+
+test('geocode failure or quota leaves the address null without failing the recommendation', async () => {
+  const failing = harness([{ message:'이천휴게소에서 쉬어요.', recommendedPlaceId:'ChIJsecondPlace0001', koreanNames:[] }], { geocode:() => null });
+  const r = await assist(rest(), failing.opts);
+  assert.equal(r.status, 'OK'); assert(r.places.every(p => p.address === null));
+  const limited = harness([{ message:'이천휴게소에서 쉬어요.', recommendedPlaceId:'ChIJsecondPlace0001', koreanNames:[] }]);
+  const q2 = await assist(rest(), { ...limited.opts, reserveGeocode:async () => { throw new Error('limit'); } });
+  assert(q2.places.every(p => p.address === null)); assert.equal(limited.calls.geocode.length, 0);
+});
+
+test('koreanAddress strips the country and rejects non-Korean or failed results', () => {
+  assert.equal(koreanAddress({ status:'OK', results:[{ formatted_address:'대한민국 서울특별시 중구 세종대로 110' }] }), '서울특별시 중구 세종대로 110');
+  assert.equal(koreanAddress({ status:'OK', results:[{ formatted_address:'110 Sejong-daero, Seoul' }] }), null);
+  assert.equal(koreanAddress({ status:'ZERO_RESULTS', results:[] }), null);
+});
+
+test('geocode daily cap counts every address lookup', async () => {
+  const data = new Map();
+  const db = { collection:() => ({ doc:id => ({ key:id }) }), runTransaction:async fn => fn({ get:async r => ({ data:() => data.get(r.key) }), set:(r, v) => data.set(r.key, v) }) };
+  const store = new AssistantStore(db);
+  await store.reserveGeocode(0, 5, 8);
+  await assert.rejects(store.reserveGeocode(0, 5, 8), { code:'GEOCODE_LIMITED' });
+});
+
+test('rest recommendation searches rest areas AND dog-friendly cafes/parks, merged nearest first with approx minutes', async () => {
+  const { calls, opts } = harness([{ message:'이천휴게소는 약 4분 거리예요. dd와 잠시 쉬어 가요.', recommendedPlaceId:'ChIJsecondPlace0001', koreanNames:[] }]);
+  let reserved = 0;
+  const near = { latitude:37.12, longitude:127.12, ageMs:1000 };
+  const r = await assist(validateAssist({ type:'REST_RECOMMENDATION', requestId:'r', eventId:'c1', context:ctx, location:near }), { ...opts, reserveMaps:async () => { reserved++; } });
+  assert.deepEqual(calls.maps.map(m => m.textQuery), ['반려견 동반 가능한 휴게소', '반려견 동반 가능한 카페 공원']);
+  assert.equal(reserved, 2);
+  assert.deepEqual(r.places.map(p => p.placeId), ['ChIJsecondPlace0001', 'ChIJvSMioIapZDURijUJ9O6phq8']); // deduped, nearest first
+  const [first] = r.places;
+  assert(first.distanceMeters > 0 && Number.isInteger(first.approxMinutes));
+  // Gemini sees approx minutes but never coordinates
+  const sent = JSON.stringify(calls.gemini[0]);
+  assert(sent.includes('approxMinutes') && !sent.includes('37.12'));
+  const expected = `이천휴게소는 약 ${first.approxMinutes}분 거리예요. dd와 잠시 쉬어 가요.`;
+  assert.equal(first.approxMinutes, 4, `fixture distance gives ${first.approxMinutes}`);
+  assert.equal(r.displayText, expected);
+});
+
+test('placeTimeOk: only the chosen place approx minutes, never arrival times', async () => {
+  const { placeTimeOk, restSearchQueries } = await import('../src/assist.js');
+  assert.equal(placeTimeOk('약 12분 거리예요.', 12), true);
+  assert.equal(placeTimeOk('쉬어 가요.', 12), true);
+  assert.equal(placeTimeOk('약 20분 거리예요.', 12), false);
+  assert.equal(placeTimeOk('12분 뒤 도착 예정이에요.', 12), false);
+  assert.deepEqual(restSearchQueries('LARGE'), ['대형견 동반 가능한 휴게소', '대형견 동반 가능한 카페 공원']);
+});
+
+test('one of the two rest searches failing still recommends from the other', async () => {
+  let n = 0;
+  const base = harness([{ message:'덕평휴게소 달려라코코에서 쉬어요.', recommendedPlaceId:'ChIJvSMioIapZDURijUJ9O6phq8', koreanNames:[] }]);
+  const fetchImpl = async (url, init) => url.includes('mapstools') && n++ === 1 ? { ok:false, text:async () => '' } : base.opts.fetchImpl(url, init);
+  const r = await assist(rest(), { ...base.opts, fetchImpl });
+  assert.equal(r.status, 'OK'); assert.equal(r.places.length, 2);
 });

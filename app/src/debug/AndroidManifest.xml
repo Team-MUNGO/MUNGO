@@ -9,5 +9,13 @@
                 <action android:name="com.example.poco.DEBUG_TEMP" />
             </intent-filter>
         </receiver>
+        <!-- 디버그 빌드 전용: 휴식 제안을 바로 한 번 보낸다 (DebugRestReceiver) -->
+        <receiver
+            android:name="com.example.poco.debug.DebugRestReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.example.poco.DEBUG_REST" />
+            </intent-filter>
+        </receiver>
     </application>
 </manifest>

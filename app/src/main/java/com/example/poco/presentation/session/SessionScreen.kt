@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -79,7 +78,6 @@ import com.example.poco.presentation.session.component.TileSize
 import com.example.poco.presentation.session.component.WindowTile
 import com.example.poco.presentation.session.component.WindowWarningPanel
 import com.example.poco.presentation.session.component.WindowWarningPopup
-import com.example.poco.presentation.session.component.isPlainGleo
 import com.example.poco.presentation.session.component.windowWarningBusy
 
 @Composable
@@ -502,11 +500,8 @@ private fun SplitDrivingLayout(
             Spacer(Modifier.height(20.dp))
             RestDepartButton(state, actions, Modifier.fillMaxWidth().height(96.dp))
         } else {
-            // 음성 안내 카드만 있을 땐 카드는 내용 높이, 남는 높이는 위쪽 칸들이 나눠 쓴다.
-            // 경유지 제안처럼 버튼이 있는 카드가 뜨면 위쪽 칸은 기본 높이로 줄어든다
-            val plain = isPlainGleo(state, ai)
-            fun Modifier.share(base: Float) =
-                if (plain) heightIn(min = base.dp).weight(base) else height(base.dp)
+            // 위쪽 칸은 어떤 카드가 떠도 같은 높이. 남는 높이는 아래 슬롯(음성 카드 · 제안 카드)이 쓴다
+            fun Modifier.share(base: Float) = height(base.dp)
             ComfortCardSplit(state, Modifier.fillMaxWidth().share(196f))
             Spacer(Modifier.height(16.dp))
             Row(
@@ -530,9 +525,7 @@ private fun SplitDrivingLayout(
                 ai,
                 actions,
                 compact = true,
-                modifier = Modifier.fillMaxWidth().then(
-                    if (plain) Modifier else Modifier.weight(1f)
-                )
+                modifier = Modifier.fillMaxWidth().weight(1f)
             )
         }
     }

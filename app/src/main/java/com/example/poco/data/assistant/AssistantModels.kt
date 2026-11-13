@@ -56,9 +56,16 @@ data class AssistPlace(
     val name: String,
     val latitude: Double,
     val longitude: Double,
+    /** 서버가 좌표로 찾은 한국어 주소(역지오코딩). 못 찾으면 null */
     val address: String? = null,
     val mapsUrl: String? = null,
-    val canAddWaypoint: Boolean = false
+    val canAddWaypoint: Boolean = false,
+    /** Maps 이름에 한글이 없어 [name]을 한국어로 바꿨을 때만: Maps가 준 원래 이름 */
+    val originalName: String? = null,
+    /** 현재 위치에서 직선거리 (서버 계산) */
+    val distanceMeters: Int? = null,
+    /** 어림 이동 시간(분). 내비 ETA가 아니라 직선거리로 어림한 값이라 항상 "약"으로만 보여 준다 */
+    val approxMinutes: Int? = null
 )
 
 @Serializable
@@ -93,6 +100,12 @@ fun AssistResponse.validate(request: AssistRequest): AssistResponse {
     places.forEach {
         require(Regex("[A-Za-z0-9_-]{10,300}").matches(it.placeId))
         require(it.name.isNotBlank() && it.name.length <= 100)
+        require(it.address == null || it.address.isNotBlank() && it.address.length <= 200)
+        require(
+            it.originalName == null || it.originalName.isNotBlank() && it.originalName.length <= 100
+        )
+        require(it.distanceMeters == null || it.distanceMeters in 0..1_000_000)
+        require(it.approxMinutes == null || it.approxMinutes in 1..1_440)
         require(it.latitude.isFinite() && it.latitude in -90.0..90.0)
         require(it.longitude.isFinite() && it.longitude in -180.0..180.0)
     }

@@ -53,6 +53,15 @@ export class AssistantStore {
       tx.set(ref,{count:count+1,expiresAt:new Date(now+172800000)});
     });
   }
+  /** Separate daily cap on billable reverse-geocoding calls (Korean addresses, up to 5 per search). */
+  async reserveGeocode(now, count, max=1500) {
+    const ref=this.db.collection('assistantLimits').doc(`geocode-${Math.floor(now/86400000)}`);
+    await this.db.runTransaction(async tx => {
+      const used=(await tx.get(ref)).data()?.count ?? 0;
+      if (used+count > max) throw new ApiError(429,'GEOCODE_LIMITED','오늘 주소 확인 한도에 도달했어요.');
+      tx.set(ref,{count:used+count,expiresAt:new Date(now+172800000)});
+    });
+  }
   async consume(tx, limits, now) {
     const refs=[...limits,[`project-${Math.floor(now/86400000)}`,500]].map(([id,max])=>[this.db.collection('assistantLimits').doc(id),max]);
     const data=await Promise.all(refs.map(([ref])=>tx.get(ref)));

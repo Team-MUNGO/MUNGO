@@ -171,6 +171,23 @@ class IntegratedRulesTest {
         )
     }
 
+    /** Pleos 내비는 경유지 좌표를 0,0으로 돌려준다: 그때는 이름으로 같은 장소인지 본다 */
+    @Test fun waypointWithoutCoordinatesMatchesByName() {
+        val place = VerifiedPlace("ChIJvSMioIapZDURijUJ9O6phq8", "덕평휴게소 달려라코코", 37.24, 127.39, null)
+        val tracker = WaypointTracker(place)
+        assertNull(tracker.onWaypoints(listOf(NaviWaypoint("덕평휴게소 달려라코코", 0.0, 0.0, 1980, 43_000))))
+        assertFalse(tracker.finished)
+        assertTrue(place.matchesWaypoint("덕평휴게소 달려라코코 ", 0.0, 0.0, 300.0))
+        assertFalse(place.matchesWaypoint("이천휴게소", 0.0, 0.0, 300.0))
+        // 좌표가 있으면 이름이 같아도 거리로 판단
+        assertFalse(place.matchesWaypoint("덕평휴게소 달려라코코", 36.0, 127.0, 300.0))
+        assertTrue(
+            WaypointTracker(place).onWaypoints(
+                listOf(NaviWaypoint("이천휴게소", 0.0, 0.0, 10, 10))
+            ) is WaypointSignal.Cancelled
+        )
+    }
+
     @Test fun bumpPassageOnlyOnceAfterNearApproach() {
         val t = BumpPassageTracker()
         assertTrue(t.update(listOf("a" to 200)).isEmpty())

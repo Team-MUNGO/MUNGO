@@ -1,5 +1,5 @@
 import { ApiError, exactKeys } from './assistant.js';
-import { searchPlaces } from './maps.js';
+import { HANGUL, approxMinutes, distanceMeters, reverseGeocode, searchPlaces } from './maps.js';
 
 /*
  * Structured AI endpoint (/assist).
@@ -65,7 +65,11 @@ const INTENT = `${POLICY}
 const PHRASE = `${POLICY}
 candidates는 Google Maps 검색 결과다. 이 목록에 있는 장소만 언급할 수 있다.
 recommendedPlaceId에는 candidates의 placeId 하나를 그대로 넣는다. 반려견 크기(petSize)와 mapsSummary에 근거가 있으면 반영한다.
-message는 추천 이유를 담되 "주변" 후보라고만 표현한다. 경로상에 있다고 말하지 않는다.`;
+message는 추천 이유를 담되 "주변" 후보라고만 표현한다. 경로상에 있다고 말하지 않는다.
+후보는 휴게소만이 아니라 반려견과 잠시 쉬기 좋은 곳(반려견 동반 카페·공원·놀이터 등)일 수 있다. 장소 종류에 맞는 쉬기 좋은 이유를 말한다.
+candidates의 approxMinutes는 현재 위치에서 직선거리로 어림한 이동 시간이다. message에서 시간은 추천 장소의 approxMinutes만 "약 N분 거리" 형태로 쓴다. 다음 휴식까지 남은 시간, 도착 예정 시각은 말하지 않는다.
+koreanNames: candidates 중 name에 한글이 없는 장소만 placeId와 한국어 이름(한국에서 쓰는 이름 또는 한글 음역)을 넣는다. 새 장소를 만들지 않는다.
+message에서 장소를 부를 때는 koreanNames에 넣은 한국어 이름(없으면 candidates의 name)을 그대로 쓴다.`;
 
 export async function callGemini({ apiKey, model, system, payload, schema, fetchImpl = fetch, log = console.warn }) {
   if (!apiKey || !/^[a-zA-Z0-9._-]+$/.test(model ?? '')) throw new ApiError(503, 'AI_UNAVAILABLE', 'AI 안내 연결을 준비하고 있어요.');
@@ -121,7 +125,32 @@ export function unsupportedTimeClaim(text, context = {}) {
   return mentioned.length === 0 ? !Number.isFinite(context.routeRemainingMinutes) : mentioned.some(v => !allowed.has(v));
 }
 
-export async function assist(input, { geminiKey, mapsKey, model, fetchImpl = fetch, reserveMaps = async () => {} }) {
+/** 장소 추천 문장의 시간 표현은 추천 장소의 어림 시간(약 N분)과 같을 때만 허용. 도착 예정 시각은 금지 */
+export function placeTimeOk(text, minutes) {
+  if (/도착\s*(예정|시간)/.test(text)) return false;
+  const mentioned = [...text.matchAll(TIME_EXPR)].map(m => m[3] != null ? Number(m[3]) : Number(m[1]) * 60 + Number(m[2] ?? 0));
+  return mentioned.every(v => v === minutes);
+}
+
+/** 쉬어 갈 곳: 휴게소만이 아니라 반려견과 쉴 수 있는 카페·공원도 함께 찾는다 */
+export function restSearchQueries(petSize) {
+  const dog = petSize === 'LARGE' ? '대형견' : '반려견';
+  return [`${dog} 동반 가능한 휴게소`, `${dog} 동반 가능한 카페 공원`];
+}
+
+/** 여러 검색을 함께 돌려 placeId로 합치고 가까운 순 최대 5곳. 하나라도 성공하면 결과를 쓴다 */
+async function searchAll(queries, { location, mapsKey, fetchImpl, reserveMaps }) {
+  const results = await Promise.allSettled(queries.map(query =>
+    reserveMaps().then(() => searchPlaces({ query, location, apiKey:mapsKey, fetchImpl }))));
+  const ok = results.filter(r => r.status === 'fulfilled').map(r => r.value);
+  if (!ok.length) throw results[0].reason;
+  const seen = new Set();
+  const places = ok.flatMap(r => r.places).filter(p => !seen.has(p.placeId) && seen.add(p.placeId))
+    .sort((a, b) => distanceMeters(location, a) - distanceMeters(location, b)).slice(0, 5);
+  return { places, summary:ok.map(r => r.summary).filter(Boolean).join('\n').slice(0, 2000) };
+}
+
+export async function assist(input, { geminiKey, mapsKey, model, fetchImpl = fetch, reserveMaps = async () => {}, reserveGeocode = async () => {} }) {
   const { type, requestId, eventId = null, context } = input;
   const base = { requestId, eventId, type };
   let searchQuery = input.searchQuery ?? null;
@@ -139,25 +168,63 @@ export async function assist(input, { geminiKey, mapsKey, model, fetchImpl = fet
     }
     searchQuery = intent.searchQuery.trim();
   }
-  if (type === 'REST_RECOMMENDATION') searchQuery = context.petSize === 'LARGE' ? '대형견 동반 가능한 휴게소' : '반려견 동반 가능한 휴게소';
+  const restQueries = type === 'REST_RECOMMENDATION' ? restSearchQueries(context.petSize) : null;
+  if (restQueries) searchQuery = restQueries[0];
   if (!input.location) {
     // The app sends coordinates only after the server confirms a place search is needed.
     const text = '주변 장소를 찾으려면 현재 위치가 필요해요.';
     return { ...base, status:'LOCATION_REQUIRED', displayText:text, ttsText:text, places:[], recommendedPlaceId:null, searchQuery, sources:{ text:null, places:null } };
   }
-  await reserveMaps();
-  const { places, summary } = await searchPlaces({ query:searchQuery, location:input.location, apiKey:mapsKey, fetchImpl });
-  if (!places.length) {
+  const { places:searched, summary } = restQueries
+    ? await searchAll(restQueries, { location:input.location, mapsKey, fetchImpl, reserveMaps })
+    : await reserveMaps().then(() => searchPlaces({ query:searchQuery, location:input.location, apiKey:mapsKey, fetchImpl }));
+  // Distance/minutes are derived from Maps coordinates only (approximate, never a Navi ETA).
+  const found = searched.map(p => {
+    const meters = distanceMeters(input.location, p);
+    return { ...p, distanceMeters:Math.round(meters), approxMinutes:approxMinutes(meters) };
+  });
+  if (!found.length) {
     const text = '확인된 주변 장소가 없어요. 내비게이션에서 쉬어갈 곳을 확인해 주세요.';
     return { ...base, status:'NO_RESULTS', displayText:text, ttsText:text, places:[], recommendedPlaceId:null, searchQuery, sources:{ text:null, places:'google_maps' } };
   }
+  // Korean addresses come from reverse geocoding of the Maps coordinates (in parallel with Gemini).
+  const addresses = geocodeAddresses(found, { mapsKey, fetchImpl, reserveGeocode });
   const reply = await callGemini({ apiKey:geminiKey, model, fetchImpl, system:PHRASE,
     // Coordinates are never sent to Gemini; only Maps names/IDs and the minimal context.
-    payload:{ type, question:input.question ?? null, context, mapsSummary:summary, candidates:places.map(p => ({ placeId:p.placeId, name:p.name })) },
-    schema:{ type:'OBJECT', properties:{ message:{ type:'STRING' }, recommendedPlaceId:{ type:'STRING' } }, required:['message', 'recommendedPlaceId'] } });
+    payload:{ type, question:input.question ?? null, context, mapsSummary:summary, candidates:found.map(p => ({ placeId:p.placeId, name:p.name, approxMinutes:p.approxMinutes })) },
+    schema:{ type:'OBJECT', properties:{ message:{ type:'STRING' }, recommendedPlaceId:{ type:'STRING' },
+      koreanNames:{ type:'ARRAY', items:{ type:'OBJECT', properties:{ placeId:{ type:'STRING' }, name:{ type:'STRING' } }, required:['placeId', 'name'] } } },
+    required:['message', 'recommendedPlaceId', 'koreanNames'] } });
+  const names = koreanNames(found, reply?.koreanNames);
+  const resolved = await addresses;
+  // Display names are Korean; the Maps name is kept as originalName. Coordinates stay exactly as Maps returned them.
+  const places = found.map((p, i) => ({ ...p, ...(names.has(p.placeId) ? { name:names.get(p.placeId), originalName:p.name } : {}), address:resolved[i] }));
   const chosen = places.find(p => p.placeId === reply?.recommendedPlaceId) ?? places[0];
   const message = cleanText(reply?.message);
-  const fallback = `주변에서 ${chosen.name} 후보를 찾았어요. 진입 방향과 운영 여부는 내비게이션에서 확인해 주세요.`;
-  const displayText = message && !claimsEta(message) && message.includes(chosen.name) ? message : fallback;
+  const fallback = `${chosen.name}까지 약 ${chosen.approxMinutes}분 거리예요. 진입 방향과 운영 여부는 내비게이션에서 확인해 주세요.`;
+  const displayText = message && message.includes(chosen.name) && placeTimeOk(message, chosen.approxMinutes) ? message : fallback;
   return { ...base, status:'OK', displayText, ttsText:displayText, places, recommendedPlaceId:chosen.placeId, searchQuery, sources:{ text:'gemini', places:'google_maps' } };
+}
+
+/** Korean display names from Gemini, accepted only for listed places whose Maps name has no Hangul. */
+export function koreanNames(places, proposed) {
+  const out = new Map();
+  if (!Array.isArray(proposed)) return out;
+  const needs = new Set(places.filter(p => !HANGUL.test(p.name)).map(p => p.placeId));
+  for (const item of proposed) {
+    const id = item?.placeId, name = typeof item?.name === 'string' ? item.name.trim() : '';
+    if (!needs.has(id) || out.has(id) || !name || name.length > 100 || !HANGUL.test(name) || /https?:|www\.|[<>{}]/i.test(name)) continue;
+    out.set(id, name);
+  }
+  return out;
+}
+
+/** Reverse-geocodes every candidate (<= 5). A quota or lookup failure leaves the address null. */
+async function geocodeAddresses(places, { mapsKey, fetchImpl, reserveGeocode }) {
+  try {
+    await reserveGeocode(places.length);
+  } catch {
+    return places.map(() => null);
+  }
+  return Promise.all(places.map(p => reverseGeocode({ latitude:p.latitude, longitude:p.longitude, apiKey:mapsKey, fetchImpl })));
 }

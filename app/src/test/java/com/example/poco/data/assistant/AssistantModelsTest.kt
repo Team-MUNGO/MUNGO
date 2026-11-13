@@ -67,4 +67,23 @@ class AssistantModelsTest {
         assertNull(place.copy(canAddWaypoint = false).toVerifiedPlace(response))
         assertNull(place.toVerifiedPlace(response.copy(sources = AssistSources("gemini", null))))
     }
+
+    /** 서버가 한국어로 바꾼 이름 · 역지오코딩 주소가 그대로 경유지에 들어간다 (좌표는 Maps 값 그대로) */
+    @Test fun koreanNameAndAddressReachTheWaypoint() {
+        val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
+        val decoded = json.decodeFromString<AssistPlace>(
+            """{"placeId":"ChIJenglishPlace0001","name":"해피 도그 파크","latitude":37.3,""" +
+                """"longitude":127.3,"address":"경기도 이천시 마장면 덕평로 154",""" +
+                """"canAddWaypoint":true,"originalName":"Happy Dog Park"}"""
+        )
+        val response = ok(listOf(decoded), decoded.placeId).validate(request)
+        val waypoint = response.recommended!!.toVerifiedPlace(response)!!
+        assertEquals("해피 도그 파크", waypoint.name)
+        assertEquals("경기도 이천시 마장면 덕평로 154", waypoint.address)
+        assertEquals(37.3, waypoint.latitude, 0.0)
+        assertEquals(127.3, waypoint.longitude, 0.0)
+        assertThrows(IllegalArgumentException::class.java) {
+            ok(listOf(place.copy(address = "x".repeat(201))), null).validate(request)
+        }
+    }
 }

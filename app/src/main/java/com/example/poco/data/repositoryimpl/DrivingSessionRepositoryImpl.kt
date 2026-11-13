@@ -743,19 +743,34 @@ class DrivingSessionRepositoryImpl @Inject constructor(
                     Guidance("wp-added-${place.placeId}", GuidancePriority.REST_PROPOSAL, text)
                 )
             } catch (e: CancellationException) {
-                throw e
+                // withTimeout의 TimeoutCancellationException도 CancellationException이라 여기서 갈라야 한다.
+                // 그냥 다시 던지면 실패 표시 없이 '경유지 확인 중'에 멈춘다
+                if (e !is TimeoutCancellationException) throw e
+                if (token != generation) return@launch
+                val message = "경유지 등록을 확인하지 못했어요. 내비게이션에서 확인해 주세요."
+                record(TripEventType.WAYPOINT_FAILED, detail = message)
+                mutableState.update {
+                    it.copy(waypoint = WaypointUiState.Failed(place.name, message))
+                }
             } catch (e: Exception) {
                 if (token != generation) return@launch
-                val message = if (e is TimeoutCancellationException) {
-                    "경유지 등록을 확인하지 못했어요. 내비게이션에서 확인해 주세요."
-                } else {
-                    e.message ?: "경유지를 추가하지 못했어요."
-                }
+                val message = e.message ?: "경유지를 추가하지 못했어요."
                 record(TripEventType.WAYPOINT_FAILED, detail = message.take(120))
                 // Failure is shown on screen only; success-only TTS policy.
                 mutableState.update {
                     it.copy(waypoint = WaypointUiState.Failed(place.name, message))
                 }
+            }
+        }
+    }
+
+    private fun cancelFailed(message: String) {
+        mutableState.update {
+            val w = it.waypoint
+            if (w is WaypointUiState.Added) {
+                it.copy(waypoint = w.copy(cancelling = false, cancelError = message))
+            } else {
+                it
             }
         }
     }
@@ -776,24 +791,13 @@ class DrivingSessionRepositoryImpl @Inject constructor(
                 // Same path as a Navi-side cancellation: record once, clear pending guidance.
                 tracker.onWaypoints(emptyList())?.let(::onWaypointSignal)
             } catch (e: CancellationException) {
-                throw e
+                // 타임아웃만 실패로 보여 주고, 진짜 취소(주행 종료 등)는 다시 던진다
+                if (e !is TimeoutCancellationException) throw e
+                if (token != generation) return@launch
+                cancelFailed("경유지 취소를 확인하지 못했어요. 내비게이션에서 확인해 주세요.")
             } catch (e: Exception) {
                 if (token != generation) return@launch
-                val message = if (e is TimeoutCancellationException) {
-                    "경유지 취소를 확인하지 못했어요. 내비게이션에서 확인해 주세요."
-                } else {
-                    e.message ?: "경유지를 취소하지 못했어요."
-                }
-                mutableState.update {
-                    val w = it.waypoint
-                    if (w is WaypointUiState.Added) {
-                        it.copy(
-                            waypoint = w.copy(cancelling = false, cancelError = message)
-                        )
-                    } else {
-                        it
-                    }
-                }
+                cancelFailed(e.message ?: "경유지를 취소하지 못했어요.")
             }
         }
     }

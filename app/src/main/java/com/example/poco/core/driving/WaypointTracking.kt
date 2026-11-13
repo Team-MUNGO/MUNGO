@@ -42,6 +42,25 @@ data class VerifiedPlace(
     val address: String?
 )
 
+/**
+ * 내비가 돌려준 경유지가 이 장소인지. 좌표가 있으면 [matchMeters] 안인지로 보고,
+ * 내비가 좌표를 0,0(모름)으로 돌려주면 이름이 같은지로 본다 (Pleos 내비 실측: 좌표 없이 이름만 옴)
+ */
+fun VerifiedPlace.matchesWaypoint(
+    name: String,
+    latitude: Double,
+    longitude: Double,
+    matchMeters: Double
+): Boolean {
+    val known =
+        latitude.isFinite() && longitude.isFinite() && !(latitude == 0.0 && longitude == 0.0)
+    return if (known) {
+        distanceMeters(this.latitude, this.longitude, latitude, longitude) <= matchMeters
+    } else {
+        name.trim() == this.name.trim()
+    }
+}
+
 data class NaviWaypoint(
     val name: String,
     val latitude: Double,
@@ -72,7 +91,7 @@ class WaypointTracker(val place: VerifiedPlace, private val matchMeters: Double 
         private set
 
     fun matches(w: NaviWaypoint) =
-        distanceMeters(place.latitude, place.longitude, w.latitude, w.longitude) <= matchMeters
+        place.matchesWaypoint(w.name, w.latitude, w.longitude, matchMeters)
 
     fun onWaypoints(list: List<NaviWaypoint>): WaypointSignal? {
         if (finished || arrived) return null

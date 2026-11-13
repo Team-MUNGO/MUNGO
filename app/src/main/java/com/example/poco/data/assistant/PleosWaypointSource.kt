@@ -1,6 +1,7 @@
 package com.example.poco.data.assistant
 
 import ai.pleos.playground.navi.constants.NaviErrorCode
+import ai.pleos.playground.navi.constants.NaviMode
 import ai.pleos.playground.navi.constants.WaypointIndex
 import ai.pleos.playground.navi.data.RequestWaypointInfo
 import ai.pleos.playground.navi.data.RouteStateInfo
@@ -10,7 +11,7 @@ import ai.pleos.playground.navi.helper.listener.NaviHelperEventListener
 import android.content.Context
 import com.example.poco.core.driving.NaviWaypoint
 import com.example.poco.core.driving.VerifiedPlace
-import com.example.poco.core.driving.distanceMeters
+import com.example.poco.core.driving.matchesWaypoint
 import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import kotlin.coroutines.resume
@@ -47,7 +48,7 @@ class PleosWaypointSource @Inject constructor(@ApplicationContext private val co
         var failure: String? = null
         val listener = object : NaviHelperEventListener {
             override fun onRouteStateInfo(routeStateInfo: RouteStateInfo) {
-                route.complete(routeStateInfo.isRouting)
+                route.complete(routeStateInfo.hasActiveRoute())
             }
             override fun onWayPointInfo(waypointInfoList: List<WaypointInfo>) {
                 points.trySend(waypointInfoList)
@@ -99,13 +100,7 @@ class PleosWaypointSource @Inject constructor(@ApplicationContext private val co
                     var confirmed: NaviWaypoint? = null
                     while (confirmed == null) {
                         confirmed = points.receive().firstOrNull {
-                            distanceMeters(
-                                place.latitude,
-                                place.longitude,
-                                it.latitude,
-                                it.longitude
-                            ) <=
-                                MATCH_METERS
+                            place.matchesWaypoint(it.name, it.latitude, it.longitude, MATCH_METERS)
                         }?.let {
                             NaviWaypoint(
                                 it.name,
@@ -163,13 +158,7 @@ class PleosWaypointSource @Inject constructor(@ApplicationContext private val co
                 }
                 try {
                     while (points.receive().any {
-                            distanceMeters(
-                                place.latitude,
-                                place.longitude,
-                                it.latitude,
-                                it.longitude
-                            ) <=
-                                MATCH_METERS
+                            place.matchesWaypoint(it.name, it.latitude, it.longitude, MATCH_METERS)
                         }
                     ) {
                         Unit
@@ -189,3 +178,10 @@ class PleosWaypointSource @Inject constructor(@ApplicationContext private val co
         const val MATCH_METERS = 300.0
     }
 }
+
+/**
+ * 목적지 안내 중인지. 실제 내비는 경로 안내 중에도 isRouting=false를 보내므로(에뮬레이터 확인)
+ * 안내 모드(경로 안내 · 모의 주행)를 기준으로 보고, isRouting=true도 함께 인정한다
+ */
+internal fun RouteStateInfo.hasActiveRoute(): Boolean =
+    isRouting || naviMode == NaviMode.ROUTE_GUIDING || naviMode == NaviMode.SIMULATION_GUIDING

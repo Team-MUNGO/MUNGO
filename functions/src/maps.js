@@ -60,3 +60,47 @@ export async function searchPlaces({ query, location, apiKey, fetchImpl = fetch 
   const summary = typeof json.summary === 'string' ? json.summary.slice(0, 2000) : '';
   return { places:verifiedPlaces(json), summary };
 }
+
+// Geocoding API (reverse): coordinates from Maps -> official Korean address. Facts only, never AI-written.
+export const GEOCODE_URL = 'https://maps.googleapis.com/maps/api/geocode/json';
+export const HANGUL = /[가-힣]/;
+const ADDRESS_MAX = 200;
+
+/** First Korean formatted address in a Geocoding response, without the leading "대한민국". */
+export function koreanAddress(json) {
+  if (json?.status !== 'OK' || !Array.isArray(json.results)) return null;
+  for (const r of json.results) {
+    const raw = typeof r?.formatted_address === 'string' ? r.formatted_address : '';
+    const text = raw.replace(/^대한민국\s*/, '').trim();
+    if (text && HANGUL.test(text) && text.length <= ADDRESS_MAX) return text;
+  }
+  return null;
+}
+
+/** Korean address for verified coordinates, or null on any failure (an address is never guessed). */
+export async function reverseGeocode({ latitude, longitude, apiKey, fetchImpl = fetch }) {
+  if (!apiKey || !finite(latitude, -90, 90) || !finite(longitude, -180, 180)) return null;
+  const params = new URLSearchParams({ latlng:`${latitude},${longitude}`, language:'ko', region:'kr', key:apiKey });
+  try {
+    const response = await fetchImpl(`${GEOCODE_URL}?${params}`, { method:'GET', redirect:'error', signal:AbortSignal.timeout(5000) });
+    if (!response.ok) return null;
+    const raw = await response.text();
+    if (raw.length > 200000) return null;
+    return koreanAddress(JSON.parse(raw));
+  } catch {
+    return null;
+  }
+}
+
+/** Straight-line distance in meters (haversine). */
+export function distanceMeters(a, b) {
+  const r = Math.PI / 180;
+  const h = Math.sin((b.latitude - a.latitude) * r / 2) ** 2
+    + Math.cos(a.latitude * r) * Math.cos(b.latitude * r) * Math.sin((b.longitude - a.longitude) * r / 2) ** 2;
+  return 6371000 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
+}
+
+// 어림 이동 시간: 직선거리 × 도로 우회 1.3, 평균 50km/h. 내비 ETA가 아니므로 항상 "약"으로만 말한다.
+export const ROAD_FACTOR = 1.3;
+export const AVG_KMH = 50;
+export const approxMinutes = meters => Math.max(1, Math.round(meters / 1000 * ROAD_FACTOR / AVG_KMH * 60));

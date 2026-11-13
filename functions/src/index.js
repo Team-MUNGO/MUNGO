@@ -46,7 +46,7 @@ export const assistantApi=onRequest({region:'asia-northeast3',serviceAccount:ser
       if (summary) {
         res.json(await summarize(input,{geminiKey:geminiKey.value(),model:model.value()}));
       } else if (structured) {
-        res.json(await assist(input,{geminiKey:geminiKey.value(),mapsKey:mapsKey.value(),model:model.value(),reserveMaps:()=>store.reserveMaps(now)}));
+        res.json(await assist(input,{geminiKey:geminiKey.value(),mapsKey:mapsKey.value(),model:model.value(),reserveMaps:()=>store.reserveMaps(now),reserveGeocode:count=>store.reserveGeocode(now,count)}));
       } else {
         res.json(await generateAnswer(input,{apiKey:geminiKey.value(),model:model.value(),catalog,now}));
       }
