@@ -1,15 +1,17 @@
 package com.example.poco.presentation.splash
 
-import android.media.AudioManager
+import android.graphics.SurfaceTexture
 import android.media.MediaPlayer
 import android.net.Uri
-import android.widget.VideoView
+import android.view.Surface
+import android.view.TextureView
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -18,10 +20,13 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -32,6 +37,7 @@ import com.example.poco.R
 import com.example.poco.core.designsystem.MungoLogo
 import com.example.poco.core.theme.POCOTheme
 import com.example.poco.core.theme.PocoSpacing
+import kotlinx.coroutines.delay
 
 @Composable
 fun SplashRoute(
@@ -54,9 +60,13 @@ fun SplashRoute(
 }
 
 /**
- * 인트로 영상 (res/raw/mungo_intro.mp4, 1700×1184 · 4.6초 · 소리 없음).
+ * 인트로 영상 (res/raw/mungo_intro.mp4, 1552×1080 · 30fps · 4.6초 · 소리 없음,
+ * 원본: design/brand/mungo_intro_original.mp4).
  * 끝나면 [onFinished] → 온보딩/홈으로. 화면을 누르면 건너뛴다.
- * 재생에 실패하면 바로 넘어가고, 미리보기(Preview)에서는 정지 화면 [SplashScreen]을 보여준다
+ * 재생에 실패하거나 3초 안에 준비되지 않으면 바로 넘어가고, 미리보기(Preview)에서는 정지 화면 [SplashScreen]을 보여준다.
+ *
+ * TextureView에 직접 그린다: VideoView(SurfaceView)는 첫 장면 전 검은 화면을 가리려고 덮개를 씌워야 하는데,
+ * 에뮬레이터 · 느린 기기에서는 덮개가 늦게 걷혀 앞부분(발자국)이 잘려 보였다.
  */
 @Composable
 private fun SplashIntro(onFinished: () -> Unit) {
@@ -64,46 +74,82 @@ private fun SplashIntro(onFinished: () -> Unit) {
         SplashScreen()
         return
     }
-    val background = POCOTheme.colors.bgSurface.toArgb()
+    val finish = rememberUpdatedState(onFinished)
+    var isPrepared by remember { mutableStateOf(false) }
+    // 준비가 3초 넘게 걸리면(디코더 문제 등) 기다리지 않고 넘어간다
+    LaunchedEffect(Unit) {
+        delay(PREPARE_TIMEOUT_MS)
+        if (!isPrepared) finish.value()
+    }
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(POCOTheme.colors.bgSurface)
+            // 영상 바탕이 순수 흰색이라 같은 색으로 이어지게
+            .background(Color.White)
             .clickable(
                 interactionSource = remember { MutableInteractionSource() },
                 indication = null,
                 onClick = onFinished
-            )
+            ),
+        contentAlignment = Alignment.Center
     ) {
         AndroidView(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .aspectRatio(INTRO_RATIO, matchHeightConstraintsFirst = true),
             factory = { context ->
-                VideoView(context).apply {
-                    // 소리 없는 영상: 음악 · 내비 음성을 끊지 않도록 오디오 포커스를 가져가지 않는다
-                    setAudioFocusRequest(AudioManager.AUDIOFOCUS_NONE)
-                    // 첫 장면이 그려지기 전 검은 화면이 보이지 않게 바탕색으로 가려 둔다
-                    setBackgroundColor(background)
-                    setOnInfoListener { _, what, _ ->
-                        if (what == MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
-                            setBackgroundColor(android.graphics.Color.TRANSPARENT)
+                val player = MediaPlayer()
+                TextureView(context).apply {
+                    tag = player
+                    surfaceTextureListener = object : TextureView.SurfaceTextureListener {
+                        override fun onSurfaceTextureAvailable(
+                            texture: SurfaceTexture,
+                            w: Int,
+                            h: Int
+                        ) {
+                            runCatching {
+                                player.setSurface(Surface(texture))
+                                player.setDataSource(
+                                    context,
+                                    Uri.parse(
+                                        "android.resource://${context.packageName}/${R.raw.mungo_intro}"
+                                    )
+                                )
+                                // 소리 없는 영상: 음악 · 내비 음성을 끊지 않도록 오디오 포커스를 가져가지 않는다
+                                player.setVolume(0f, 0f)
+                                player.setOnPreparedListener {
+                                    isPrepared = true
+                                    it.start()
+                                }
+                                player.setOnCompletionListener { finish.value() }
+                                player.setOnErrorListener { _, _, _ ->
+                                    finish.value()
+                                    true
+                                }
+                                player.prepareAsync()
+                            }.onFailure { finish.value() }
                         }
-                        false
+
+                        override fun onSurfaceTextureSizeChanged(
+                            texture: SurfaceTexture,
+                            w: Int,
+                            h: Int
+                        ) = Unit
+
+                        override fun onSurfaceTextureDestroyed(texture: SurfaceTexture): Boolean =
+                            true
+
+                        override fun onSurfaceTextureUpdated(texture: SurfaceTexture) = Unit
                     }
-                    setOnCompletionListener { onFinished() }
-                    setOnErrorListener { _, _, _ ->
-                        onFinished()
-                        true
-                    }
-                    setVideoURI(
-                        Uri.parse("android.resource://${context.packageName}/${R.raw.mungo_intro}")
-                    )
-                    start()
                 }
             },
-            onRelease = { it.stopPlayback() }
+            onRelease = { view -> (view.tag as? MediaPlayer)?.release() }
         )
     }
 }
+
+private const val INTRO_RATIO = 1552f / 1080f
+private const val PREPARE_TIMEOUT_MS = 3_000L
 
 /** 정지 화면 (미리보기용): 흰 바탕 가운데 로고 + 한 줄 소개, 아래에 Pleos Connect 표기 (피그마 스플래시) */
 @Composable
