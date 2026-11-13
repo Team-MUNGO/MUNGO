@@ -125,7 +125,7 @@ data class TemperatureNote(val title: String, val body: String)
 
 /**
  * 함께 타는 펫 기준 온도 안내.
- * 제목은 가장 예민한 펫 한 마리의 이유, 범위는 모두를 합친 가장 엄격한 기준 (POCO 기준점 ①)
+ * 제목은 가장 예민한 펫 한 마리의 이유, 범위는 모두를 합친 가장 엄격한 기준 (mungo 기준점 ①)
  */
 fun temperatureNote(pets: List<Pet>): TemperatureNote? {
     if (pets.isEmpty()) return null

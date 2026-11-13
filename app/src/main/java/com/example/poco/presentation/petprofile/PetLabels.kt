@@ -19,7 +19,7 @@ fun MotionSensitivity.label(): String = when (this) {
     MotionSensitivity.HIGH -> "높음"
 }
 
-/** POCO 기준점 ③: 흔들림 기준점에 곱하는 값 */
+/** mungo 기준점 ③: 흔들림 기준점에 곱하는 값 */
 fun MotionSensitivity.description(): String = "기준 ×$thresholdFactor"
 
 fun Restraint.label(): String = when (this) {

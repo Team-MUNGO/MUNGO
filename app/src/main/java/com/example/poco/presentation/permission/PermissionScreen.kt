@@ -180,7 +180,7 @@ private fun PermissionScreen(
         uiState.requiredBanner?.let { group ->
             PermissionBanner(
                 title = group.requiredTitle,
-                description = "이 항목을 켜야 POCO를 시작할 수 있어요.",
+                description = "이 항목을 켜야 mungo를 시작할 수 있어요.",
                 onConfirm = onDismissBanner,
                 modifier = Modifier
                     .align(Alignment.TopCenter)

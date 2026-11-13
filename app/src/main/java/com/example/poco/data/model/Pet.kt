@@ -44,14 +44,14 @@ enum class PetSeat {
     PASSENGER
 }
 
-/** 멀미 민감도 = 흔들림 기준점 배율 (POCO 기준점 ③). 높음이면 더 작은 흔들림부터 알린다 */
+/** 멀미 민감도 = 흔들림 기준점 배율 (mungo 기준점 ③). 높음이면 더 작은 흔들림부터 알린다 */
 enum class MotionSensitivity(val thresholdFactor: Float) {
     LOW(1.2f),
     NORMAL(1.0f),
     HIGH(0.8f)
 }
 
-/** 고정 방식 (POCO 기준점 ③): 몸이 고정돼 있으면 같은 흔들림에도 덜 쏠린다 */
+/** 고정 방식 (mungo 기준점 ③): 몸이 고정돼 있으면 같은 흔들림에도 덜 쏠린다 */
 enum class Restraint(val thresholdFactor: Float) {
     /** 좌석에 그냥 앉거나 안고 탐 */
     NONE(1.0f),
@@ -70,7 +70,7 @@ enum class VoiceFrequency {
 /**
  * 몸무게로 자동 분류되는 크기.
  * 소형 10kg 미만 · 중형 10~25kg 미만 · 대형 25kg 이상.
- * 온도 · 흔들림 기준은 domain/driving/PocoStandard (POCO 기준점)에서 정한다
+ * 온도 · 흔들림 기준은 domain/driving/PocoStandard (mungo 기준점)에서 정한다
  */
 enum class PetSize {
     SMALL,

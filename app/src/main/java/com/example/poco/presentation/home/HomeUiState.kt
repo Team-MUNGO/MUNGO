@@ -44,7 +44,7 @@ data class HomeUiState(
     val temperatureStatus: CheckStatus
         get() {
             val temperature = seatTemperature ?: return CheckStatus.UNKNOWN
-            // POCO 기준점 ①: 견종 유형별 더움 · 추움 기준 (펫이 없으면 기본 유형)
+            // mungo 기준점 ①: 견종 유형별 더움 · 추움 기준 (펫이 없으면 기본 유형)
             val standard = pet?.temperatureStandard
                 ?: PocoStandard.temperature(setOf(PetType.BASIC))
             val isOff = standard.isHot(temperature) || standard.isCold(temperature)

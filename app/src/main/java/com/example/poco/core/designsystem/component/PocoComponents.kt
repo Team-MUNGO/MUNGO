@@ -55,7 +55,7 @@ import com.example.poco.core.theme.PocoSpacing
 import com.example.poco.core.theme.PocoStroke
 
 /*
- * POCO 기본 컴포넌트 (mungo 디자인 시스템으로 교체)
+ * mungo 기본 컴포넌트 (mungo 디자인 시스템으로 교체)
  * 색은 모두 POCOTheme.colors 토큰 → 라이트/다크 자동 대응. 새 컴포넌트는 MungoComponents.kt
  */
 

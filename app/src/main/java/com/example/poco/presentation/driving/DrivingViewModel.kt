@@ -70,7 +70,7 @@ class DrivingViewModel @Inject constructor(
     private var pet: Pet? = null
     private var voiceFrequency = VoiceFrequency.NORMAL
 
-    /** POCO 기준점 ①: 견종 유형별 온도 기준 (펫이 없으면 기본 유형) */
+    /** mungo 기준점 ①: 견종 유형별 온도 기준 (펫이 없으면 기본 유형) */
     private var temperatureStandard = PocoStandard.temperature(setOf(PetType.BASIC))
 
     private val lastSpokenAt = mutableMapOf<VoiceKey, Long>()
@@ -352,7 +352,7 @@ class DrivingViewModel @Inject constructor(
     private fun onDrivingEvent(event: DrivingEvent) {
         val name = petName()
         if (event.isDanger) {
-            // POCO 기준점 '위험' (4.0m/s² 이상): 빈도 설정과 상관없이 바로 말한다
+            // mungo 기준점 '위험' (4.0m/s² 이상): 빈도 설정과 상관없이 바로 말한다
             say(VoiceKey.DANGER, "많이 흔들렸어요. ${name.iGa} 괜찮은지 정차 후 확인해 주세요.")
         } else {
             onComfortEvent(event, name)
@@ -404,7 +404,7 @@ class DrivingViewModel @Inject constructor(
 
         val temperature = _uiState.value.seatTemperature
         val standard = temperatureStandard
-        // POCO 기준점 ①: 더움 알림(이상) · 추움 알림(이하). 경계값도 알림 대상
+        // mungo 기준점 ①: 더움 알림(이상) · 추움 알림(이하). 경계값도 알림 대상
         val isHot = temperature != null && standard.isHot(temperature)
         val isOff = temperature != null && (isHot || standard.isCold(temperature))
         val isDanger = temperature != null && standard.isDanger(temperature)
