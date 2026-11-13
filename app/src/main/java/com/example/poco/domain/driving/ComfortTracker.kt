@@ -16,7 +16,7 @@ enum class DrivingEventType {
 /**
  * @param points 실제로 깎인 점수 (양수)
  * @param isAnticipated 내비가 미리 알려준 구간(과속방지턱 · 급커브 등)에서 생긴 사건 → 감점 절반
- * @param isDanger 4.0m/s² 이상 (POCO 기준점 '위험') → 정차 후 확인 안내
+ * @param isDanger 4.0m/s² 이상 (mungo 기준점 '위험') → 정차 후 확인 안내
  */
 data class DrivingEvent(
     val type: DrivingEventType,
@@ -52,8 +52,8 @@ data class RoadContext(
  * - 진행 방향 (FusedLocation SDK) → 횡가속도(속도 × 회전 속도)로 급회전, 차종과 무관하게 판단
  * - 도로 상황 (NaviHelper SDK) → 예고된 구간의 사건은 감점 절반, 예고 후 부드럽게 지나가면 가점
  *
- * 판단 기준 = POCO 기준점 ② (앞뒤 1.5 / 2.5 / 4.0, 좌우 1.5 / 2.0 / 4.0 m/s²)
- * × [thresholdFactor] (POCO 기준점 ③: 멀미 민감도 × 크기 × 고정 방식)
+ * 판단 기준 = mungo 기준점 ② (앞뒤 1.5 / 2.5 / 4.0, 좌우 1.5 / 2.0 / 4.0 m/s²)
+ * × [thresholdFactor] (mungo 기준점 ③: 멀미 민감도 × 크기 × 고정 방식)
  *
  * 점수
  * - 100점에서 시작

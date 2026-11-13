@@ -14,7 +14,7 @@ import androidx.room.RoomDatabase
         AutoMigration(from = 2, to = 3),
         // 반려견 사진 경로 추가
         AutoMigration(from = 3, to = 4),
-        // 고정 방식(이동장 · 하네스) 추가 - POCO 기준점 ③
+        // 고정 방식(이동장 · 하네스) 추가 - mungo 기준점 ③
         AutoMigration(from = 4, to = 5),
         // 종류 · 성향 · 안내 설정 4가지 추가 (온보딩 프로필 만들기)
         AutoMigration(from = 5, to = 6),

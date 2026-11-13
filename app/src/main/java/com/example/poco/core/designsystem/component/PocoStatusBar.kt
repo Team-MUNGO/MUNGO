@@ -25,7 +25,7 @@ import com.example.poco.core.util.toClock
 import kotlinx.coroutines.delay
 
 /**
- * 앱 상단 바: 왼쪽 시각 · 기어 상태, 가운데 POCO 로고.
+ * 앱 상단 바: 왼쪽 시각 · 기어 상태, 가운데 mungo 로고.
  * (LTE·배터리는 차량 시스템 UI가 보여주므로 앱에서는 그리지 않음)
  */
 @Composable

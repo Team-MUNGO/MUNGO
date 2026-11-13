@@ -1,10 +1,10 @@
 <#
-  POCO 주행 테스트 도우미 (에뮬레이터 차량 값 바꾸기)
+  mungo 주행 테스트 도우미 (에뮬레이터 차량 값 바꾸기)
 
   Pleos Virtual Console에 "속도" 조작이 없어서, 속도는 이 스크립트로 넣는다.
   (기어 · 브레이크 · 조향 · 창문 · 온도는 Virtual Console에서 바꿔도 된다)
 
-  사용법 (PowerShell, POCO 폴더에서):
+  사용법 (PowerShell, 저장소 폴더에서):
     .\tools\vehicle-sim.ps1 speed 60        # 속도 60km/h
     .\tools\vehicle-sim.ps1 gear D          # 기어 D (P R N D)
     .\tools\vehicle-sim.ps1 hardbrake       # 60 → 20km/h 1초 만에 = 급제동 1회

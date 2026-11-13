@@ -14,7 +14,7 @@ data class DrivingUiState(
     val mood: PetMood = PetMood.CALM,
     /** 표정 이유 한 줄 */
     val lastEventType: DrivingEventType? = null,
-    /** 화면에 보여줄 POCO 음성 안내 (말한 문장 그대로) */
+    /** 화면에 보여줄 mungo 음성 안내 (말한 문장 그대로) */
     val voiceMessage: String? = null,
     val hardBrakeCount: Int = 0,
     val sharpTurnCount: Int = 0,
@@ -41,7 +41,7 @@ sealed interface DrivingAlert {
     /** 07-2 창문 안전 알림: 30km/h 이상 + 반려동물 옆 창문 30% 이상 */
     data class Window(val window: CarWindow, val openPercent: Int, val speedKmh: Int) : DrivingAlert
 
-    /** 온도 알림: POCO 기준점 ① 견종 유형별 더움 · 추움 기준을 넘음. 29.5°C 이상은 위험 */
+    /** 온도 알림: mungo 기준점 ① 견종 유형별 더움 · 추움 기준을 넘음. 29.5°C 이상은 위험 */
     data class Temperature(
         val celsius: Float,
         val isHot: Boolean,
