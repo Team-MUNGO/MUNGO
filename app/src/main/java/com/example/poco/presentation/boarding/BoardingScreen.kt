@@ -467,7 +467,7 @@ private fun CompanionPicker(uiState: BoardingUiState, actions: BoardingActions) 
         val note = uiState.temperatureNote
         val reservedNote = note ?: temperatureNote(uiState.pets)
         reservedNote?.let {
-            Spacer(Modifier.height(48.dp))
+            Spacer(Modifier.height(50.dp)) // Figma 488:7546: 카드 아래 50
             Box(
                 Modifier.alpha(if (note != null) 1f else 0f)
                     .then(if (note == null) Modifier.clearAndSetSemantics {} else Modifier)
@@ -672,6 +672,16 @@ private fun ReadyPreview() {
             previewState(BoardingStep.READY).copy(isLayoutDialogVisible = true),
             BoardingActions()
         )
+    }
+}
+
+@Preview(widthDp = 1700, heightDp = 1184, name = "출발 준비")
+@Composable
+internal fun ReadyOnlyPreview() {
+    POCOTheme(darkTheme = false) {
+        // 품종 그림이 있는 펫으로 (그림 없는 품종은 작은 기본 마크)
+        val state = previewState(BoardingStep.READY)
+        BoardingScreen(state.copy(pets = state.pets.map { it.copy(breed = "몰티즈") }), BoardingActions())
     }
 }
 

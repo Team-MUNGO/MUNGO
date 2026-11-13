@@ -132,7 +132,7 @@ private fun SplashScreen(modifier: Modifier = Modifier) {
             )
         }
         Text(
-            text = "Pleos Connect ©",
+            text = "mungo ©",
             style = Mg.regular(22, 26),
             color = Color(0xFF9AA4B0),
             modifier = Modifier

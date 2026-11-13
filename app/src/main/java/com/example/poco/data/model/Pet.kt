@@ -20,7 +20,7 @@ data class Pet(
     val species: PetSpecies = PetSpecies.DOG,
     /** 온보딩 "차에서 어떤 편인가요?"에서 고른 모습 */
     val traits: Set<PetTrait> = emptySet(),
-    /** 온보딩 "어떤 안내를 받으시겠어요?" - 글레오 음성 안내 (급제동 · 급커브) */
+    /** 온보딩 "어떤 안내를 받으시겠어요?" - mungo 음성 안내 (급제동 · 급커브) */
     val voiceGuideEnabled: Boolean = true,
     /** 실내 온도 알림 */
     val temperatureAlertEnabled: Boolean = true,

@@ -451,7 +451,7 @@ fun TripEventsRoute(tripId: String, onBack: () -> Unit, viewModel: TripDetailVie
                 Spacer(Modifier.height(16.dp))
                 Row { Text("실내", Modifier.width(97.dp), style = Mg.Body, color = Mg.Muted); Text(eventCabinText(selected, events), style = Mg.bold(24, 32), color = Mg.Ink) }
                 Spacer(Modifier.height(24.dp))
-                Text("당시 Gleo 안내", style = Mg.semi(23, 31), color = Mg.Muted)
+                Text("당시 mungo 안내", style = Mg.semi(23, 31), color = Mg.Muted)
                 Spacer(Modifier.height(8.dp))
                 Text(selected.snapshot?.guidanceText ?: "안내 기록 없음", style = Mg.Body, color = Mg.Ink)
                 Spacer(Modifier.height(24.dp))

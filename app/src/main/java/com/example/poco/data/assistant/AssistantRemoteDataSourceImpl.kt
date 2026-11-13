@@ -75,6 +75,31 @@ class AssistantRemoteDataSourceImpl @Inject constructor(
         }
     }
 
+    override suspend fun summarizeTrip(request: TripSummaryRequest): String {
+        ensureSession()
+        val response = post("summary", json.encodeToString(request), session!!.token)
+        val parsed = try {
+            json.decodeFromString<TripSummaryResponse>(response)
+        } catch (_: Exception) {
+            throw AssistantException("INVALID_RESPONSE", "응답을 확인하지 못했어요.")
+        }
+        val text = parsed.text.trim()
+        if (parsed.requestId != request.requestId || text.isEmpty() || text.length > 120) {
+            throw AssistantException("INVALID_RESPONSE", "응답을 확인하지 못했어요.")
+        }
+        return text
+    }
+
+    private suspend fun ensureSession() {
+        if (!connected && anonymous.available) {
+            session = anonymous.signIn().let { Session(it.idToken, it.expiresAt) }
+        }
+        if (!connected) {
+            session = null
+            throw AssistantException("UNAUTHENTICATED", "정차 후 AI 연결을 설정해 주세요.")
+        }
+    }
+
     private suspend fun post(path: String, body: String, token: String?): String {
         if (!configured) throw AssistantException("NOT_CONFIGURED", "AI 서버 연결이 아직 설정되지 않았어요.")
         val request = Request.Builder().url("$baseUrl/$path")

@@ -76,6 +76,9 @@ interface TripHistoryRepository {
     fun trip(id: String): Flow<TripEntity?>
     fun events(id: String): Flow<List<TripEventEntity>>
     suspend fun setMotionSickness(id: String, record: MotionRecord)
+
+    /** AI "오늘 한 줄" 저장 (완료된 기록에만) */
+    suspend fun setOneLine(id: String, text: String) {}
 }
 
 @Singleton
@@ -142,4 +145,7 @@ class TripRecorder @Inject constructor(private val dao: TripDao) : TripRecordSin
     override fun events(id: String) = dao.observeEvents(id)
     override suspend fun setMotionSickness(id: String, record: MotionRecord) =
         writeAndWait { dao.setMotionSickness(id, record.encode()) }
+
+    override suspend fun setOneLine(id: String, text: String) =
+        writeAndWait { dao.setOneLine(id, text) }
 }

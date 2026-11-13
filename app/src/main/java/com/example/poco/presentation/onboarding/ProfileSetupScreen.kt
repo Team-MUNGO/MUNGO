@@ -222,7 +222,11 @@ private fun ProfileSetupScreen(
                     modifier = Modifier
                         .weight(1f)
                         .fillMaxHeight()
-                        .padding(horizontal = 76.dp),
+                        // Figma: 기본 정보(488:7387)는 x 685 ~ 1605, 성향 · 알림(488:8778 · 8873)은 x 635 ~ 1657
+                        .then(
+                            if (uiState.step == ProfileStep.BASIC) Modifier.padding(start = 101.dp, end = 71.dp)
+                            else Modifier.padding(start = 51.dp, end = 19.dp)
+                        ),
                     contentAlignment = Alignment.Center
                 ) {
                     when (uiState.step) {
@@ -258,7 +262,8 @@ private fun StepPanel(
     Column(
         modifier = modifier
             .background(colors.bgSurface, RoundedCornerShape(MungoRadius.xl))
-            .padding(horizontal = 56.dp, vertical = 48.dp)
+            // Figma 488:7389: 글자 시작 x 82 · 위 72 → 패널 안쪽 53 / 45
+            .padding(start = 53.dp, end = 59.dp, top = 45.dp, bottom = 45.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
@@ -293,23 +298,24 @@ private fun StepPanel(
                 )
             }
         }
-        Spacer(Modifier.height(72.dp))
+        Spacer(Modifier.height(76.dp))
         Text(
             text = title,
-            style = Mg.bold(60, 72),
+            style = Mg.bold(60, 78),
             color = colors.textPrimary
         )
-        Spacer(Modifier.height(PocoSpacing.space32))
-        Text(text = description, style = Mg.regular(26, 36), color = colors.textSecondary)
-        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(36.dp))
+        Text(text = description, style = Mg.regular(26, 38), color = colors.textSecondary)
+        // Figma: 설명 → 구분선 34, 남는 높이는 요약 목록과 버튼 사이로 간다
+        Spacer(Modifier.height(34.dp))
         HorizontalDivider(thickness = 2.dp, color = colors.borderDefault)
-        Spacer(Modifier.height(PocoSpacing.space40))
+        Spacer(Modifier.height(39.dp))
         Text(
             text = "지금까지 입력한 정보",
             style = POCOTheme.typography.body3,
             color = colors.textTertiary
         )
-        Spacer(Modifier.height(PocoSpacing.space16))
+        Spacer(Modifier.height(23.dp))
         SummaryRow("이름", form.name.trim())
         SummaryRow("종류", form.species.label())
         SummaryRow("품종", form.breed.trim())
@@ -319,7 +325,8 @@ private fun StepPanel(
             Spacer(Modifier.height(PocoSpacing.space12))
             Text(text = it, style = POCOTheme.typography.body3, color = colors.statusAlert)
         }
-        Spacer(Modifier.height(PocoSpacing.space40))
+        Spacer(Modifier.weight(1f))
+        Spacer(Modifier.height(PocoSpacing.space24))
         Row(horizontalArrangement = Arrangement.spacedBy(PocoSpacing.space20)) {
             PocoButton(
                 text = "이전",
@@ -350,7 +357,7 @@ private fun SummaryRow(label: String, value: String) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp),
+            .height(60.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(
@@ -373,11 +380,9 @@ private fun SummaryRow(label: String, value: String) {
 
 @Composable
 private fun BasicInfoContent(form: PetForm, actions: ProfileSetupActions) {
-    Column(
-        modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(PocoSpacing.space24)
-    ) {
-        Row(horizontalArrangement = Arrangement.spacedBy(PocoSpacing.space40)) {
+    // Figma 488:7387: 칸 사이 29 · 37 · 38, 이름/종류 간격 42, 나이/몸무게 카드 간격 24
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(horizontalArrangement = Arrangement.spacedBy(42.dp)) {
             LabeledField("이름", Modifier.weight(1f)) {
                 SetupTextField(
                     value = form.name,
@@ -389,6 +394,7 @@ private fun BasicInfoContent(form: PetForm, actions: ProfileSetupActions) {
                 SpeciesDropdown(selected = form.species, onSelect = actions.onSpeciesSelect)
             }
         }
+        Spacer(Modifier.height(29.dp))
         LabeledField("품종") {
             SetupTextField(
                 value = form.breed,
@@ -397,6 +403,7 @@ private fun BasicInfoContent(form: PetForm, actions: ProfileSetupActions) {
                 trailingIcon = MungoIcon.SEARCH
             )
         }
+        Spacer(Modifier.height(37.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(PocoSpacing.space24)) {
             StepperCard(
                 label = "나이",
@@ -419,7 +426,8 @@ private fun BasicInfoContent(form: PetForm, actions: ProfileSetupActions) {
                 modifier = Modifier.weight(1f)
             )
         }
-        LabeledField("크기") {
+        Spacer(Modifier.height(38.dp))
+        LabeledField("크기", gap = 23.dp) {
             SizeSegment(selected = form.size)
         }
     }
@@ -429,6 +437,7 @@ private fun BasicInfoContent(form: PetForm, actions: ProfileSetupActions) {
 private fun LabeledField(
     label: String,
     modifier: Modifier = Modifier,
+    gap: Dp = 16.dp,
     content: @Composable ColumnScope.() -> Unit
 ) {
     Column(modifier = modifier) {
@@ -437,14 +446,14 @@ private fun LabeledField(
             style = Mg.bold(24, 32),
             color = POCOTheme.colors.textSecondary
         )
-        Spacer(Modifier.height(PocoSpacing.space12))
+        Spacer(Modifier.height(gap))
         content()
     }
 }
 
 private val KoreanLocales = LocaleList(Locale("ko-KR"))
 
-/** 흰 입력칸 (높이 88 · 라운드 16). 포커스되면 망고 테두리 */
+/** 흰 입력칸 (높이 94 · 라운드 16). 포커스되면 망고 테두리 */
 @Composable
 internal fun SetupTextField(
     value: String,
@@ -573,12 +582,15 @@ private fun StepperCard(
     // 숫자 칸 너비는 지금 글자(비었으면 "-") 폭으로 직접 잰다.
     // width(IntrinsicSize.Min)은 +/-로 값이 바뀌어도 너비가 갱신되지 않아 숫자가 안 보였다
     val numberWidth = rememberNumberWidth(text.ifEmpty { "-" }, numberStyle)
+    // Figma 488:7416: 448 × 440, 라벨 위 38 · 버튼 170 × 94 (간격 26) · 아래 32
     Column(
         modifier = modifier
+            .height(440.dp)
             .background(colors.bgSurface, RoundedCornerShape(MungoRadius.lg))
-            .padding(horizontal = 40.dp, vertical = 36.dp)
+            .padding(start = 40.dp, end = 40.dp, top = 38.dp, bottom = 32.dp)
     ) {
         Text(text = label, style = POCOTheme.typography.title2, color = colors.textSecondary)
+        Spacer(Modifier.weight(1f))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -618,8 +630,8 @@ private fun StepperCard(
                 modifier = Modifier.alignByBaseline()
             )
         }
-        Spacer(Modifier.height(PocoSpacing.space16))
-        Row(horizontalArrangement = Arrangement.spacedBy(PocoSpacing.space24)) {
+        Spacer(Modifier.weight(1f))
+        Row(horizontalArrangement = Arrangement.spacedBy(26.dp)) {
             RepeatButton(MungoIcon.MINUS, "$label 줄이기", onMinus)
             RepeatButton(MungoIcon.PLUS, "$label 늘리기", onPlus)
         }
@@ -648,7 +660,7 @@ private fun RowScope.RepeatButton(icon: MungoIcon, description: String, onStep: 
     Box(
         modifier = Modifier
             .weight(1f)
-            .height(MungoSize.buttonLarge)
+            .height(94.dp)
             .clip(CircleShape)
             .background(if (pressed) colors.statePressed else colors.bgSurface)
             .border(2.dp, colors.borderDefault, CircleShape)
@@ -728,12 +740,13 @@ private fun PetTrait.icon(): MungoIcon = when (this) {
 
 @Composable
 private fun TraitsContent(selected: Set<PetTrait>, actions: ProfileSetupActions) {
+    // Figma 488:8778: 카드 300 · 가로 23 · 세로 22 간격, 안내 바까지 33
     Column(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(PocoSpacing.space20)
+        verticalArrangement = Arrangement.spacedBy(22.dp)
     ) {
         ONBOARDING_TRAITS.chunked(3).forEach { row ->
-            Row(horizontalArrangement = Arrangement.spacedBy(PocoSpacing.space20)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(23.dp)) {
                 row.forEach { trait ->
                     TraitCard(
                         trait = trait,
@@ -744,7 +757,7 @@ private fun TraitsContent(selected: Set<PetTrait>, actions: ProfileSetupActions)
                 }
             }
         }
-        Spacer(Modifier.height(PocoSpacing.space12))
+        Spacer(Modifier.height(11.dp))
         InfoBar("고른 모습은 마이펫 > 케어 기준에서 언제든 바꿀 수 있어요.")
     }
 }
@@ -856,7 +869,7 @@ private fun AlertsContent(uiState: ProfileSetupUiState, actions: ProfileSetupAct
     ) {
         AlertRow(
             icon = MungoIcon.SPEAKER,
-            title = "글레오 음성 안내",
+            title = "mungo 음성 안내",
             description = "급제동 · 급커브가 있으면 음성으로 알려 드려요.",
             checked = form.voiceGuideEnabled,
             onCheckedChange = actions.onVoiceGuideChange
@@ -904,7 +917,8 @@ private fun AlertRow(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(136.dp)
+            // Figma 488:8881: 1020 × 142, 간격 20
+            .height(142.dp)
             .clip(shape)
             .background(colors.bgSurface)
             .clickable { onCheckedChange(!checked) }
@@ -981,7 +995,7 @@ private fun CompleteContent(
             style = Mg.bold(56, 70),
             color = colors.textPrimary
         )
-        Spacer(Modifier.height(PocoSpacing.space16))
+        Spacer(Modifier.height(18.dp))
         Text(
             text = "입력하신 정보가 맞는지 확인해주세요.",
             style = POCOTheme.typography.body1,
@@ -991,7 +1005,8 @@ private fun CompleteContent(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(248.dp)
+                // Figma 488:7465: 860 × 250
+                .height(250.dp)
                 .background(colors.bgSurface, RoundedCornerShape(MungoRadius.xl))
                 .padding(horizontal = 40.dp),
             verticalAlignment = Alignment.CenterVertically
@@ -1041,18 +1056,20 @@ private fun CompleteContent(
             Spacer(Modifier.height(PocoSpacing.space16))
             Text(text = it, style = POCOTheme.typography.body2, color = colors.statusAlert)
         }
-        Spacer(Modifier.height(PocoSpacing.space48))
-        Row(horizontalArrangement = Arrangement.spacedBy(PocoSpacing.space40)) {
-            PocoButton(
-                text = "이전",
-                onClick = actions.onBack,
-                style = PocoButtonStyle.OUTLINE,
-                size = PocoButtonSize.LARGE,
-                shape = CircleShape,
+        Spacer(Modifier.height(60.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(41.dp)) {
+            // Figma 488:7474: 테두리 없는 흰 알약 + B28 회색 글자
+            Box(
                 modifier = Modifier
                     .weight(1f)
-                    .height(96.dp)
-            )
+                    .height(94.dp)
+                    .clip(CircleShape)
+                    .background(colors.bgSurface)
+                    .clickable(onClick = actions.onBack),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = "이전", style = Mg.bold(28, 34), color = colors.textTertiary)
+            }
             PocoButton(
                 text = if (uiState.isSaving) "저장 중…" else "시작하기",
                 onClick = actions.onFinish,
@@ -1061,7 +1078,7 @@ private fun CompleteContent(
                 shape = CircleShape,
                 modifier = Modifier
                     .weight(1f)
-                    .height(96.dp)
+                    .height(94.dp)
             )
         }
     }

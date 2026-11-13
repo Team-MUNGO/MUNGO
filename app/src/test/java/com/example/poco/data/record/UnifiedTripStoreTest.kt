@@ -58,6 +58,7 @@ class UnifiedTripStoreTest {
         ) = 0
         override suspend fun markInterrupted(keep: String) = 0
         override suspend fun setMotionSickness(id: String, signs: String?) = Unit
+        override suspend fun setOneLine(id: String, text: String) = Unit
     }
 
     private fun summary(id: Long, start: Long, score: Int) = TripSummary(

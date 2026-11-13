@@ -29,6 +29,9 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -36,12 +39,16 @@ import androidx.compose.ui.window.DialogProperties
 import com.example.poco.core.designsystem.MungoIcon
 import com.example.poco.core.designsystem.MungoIconView
 import com.example.poco.core.designsystem.PetPhoto
+import com.example.poco.core.designsystem.hasFullPetImage
 import com.example.poco.core.designsystem.component.pressable
 import com.example.poco.core.theme.MungoRadius
+import com.example.poco.R
+import com.example.poco.presentation.design.DrawableIcon
 import com.example.poco.presentation.design.Mg
 import com.example.poco.core.theme.POCOTheme
 import com.example.poco.core.util.iGa
 import com.example.poco.data.model.PetSeat
+import com.example.poco.data.model.Restraint
 import com.example.poco.presentation.petprofile.label
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
@@ -111,49 +118,151 @@ internal fun ReadyPanel(uiState: BoardingUiState) {
             .padding(40.dp),
         verticalArrangement = Arrangement.spacedBy(24.dp)
     ) {
+        ReadyCard(uiState, Modifier.fillMaxWidth().weight(1f))
+        // Figma 488:9008 음성 안내 카드: 망고 원(75) + 진한 스피커, 'mungo' 라벨 아래 안내 문장
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .weight(1f)
-                .background(colors.bgAccentSubtle, RoundedCornerShape(MungoRadius.xl))
-                .padding(32.dp),
-            horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            uiState.selectedPets.take(MAX_PETS_SHOWN).forEach { pet ->
-                PetPhoto(
-                    photoPath = pet.photoPath,
-                    breed = pet.breed,
-                    modifier = Modifier
-                        .fillMaxHeight(if (uiState.selectedPets.size == 1) 0.9f else 0.6f)
-                        .aspectRatio(1f)
-                )
-            }
-        }
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .background(colors.bgSurface, RoundedCornerShape(MungoRadius.xl))
-                .padding(horizontal = 40.dp, vertical = 36.dp),
+                .heightIn(min = 212.dp)
+                .background(colors.bgSurface, RoundedCornerShape(35.dp))
+                .padding(start = 54.dp, end = 40.dp, top = 40.dp, bottom = 40.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
             Box(
                 modifier = Modifier
-                    .size(88.dp)
+                    .size(75.dp)
                     .background(colors.bgAccent, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                MungoIconView(MungoIcon.SPEAKER, tint = colors.textOnAccent, size = 40.dp)
+                DrawableIcon(R.drawable.driving_speaker, tint = Mg.Ink, size = 30.dp)
             }
-            Spacer(Modifier.width(28.dp))
-            Text(
-                text = "“${readyMessage(uiState.selectedPets.map { it.name })}”",
-                style = Mg.semi(35, 46),
-                color = colors.textPrimary
-            )
+            Spacer(Modifier.width(21.dp))
+            Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                Text(text = "mungo", style = Mg.regular(23, 27), color = colors.textSecondary)
+                Text(
+                    text = "“${readyMessage(uiState.selectedPets.map { it.name })}”",
+                    style = Mg.semi(35, 42),
+                    color = colors.textPrimary
+                )
+            }
         }
     }
 }
+
+/**
+ * Figma 488:8997 출발 준비 완료 카드: 왼쪽 위 제목 · 요약, 왼쪽 아래 D 기어 안내,
+ * 오른쪽은 망고 도형(뒷판 · 바닥) 위에 반려견 그림
+ */
+@Composable
+private fun ReadyCard(uiState: BoardingUiState, modifier: Modifier = Modifier) {
+    val colors = POCOTheme.colors
+    val pets = uiState.selectedPets
+    val names = pets.joinToString(", ") { it.name }.ifBlank { "반려견" }
+    val dark = colors.isDark
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(37.dp))
+            .background(if (dark) colors.bgAccentSubtle else Mg.AlertBg)
+    ) {
+        // 뒷판 (#FFE2BF) · 바닥 (#FFC98A)
+        Box(
+            Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 94.dp, bottom = 99.dp)
+                .size(width = 308.dp, height = 334.dp)
+                .background(if (dark) colors.bgNeutral else READY_BACK, RoundedCornerShape(64.dp))
+        )
+        Box(
+            Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 53.dp, bottom = 56.dp)
+                .size(width = 388.dp, height = 94.dp)
+                .background(if (dark) colors.bgNeutralStrong.copy(alpha = 0.2f) else READY_FLOOR, RoundedCornerShape(40.dp))
+        )
+        // 사진 · 품종 그림은 둥글게 잘린 그림이라 뒷판 위에 원으로 앉힌다 (그림이 없으면 작은 기본 마크)
+        Row(
+            modifier = Modifier
+                .align(Alignment.BottomEnd)
+                .padding(end = 68.dp, bottom = 76.dp),
+            horizontalArrangement = Arrangement.spacedBy((-60).dp),
+            verticalAlignment = Alignment.Bottom
+        ) {
+            val shown = pets.take(MAX_PETS_SHOWN)
+            shown.forEach { pet ->
+                val full = hasFullPetImage(pet.photoPath, pet.breed)
+                PetPhoto(
+                    photoPath = pet.photoPath,
+                    breed = pet.breed,
+                    modifier = when {
+                        !full -> Modifier.padding(end = 60.dp, bottom = 70.dp).size(240.dp)
+                        shown.size == 1 -> Modifier.size(360.dp)
+                        else -> Modifier.size(240.dp)
+                    }
+                )
+            }
+        }
+
+        Column(
+            modifier = Modifier
+                .fillMaxHeight()
+                .padding(start = 54.dp, top = 45.dp, bottom = 48.dp)
+        ) {
+            Text(
+                text = "$names 준비 끝\n이제 출발해요",
+                style = Mg.bold(62, 80),
+                color = colors.textPrimary,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = 560.dp)
+            )
+            Spacer(Modifier.height(22.dp))
+            Text(
+                text = readySummary(uiState),
+                style = Mg.regular(27, 32),
+                color = if (dark) colors.textSecondary else READY_SUB,
+                modifier = Modifier.padding(start = 9.dp)
+            )
+            Spacer(Modifier.weight(1f))
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Box(
+                    modifier = Modifier
+                        .size(75.dp)
+                        .background(colors.bgAccent, RoundedCornerShape(19.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = "D", style = Mg.bold(37, 44), color = Mg.Ink)
+                }
+                Spacer(Modifier.width(21.dp))
+                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                    Text(
+                        text = "기어를 D로 바꾸면",
+                        style = Mg.regular(24, 29),
+                        color = if (dark) colors.textSecondary else READY_SUB
+                    )
+                    Text(text = "주행 케어가 바로 시작돼요", style = Mg.bold(24, 29), color = colors.textPrimary)
+                }
+            }
+        }
+    }
+}
+
+/** "조수석 | 이동장 | 실내 24°C" (여러 마리면 자리는 '여러 자리') */
+private fun readySummary(uiState: BoardingUiState): String {
+    val pets = uiState.selectedPets
+    val seats = pets.mapNotNull { uiState.seats[it.id] }.distinct()
+    val seat = when {
+        seats.size == 1 -> seats.first().label()
+        seats.size > 1 -> "여러 자리"
+        else -> null
+    }
+    val restraint = "이동장".takeIf { pets.any { it.restraint == Restraint.CRATE_HARNESS } }
+    val temp = uiState.seatTemperature?.let { "실내 ${it.roundToInt()}°C" }
+    return listOfNotNull(seat, restraint, temp).joinToString(" | ")
+}
+
+private val READY_BACK = Color(0xFFFFE2BF)
+private val READY_FLOOR = Color(0xFFFFC98A)
+private val READY_SUB = Color(0xFF4E5968)
 
 // region 주행 화면 분할
 
@@ -239,7 +348,7 @@ internal fun DriveLayoutDialog(
                     VoiceRow(
                         isListening = isListening,
                         heardText = heardText,
-                        example = "글레오, 네비랑 같이 보여 줘",
+                        example = "mungo, 네비랑 같이 보여 줘",
                         onMic = onMic,
                         micSize = 56.dp
                     )

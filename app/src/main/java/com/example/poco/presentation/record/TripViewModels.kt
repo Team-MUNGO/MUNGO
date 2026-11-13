@@ -23,6 +23,12 @@ import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import com.example.poco.data.assistant.toSummaryRequest
+import com.example.poco.data.repository.AssistantRepository
+import kotlinx.coroutines.flow.filterNotNull
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.update
+import timber.log.Timber
 
 @HiltViewModel
 class TripHistoryViewModel @Inject constructor(history: TripHistoryRepository) : ViewModel() {
@@ -35,7 +41,8 @@ class TripHistoryViewModel @Inject constructor(history: TripHistoryRepository) :
 @HiltViewModel
 class TripDetailViewModel @Inject constructor(
     private val history: TripHistoryRepository,
-    settings: UserSettingsRepository
+    settings: UserSettingsRepository,
+    private val assistant: AssistantRepository
 ) : ViewModel() {
     private val id = MutableStateFlow<String?>(null)
     val trip: StateFlow<TripEntity?> = id.flatMapLatest { it?.let(history::trip) ?: emptyFlow() }
@@ -55,8 +62,47 @@ class TripDetailViewModel @Inject constructor(
         t?.let { motionAnalysis(all.ifEmpty { listOf(it) }, it, minutes) }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
+    /** AI 요청에 실패한 기록 (이번 실행 동안은 규칙 문장으로 보여 주고 다시 묻지 않는다) */
+    private val aiFailed = MutableStateFlow<Set<String>>(emptySet())
+    private val aiRequested = mutableSetOf<String>()
+
+    /**
+     * 주행 완료 "오늘 한 줄": 저장된 AI 문장 → (요청 중) 정리 중 안내 → AI를 못 쓰면 규칙 문장.
+     * 한 기록에 한 번만 묻고, 받은 문장은 기록에 저장해 다시 열어도 같은 문장을 보여 준다.
+     */
+    val oneLine: StateFlow<OneLineUi?> = combine(trip, events, aiFailed) { t, ev, failed ->
+        when {
+            t == null || t.finalScore == null -> null
+            t.aiOneLine != null -> OneLineUi(t.aiOneLine, fromAi = true)
+            !aiAvailable() || t.id in failed -> OneLineUi(oneLine(t, ev))
+            else -> OneLineUi(ONE_LINE_LOADING, loading = true)
+        }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    private fun aiAvailable() = assistant.configured && assistant.consented
+
     fun load(tripId: String) {
         id.value = tripId
+        requestOneLine(tripId)
+    }
+
+    private fun requestOneLine(tripId: String) {
+        if (!aiAvailable() || !aiRequested.add(tripId)) return
+        viewModelScope.launch {
+            // 기록이 완료(점수 저장)될 때까지 기다렸다가 한 번만 요청
+            val done = history.trip(tripId).filterNotNull().first { it.finalScore != null && it.endedAtEpoch != null }
+            if (done.aiOneLine != null) return@launch
+            val request = done.toSummaryRequest(
+                history.events(tripId).first(),
+                previousTrip(history.finishedTrips().first(), done)
+            ) ?: return@launch
+            runCatching { assistant.summarizeTrip(request) }
+                .onSuccess { text -> history.setOneLine(tripId, text) }
+                .onFailure {
+                    Timber.w(it, "오늘 한 줄 AI 실패 - 규칙 문장으로 대신")
+                    aiFailed.update { failed -> failed + tripId }
+                }
+        }
     }
 
     fun setMotion(record: MotionRecord) {
@@ -64,6 +110,10 @@ class TripDetailViewModel @Inject constructor(
         viewModelScope.launch { history.setMotionSickness(tripId, record) }
     }
 }
+
+data class OneLineUi(val text: String, val fromAi: Boolean = false, val loading: Boolean = false)
+
+private const val ONE_LINE_LOADING = "오늘 기록을 정리하고 있어요…"
 
 @HiltViewModel
 class RestSettingsViewModel @Inject constructor(

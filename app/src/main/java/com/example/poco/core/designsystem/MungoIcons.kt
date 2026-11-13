@@ -263,6 +263,15 @@ enum class MungoIcon(internal val paths: List<String>, internal val filled: Bool
             "M6 10v4",
             "M10 10v4"
         )
+    ),
+
+    /** 꼬리표 (휴식 추천 이유) */
+    TAG(
+        listOf(
+            "M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414" +
+                "l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z",
+            "M7 7.5a.5.5 0 1 0 1 0a.5.5 0 1 0 -1 0"
+        )
     )
 }
 

@@ -49,7 +49,9 @@ data class TripEntity(
     /** User-entered motion-sickness checklist (comma separated); not a diagnosis. */
     val motionSicknessSigns: String? = null,
     /** True when any value came from debug simulation; such trips are labeled, never mixed silently. */
-    val simulated: Boolean = false
+    val simulated: Boolean = false,
+    /** AI "오늘 한 줄" (/summary). Written once after completion; null until it arrives. */
+    val aiOneLine: String? = null
 )
 
 @Entity(
@@ -130,9 +132,12 @@ interface TripDao {
 
     @Query("UPDATE trips SET motionSicknessSigns = :signs WHERE id = :id")
     suspend fun setMotionSickness(id: String, signs: String?)
+
+    @Query("UPDATE trips SET aiOneLine = :text WHERE id = :id AND status != 'IN_PROGRESS'")
+    suspend fun setOneLine(id: String, text: String)
 }
 
-@Database(entities = [TripEntity::class, TripEventEntity::class], version = 2, exportSchema = true)
+@Database(entities = [TripEntity::class, TripEventEntity::class], version = 3, exportSchema = true)
 abstract class TripDatabase : RoomDatabase() {
     abstract fun trips(): TripDao
 }
@@ -148,5 +153,12 @@ val TRIP_MIGRATION_1_2 = object : Migration(1, 2) {
         db.execSQL("ALTER TABLE trip_events ADD COLUMN windowPercent REAL")
         db.execSQL("ALTER TABLE trip_events ADD COLUMN seat TEXT")
         db.execSQL("ALTER TABLE trip_events ADD COLUMN guidanceText TEXT")
+    }
+}
+
+/** Adds the AI one-liner column; existing trips keep null and fall back to the rule-based line. */
+val TRIP_MIGRATION_2_3 = object : Migration(2, 3) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE trips ADD COLUMN aiOneLine TEXT")
     }
 }

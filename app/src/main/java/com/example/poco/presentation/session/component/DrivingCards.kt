@@ -1,7 +1,5 @@
 package com.example.poco.presentation.session.component
 
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -35,9 +33,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import com.example.poco.presentation.record.subjectParticle
+import androidx.compose.ui.graphics.Path
+import androidx.compose.foundation.Canvas
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.poco.R
@@ -154,35 +156,40 @@ private fun MgTile(
     extra: (@Composable () -> Unit)? = null
 ) {
     val full = size == TileSize.Full
+    // Figma 488:12128 / 488:12312: 기준을 벗어나면 면 · 3px 테두리 · 라벨 · 값 · 단위가 모두 망고 톤 (단위도 Bold)
     MgCard(
         modifier,
-        color = if (warning) Mg.Peach else Mg.Card,
-        border = if (warning) Mg.WarnBorder else null,
-        padding = if (full) PaddingValues(start = 24.dp, end = 22.dp, top = 22.dp, bottom = 18.dp) else PaddingValues(start = 22.dp, end = 18.dp, top = 20.dp, bottom = 16.dp)
+        color = if (warning) Mg.AlertBg else Mg.Card,
+        border = if (warning) Mg.AlertStroke else null,
+        borderWidth = Mg.AlertStrokeWidth,
+        padding = if (full) PaddingValues(start = 22.dp, end = 22.dp, top = 22.dp, bottom = 34.dp) else PaddingValues(start = 18.dp, end = 18.dp, top = 18.dp, bottom = 16.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(if (full) 12.dp else 10.dp)) {
             IconBadge(
-                icon = icon, res = iconRes, size = if (full) 48.dp else 40.dp,
+                icon = icon, res = iconRes, size = if (full) 48.dp else 44.dp,
                 background = if (warning) Color.White else Mg.IconBg
             )
             Text(
                 label, style = if (warning) Mg.BodyStrong else Mg.Body,
-                color = if (warning) Mg.OrangeText else Mg.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis
+                color = if (warning) Mg.OrangeText else if (full) TileLabel else Mg.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis
             )
         }
         Spacer(Modifier.weight(1f))
-        Row(verticalAlignment = Alignment.Bottom) {
-            ValueText(value, unit, if (full) Mg.Value else Mg.ValueSplit, if (warning) Mg.OrangeText else Mg.Ink)
+        Row(Modifier.padding(start = 4.dp), verticalAlignment = Alignment.Bottom) {
+            ValueText(
+                value, unit, if (full) Mg.Value else Mg.ValueSplit, if (warning) Mg.OrangeText else Mg.Ink,
+                unitStyle = if (warning) Mg.BodyStrong else if (full) Mg.medium(24, 32) else Mg.Unit
+            )
             if (extra != null) {
                 Spacer(Modifier.width(16.dp))
                 Box(Modifier.weight(1f).padding(bottom = 16.dp)) { extra() }
             }
         }
-        if (full && detail != null) {
-            Text(detail, style = Mg.Body, color = Mg.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
+        // 전체 화면 타일엔 보조 문구가 없다 (Figma 488:10266). detail은 접근성 설명으로만 남긴다
     }
 }
+
+private val TileLabel = Color(0xFF4F5865)
 
 /** Next rest, or — once a verified waypoint is confirmed by Navi — time to that waypoint (Figma 464:46394). */
 @Composable
@@ -190,30 +197,16 @@ fun RestOrWaypointTile(state: DrivingSessionState, size: TileSize, modifier: Mod
     val added = state.waypoint as? WaypointUiState.Added
     if (state.active && added != null) {
         val eta = added.etaText?.filter(Char::isDigit)?.toIntOrNull()
-        var initial by remember(added.name) { mutableStateOf<Int?>(null) }
-        LaunchedEffect(added.name, eta) { if (initial == null && eta != null) initial = eta }
-        val progress = if (eta != null && initial != null && initial!! > 0) 1f - eta.toFloat() / initial!! else null
         MgTile(
             size, "${added.name}까지", eta?.toString() ?: "—", if (eta != null) "분" else null,
             if (eta != null) "경유지 · 내비게이션 기준" else "경유지 · 도착 시간은 내비게이션에서 확인",
             modifier, warning = true, iconRes = R.drawable.driving_paw,
-            extra = if (size == TileSize.Full && progress != null) {
-                { ProgressBar(progress.coerceIn(0.05f, 1f)) }
-            } else {
-                null
-            }
+            // Figma 488:9920: 경유지 타일은 이름 · 남은 분만 (진행 막대 없음)
         )
         return
     }
     val t = restTileText(state)
     MgTile(size, "다음 휴식까지", t.value, t.unit, t.detail, modifier, t.warning, iconRes = R.drawable.driving_cup)
-}
-
-@Composable
-private fun ProgressBar(progress: Float) {
-    Box(Modifier.fillMaxWidth().height(10.dp).background(Color(0xFFFFE2C2), CircleShape)) {
-        Box(Modifier.fillMaxWidth(progress).fillMaxHeight().background(Mg.Orange, CircleShape))
-    }
 }
 
 @Composable
@@ -258,34 +251,77 @@ fun WindowTile(state: DrivingSessionState, size: TileSize, modifier: Modifier) {
 
 // ---------- Comfort ----------
 
-@OptIn(ExperimentalLayoutApi::class)
+/**
+ * 말풍선 문구 (Figma 488:10411: 편안해요! / 조금 더워요). 온도가 기준을 벗어나면 온도가 먼저.
+ * TODO: 흔들림 안내 기준은 기획 확정 후 교체 (지금은 점수 구간만 본다)
+ */
+fun comfortBubble(state: DrivingSessionState): String {
+    if (!state.active) return "주행 준비"
+    val temp = state.settings?.let { temperatureStatus(state.temperature.valueOrNull(), it) }
+    return when {
+        temp == CabinTemperatureStatus.HOT -> "조금 더워요"
+        temp == CabinTemperatureStatus.COLD -> "조금 추워요"
+        state.comfort.score >= 85 -> "편안해요!"
+        state.comfort.score >= 70 -> "조금 흔들렸어요"
+        else -> "많이 힘들어해요"
+    }
+}
+
+/** Figma 488:10298 (420×898): 주행중 칩 · 점수 링 · 반려견 + 말풍선. 횟수 칩은 말풍선 안내로 대체됐다 */
 @Composable
 fun ComfortCardFull(state: DrivingSessionState, modifier: Modifier) {
     val c = state.comfort
-    MgCard(modifier, padding = PaddingValues(top = 62.dp, bottom = 50.dp, start = 7.dp, end = 7.dp)) {
+    MgCard(modifier, padding = PaddingValues(top = 59.dp, bottom = 77.dp, start = 7.dp, end = 7.dp)) {
         Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text("실시간 컴포트 점수", style = Mg.Body, color = Mg.Muted)
+            CardStatusChip(if (state.active) "주행중" else "대기 중")
+            Spacer(Modifier.height(39.dp))
+            Text("실시간 컴포트 점수", style = Mg.semi(24, 29), color = Mg.Ink)
+            // 링이 Figma(300)보다 커진 만큼 위아래 간격을 똑같이 나눠 가진다 (Figma는 59 · 59)
             Spacer(Modifier.weight(1f))
             ScoreRing(
-                if (state.active) c.score / 100f else null, 300.dp, 30.dp,
+                // 100점(세 자리 + '점')이 링 안쪽에 들어가는 크기 기준. 글자 크기는 점수와 상관없이 같다
+                if (state.active) c.score / 100f else null, 340.dp, 28.dp,
                 description = "컴포트 점수 ${if (state.active) c.score else "없음"}"
             ) {
-                Text(if (state.active) "${c.score}" else "—", style = Mg.bold(112, 138), color = Mg.Ink)
-            }
-            Spacer(Modifier.height(36.dp))
-            Text(comfortLabel(state), style = Mg.Title, color = Mg.Ink)
-            Spacer(Modifier.weight(1f))
-            FlowRow(
-                // Figma 464:45892: 칩 간격 4 → 카드(420) 안에 세 칩이 한 줄로 들어간다
-                horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Pill("급정거 ${c.brakingCount}", style = Mg.bold(24, 32))
-                Pill("급회전 ${c.turnCount + c.repeatedTurnCount}", style = Mg.bold(24, 32))
-                Pill("과속방지턱 ${c.bumpCount}", style = Mg.bold(24, 32))
+                Row(verticalAlignment = Alignment.Bottom) {
+                    Text(if (state.active) "${c.score}" else "—", style = Mg.bold(112, 138), color = Mg.Ink)
+                    if (state.active) Text("점", Modifier.padding(start = 4.dp, bottom = 24.dp), style = Mg.medium(27, 33), color = ScoreUnit)
+                }
             }
             Spacer(Modifier.weight(1f))
-            PetAvatar(112.dp)
+            PetAvatar(118.dp)
+            Spacer(Modifier.height(18.dp))
+            SpeechBubble(comfortBubble(state))
+        }
+    }
+}
+
+private val ScoreUnit = Color(0xFF7C899D)
+
+/** Figma 488:10409 · 488:10760: 왼쪽 카드 맨 위 상태 칩 (주행중 · 휴식중) */
+@Composable
+private fun CardStatusChip(text: String) {
+    Pill(text, height = 52.dp, horizontalPadding = 24.dp, background = Mg.StatusChip, color = Mg.OrangeText, style = Mg.semi(24, 29))
+}
+
+/** 위로 꼬리가 달린 남색 말풍선 (꼬리 20×17, 본체 최소 222×71 · 모서리 8) */
+@Composable
+internal fun SpeechBubble(text: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Canvas(Modifier.size(20.dp, 17.dp)) {
+            drawPath(
+                Path().apply {
+                    moveTo(size.width / 2f, 0f); lineTo(size.width, size.height); lineTo(0f, size.height); close()
+                },
+                Mg.Bubble
+            )
+        }
+        Box(
+            Modifier.widthIn(min = 222.dp).height(71.dp).background(Mg.Bubble, RoundedCornerShape(8.dp))
+                .padding(horizontal = 24.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(text, style = Mg.bold(34, 44), color = Color.White, maxLines = 1)
         }
     }
 }
@@ -293,9 +329,10 @@ fun ComfortCardFull(state: DrivingSessionState, modifier: Modifier) {
 @Composable
 fun ComfortCardSplit(state: DrivingSessionState, modifier: Modifier) {
     val c = state.comfort
-    MgCard(modifier, padding = PaddingValues(horizontal = 34.dp, vertical = 32.dp)) {
+    MgCard(modifier, padding = PaddingValues(horizontal = 30.dp, vertical = 16.dp)) {
         Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(30.dp)) {
-            ScoreRing(if (state.active) c.score / 100f else null, 132.dp, 16.dp, description = "컴포트 점수 ${if (state.active) c.score else "없음"}") {
+            // 100 · 컴포트가 링 안쪽에 들어가는 크기 기준
+            ScoreRing(if (state.active) c.score / 100f else null, 160.dp, 15.dp, description = "컴포트 점수 ${if (state.active) c.score else "없음"}") {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(if (state.active) "${c.score}" else "—", style = Mg.bold(50, 61), color = Mg.Ink)
                     Text("컴포트", style = Mg.Body, color = Mg.Muted)
@@ -304,10 +341,6 @@ fun ComfortCardSplit(state: DrivingSessionState, modifier: Modifier) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("${petName(state)} 상태", style = Mg.Body, color = Mg.Muted)
                 Text(comfortLabel(state), style = Mg.bold(36, 47), color = Mg.Ink)
-                Text(
-                    "급정거 ${c.brakingCount} · 급회전 ${c.turnCount + c.repeatedTurnCount} · 과속방지턱 ${c.bumpCount}",
-                    style = Mg.Body, color = Mg.Muted, maxLines = 1
-                )
             }
         }
     }
@@ -357,6 +390,33 @@ fun GleoSlot(
     }
 }
 
+/**
+ * 아직 말한 안내가 없을 때 음성 카드에 보여 줄 문장 (Figma 488:10406: "현댕이가 편안하게 가고 있어요.").
+ * 지금 측정값(온도 · 점수 · 다음 휴식)으로만 만든다.
+ */
+internal fun idleGuidance(state: DrivingSessionState, restMode: Boolean): String {
+    val pet = petName(state)
+    val subject = "$pet${subjectParticle(pet)}"
+    if (restMode) return "10분 정도 같이 걷는 걸 추천해요.\n출발 전에 리드줄을 다시 연결해 주세요."
+    val temp = state.settings?.let { temperatureStatus(state.temperature.valueOrNull(), it) }
+    // 휴식 제안은 휴식 20분 전에 온다 (RestRecommendationCoordinator)
+    val toProposal = state.rest.remainingMs?.let { it / 60_000 - 20 }
+    val restLine = when {
+        state.rest.restDue -> "지금 쉬어 갈 곳을 찾아볼게요."
+        toProposal != null && toProposal > 0 -> "${toProposal}분 뒤 쉴 곳을 알려 드릴게요."
+        else -> "곧 쉴 곳을 알려 드릴게요."
+    }
+    return when {
+        temp == CabinTemperatureStatus.HOT -> "$subject 조금 더워해요.\n실내 온도를 낮춰 주세요."
+        temp == CabinTemperatureStatus.COLD -> "$subject 조금 추워해요.\n실내 온도를 높여 주세요."
+        state.comfort.score >= 85 -> "$subject 편안하게 가고 있어요.\n$restLine"
+        state.comfort.score >= 70 -> "$subject 조금 흔들렸어요.\n천천히 부드럽게 가 볼까요?"
+        else -> "$subject 많이 힘들어해요.\n안전한 곳에서 잠시 쉬어 가요."
+    }
+}
+
+private fun quoted(text: String) = if (text.startsWith("“")) text else "“$text”"
+
 @Composable
 private fun GleoCard(
     state: DrivingSessionState,
@@ -370,46 +430,91 @@ private fun GleoCard(
     val spokenText = if (state.ttsSpeaking) {
         state.guidance?.displayText ?: state.gleoResponse
     } else null
-    val text = if (recognizing) null else ai.answerText?.takeIf { it.isNotBlank() } ?: spokenText?.takeIf { it.isNotBlank() }
-    val showQuestion = recognizing || ai.question.isNotBlank() || ai.error != null || ai.restNeedsLocation
-    val hasWaypoint = state.waypoint is WaypointUiState.Added
-    if (text == null && !showQuestion && !hasWaypoint) {
-        // Keep the guidance slot allocated, but show no invented Gleo text or question hint.
-        Box(modifier)
+    val heard = if (recognizing) null else ai.answerText?.takeIf { it.isNotBlank() } ?: spokenText?.takeIf { it.isNotBlank() }
+    if (!compact) {
+        // Figma 488:10399 / 488:10688: 음성 카드는 늘 자리를 지킨다. 말한 안내가 없으면 지금 상태로 만든 문장
+        val text = heard ?: idleGuidance(state, restMode)
+        Column(modifier) {
+            if (!restMode) Spacer(Modifier.height(21.dp))
+            VoiceCard(if (recognizing) null else text, Modifier.fillMaxWidth().weight(1f))
+            if (!restMode) {
+                // Figma 488:10392: 음성 명령 안내 줄 (누르면 질문)
+                Spacer(Modifier.height(41.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    AskHint(state, ai, actions, dark = false, modifier = Modifier.weight(1f).height(72.dp))
+                    CancelWaypointPill(state, actions, Modifier.height(72.dp))
+                }
+                Spacer(Modifier.height(18.dp))
+            }
+        }
         return
     }
-    Column(modifier) {
-        // The answer grows above the question, pushing the question down from the tile edge.
-        Column(Modifier.fillMaxWidth().animateContentSize(animationSpec = tween(250))) {
-        if (text != null) {
-            Column(
-                Modifier.fillMaxWidth()
-                    .height(if (compact || restMode) 160.dp else 236.dp)
-                    .background(Mg.Ink, RoundedCornerShape(Mg.Radius))
-                    .padding(horizontal = if (compact) 28.dp else 42.dp, vertical = 26.dp),
-                verticalArrangement = Arrangement.Center
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(if (compact) 22.dp else 34.dp)) {
-                    Box(Modifier.size(44.dp).background(Mg.Orange, CircleShape), contentAlignment = Alignment.Center) {
-                        MgIcon(MgIcons.Speaker, Color.White, 22.dp)
-                    }
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("Gleo", style = Mg.Caption, color = Mg.OnDarkMuted)
-                        Text(text, style = if (compact || restMode) Mg.semi(23, 31) else Mg.Quote, color = Color.White,
-                            maxLines = if (restMode && compact) 2 else 3, overflow = TextOverflow.Ellipsis)
-                    }
-                }
+    // 분할 화면도 음성 카드는 늘 자리를 지킨다 (Figma 488:12146 · 488:13084). 말한 안내가 없으면 지금 상태로 만든 문장
+    val text = if (recognizing) null else heard ?: idleGuidance(state, restMode)
+    if (restMode) {
+        // Figma 488:13084: 578 × 110, 라운드 24 · 주황 스피커 44 · B24 두 줄
+        Row(
+            modifier.background(Mg.Ink, RoundedCornerShape(24.dp)).padding(horizontal = 24.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(Modifier.size(44.dp).background(Mg.Orange, CircleShape), contentAlignment = Alignment.Center) {
+                MgIcon(MgIcons.Speaker, Color.White, 20.dp)
+            }
+            Spacer(Modifier.width(14.dp))
+            Text(
+                text?.let(::quoted) ?: "듣고 있어요…", Modifier.weight(1f),
+                style = Mg.bold(24, 30).copy(lineBreak = LineBreak.Heading),
+                color = if (text == null) Mg.OnDarkMuted else Color.White,
+                maxLines = 2, overflow = TextOverflow.Ellipsis
+            )
+        }
+        return
+    }
+    // Figma 488:12146: 578 × 354, 라운드 26 · "mungo" R24 · 스피커 52 · B25 문장 · 카드 안 음성 질문 알약
+    Column(
+        modifier.background(Mg.Ink, RoundedCornerShape(26.dp))
+            .padding(start = 26.dp, end = 26.dp, top = 56.dp, bottom = 32.dp)
+    ) {
+        Text("mungo", Modifier.padding(start = 70.dp), style = Mg.regular(24, 30), color = Mg.OnDarkMuted)
+        Spacer(Modifier.height(10.dp))
+        Row(verticalAlignment = Alignment.Top) {
+            Box(Modifier.size(52.dp).background(Mg.Orange, CircleShape), contentAlignment = Alignment.Center) {
+                MgIcon(MgIcons.Speaker, Color.White, 24.dp)
+            }
+            Spacer(Modifier.width(18.dp))
+            Text(
+                text?.let(::quoted) ?: "듣고 있어요…", Modifier.weight(1f),
+                style = Mg.bold(25, 38).copy(lineBreak = LineBreak.Heading),
+                color = if (text == null) Mg.OnDarkMuted else Color.White,
+                maxLines = 3, overflow = TextOverflow.Ellipsis
+            )
+        }
+        Spacer(Modifier.weight(1f))
+        Row(Modifier.padding(start = 2.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            AskHint(state, ai, actions, dark = true, modifier = Modifier.weight(1f, fill = false).height(60.dp))
+            CancelWaypointPill(state, actions, Modifier.height(60.dp))
+        }
+    }
+}
+
+/** Figma 488:10399: 남색 카드 · 왼쪽에 "mungo" + 주황 스피커, 가운데 정렬 SB35 따옴표 문장 */
+@Composable
+private fun VoiceCard(text: String?, modifier: Modifier) {
+    Row(
+        modifier.background(Mg.Ink, RoundedCornerShape(Mg.Radius)).padding(start = 48.dp, end = 40.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("mungo", style = Mg.regular(17, 20), color = Mg.OnDarkMuted)
+            Box(Modifier.size(51.dp).background(Mg.Orange, CircleShape), contentAlignment = Alignment.Center) {
+                MgIcon(MgIcons.Speaker, Color.White, 24.dp)
             }
         }
-        if (text != null && showQuestion) Spacer(Modifier.height(16.dp))
-        }
-        if (showQuestion || hasWaypoint) {
-            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                if (showQuestion) AskHint(state, ai, actions, dark = false,
-                    modifier = Modifier.weight(1f).height(if (compact) 64.dp else 72.dp))
-                CancelWaypointPill(state, actions, Modifier.height(if (compact) 64.dp else 72.dp))
-            }
-        }
+        Text(
+            text?.let(::quoted) ?: "듣고 있어요…", Modifier.weight(1f).padding(start = 24.dp),
+            style = Mg.semi(35, 53).copy(lineBreak = LineBreak.Heading), color = if (text == null) Mg.OnDarkMuted else Color.White,
+            textAlign = TextAlign.Center, maxLines = 3, overflow = TextOverflow.Ellipsis
+        )
     }
 }
 
@@ -429,13 +534,13 @@ private fun AskHint(state: DrivingSessionState, ai: AssistantUiState, actions: S
     val text = when {
         ai.restNeedsLocation && ai.phase == AssistantPhase.IDLE -> "위치 권한 허용하고 휴식 장소 찾기"
         ai.error != null && ai.phase == AssistantPhase.IDLE -> ai.error
-        ai.phase == AssistantPhase.CONNECTING -> "글레오에 연결하고 있어요"
+        ai.phase == AssistantPhase.CONNECTING -> "mungo에 연결하고 있어요"
         ai.phase == AssistantPhase.LISTENING -> if (ai.question.isBlank()) "듣고 있어요…" else "“${ai.question}”"
         ai.phase == AssistantPhase.THINKING -> "“${ai.question}”"
         ai.question.isNotBlank() -> "“${ai.question}”"
         !ai.configured -> "AI 서버가 설정되지 않았어요"
-        !ready -> "눌러서 글레오 AI 연결하기"
-        else -> if (state.waypoint is WaypointUiState.Added) "“글레오, 휴게소 어디쯤이야?”" else "“글레오, ${petName(state)} 괜찮아?”"
+        !ready -> "눌러서 mungo AI 연결하기"
+        else -> if (state.waypoint is WaypointUiState.Added) "“mungo, 휴게소 어디쯤이야?”" else "“mungo, ${petName(state)} 괜찮아?”"
     }
     val onClick = {
         when {
@@ -446,21 +551,21 @@ private fun AskHint(state: DrivingSessionState, ai: AssistantUiState, actions: S
         }
     }
     Row(
-        modifier.clip(CircleShape).background(if (dark) Mg.DarkPill else Color.White, CircleShape)
-            .clickable(onClick = onClick).padding(horizontal = if (dark) 22.dp else 16.dp),
+        modifier.clip(CircleShape).background(if (dark) Color(0xFF2C3440) else Color.White, CircleShape)
+            .clickable(onClick = onClick).padding(start = if (dark) 14.dp else 12.dp, end = if (dark) 26.dp else 12.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(14.dp)
+        horizontalArrangement = Arrangement.spacedBy(if (dark) 10.dp else 14.dp)
     ) {
         Box(
-            Modifier.size(if (dark) 28.dp else 40.dp).background(if (dark) Color.White else Mg.Ink, CircleShape),
+            Modifier.size(if (dark) 32.dp else 48.dp).background(if (dark) Color.White else Mg.Bubble, CircleShape),
             contentAlignment = Alignment.Center
-        ) { MgIcon(MgIcons.Mic, if (dark) Mg.Ink else Color.White, if (dark) 16.dp else 20.dp) }
+        ) { MgIcon(MgIcons.Mic, if (dark) Mg.Ink else Color.White, if (dark) 18.dp else 20.dp) }
         Text(
-            text, Modifier.weight(1f, fill = !dark), style = Mg.medium(24, 32),
-            color = if (dark) Color.White else Mg.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            text, Modifier.weight(1f, fill = !dark), style = if (dark) Mg.regular(24, 32) else Mg.medium(24, 32),
+            color = if (dark) Color(0xFFE5E8EB) else Mg.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis,
             textAlign = if (dark) TextAlign.Start else TextAlign.Center
         )
-        if (!dark) Spacer(Modifier.width(40.dp))
+        if (!dark) Spacer(Modifier.width(48.dp))
     }
 }
 
@@ -489,7 +594,7 @@ private fun ProposalCard(state: DrivingSessionState, actions: SessionActions, co
         Spacer(Modifier.height(8.dp))
         Text(response.displayText, style = Mg.Body, color = Mg.Muted, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Spacer(Modifier.height(10.dp))
-        if (state.ttsSpeaking) SpeakingLine("글레오가 같은 내용을 말하고 있어요")
+        if (state.ttsSpeaking) SpeakingLine("mungo가 같은 내용을 말하고 있어요")
         // Google Maps attribution must accompany grounded place content.
         Text("장소 정보: Google Maps · 운영 여부는 내비게이션에서 확인", style = Mg.Caption, color = Mg.Faint, maxLines = 1)
         failed?.let { Text(it.message, style = Mg.Caption, color = Mg.OrangeText, maxLines = 2) }
@@ -556,7 +661,7 @@ private fun WaypointAddedCard(
         Spacer(Modifier.height(10.dp))
         when {
             added.cancelError != null -> Text(added.cancelError, style = Mg.Body, color = Mg.OrangeText, maxLines = 2)
-            countingDown -> SpeakingLine("5초 뒤 글레오 안내로 돌아가요")
+            countingDown -> SpeakingLine("5초 뒤 mungo 안내로 돌아가요")
         }
         Spacer(Modifier.weight(1f))
         SecondaryButton(
@@ -583,33 +688,40 @@ private fun recoveryText(state: DrivingSessionState): String {
     return if (start != null && now > start) "컴포트 $start → $now 회복 중" else "컴포트 $now · 쉬면서 회복해요"
 }
 
+/**
+ * Figma 488:10659 (420×898): 휴식중 칩 · 컴포트 점수 변화 · 회복 안내 · 휴식 타이머 링(256) · 반려견 + 말풍선.
+ * 칩 · 링 · 사진 · 말풍선 위치는 주행 카드와 같은 줄에 맞춘다.
+ */
 @Composable
 fun RestSummaryFull(state: DrivingSessionState, modifier: Modifier) {
     val rest = state.rest
     val recommendedMs = RestIntervalPolicy.RECOMMENDED_REST_MINUTES * 60_000L
-    val left = recommendedMs - rest.currentRestMs
-    MgCard(modifier, padding = PaddingValues(start = 32.dp, end = 32.dp, top = 30.dp, bottom = 34.dp)) {
-        Text("${restPlaceName(state) ?: "잠시"}에서\n쉬어 가는 중", style = Mg.semi(27, 44), color = Mg.Ink)
-        Spacer(Modifier.height(6.dp))
-        Text(
-            "추천 ${RestIntervalPolicy.RECOMMENDED_REST_MINUTES}분 · " +
-                if (left > 0) "${(left + 59_999) / 60_000}분 남았어요" else "충분히 쉬었어요",
-            style = Mg.Body, color = Mg.Muted
-        )
-        Column(Modifier.fillMaxWidth().weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-            Spacer(Modifier.weight(1f))
-            ScoreRing(rest.currentRestMs.toFloat() / recommendedMs, 256.dp, 28.dp, description = "휴식 경과 ${restClock(rest.currentRestMs)}") {
+    val start = rest.scoreAtRestStart
+    val now = state.comfort.score
+    MgCard(modifier, padding = PaddingValues(top = 59.dp, bottom = 77.dp, start = 7.dp, end = 7.dp)) {
+        Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+            CardStatusChip("휴식중")
+            Spacer(Modifier.height(21.dp))
+            Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                MgIcon(MgIcons.Gauge, Mg.OrangeText, 16.dp, Modifier.padding(top = 7.dp))
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(restClock(rest.currentRestMs), style = Mg.bold(58, 70), color = Mg.Ink)
-                    Text("쉬는 중", style = Mg.Body, color = Mg.Muted)
+                    Text("컴포트 점수", style = Mg.semi(24, 29), color = Mg.Ink)
+                    Text(if (start != null && start != now) "${start}점 → ${now}점" else "${now}점", style = Mg.semi(24, 29), color = Mg.Ink)
                 }
             }
-            Spacer(Modifier.height(42.dp))
-            Pill(recoveryText(state), leading = { MgIcon(MgIcons.Gauge, Mg.Ink, 18.dp) })
+            Spacer(Modifier.height(14.dp))
+            Text("휴식 3분마다 점수가 1점씩 올라요", style = Mg.regular(24, 29), color = Mg.Muted)
             Spacer(Modifier.weight(1f))
-            PetAvatar(140.dp)
-            Spacer(Modifier.height(26.dp))
-            Text("휴식 3분마다 점수가 1점씩 올라요", style = Mg.Body, color = Mg.Muted)
+            ScoreRing(rest.currentRestMs.toFloat() / recommendedMs, 256.dp, 26.dp, description = "휴식 경과 ${restClock(rest.currentRestMs)}") {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(restClock(rest.currentRestMs), style = Mg.bold(64, 76), color = Mg.Ink)
+                    Text("추천 휴식\n${RestIntervalPolicy.RECOMMENDED_REST_MINUTES}분", style = Mg.regular(24, 29), color = Mg.Muted, textAlign = TextAlign.Center)
+                }
+            }
+            Spacer(Modifier.height(53.dp))
+            PetAvatar(118.dp)
+            Spacer(Modifier.height(18.dp))
+            SpeechBubble("휴식중")
         }
     }
 }
@@ -639,7 +751,7 @@ private data class RestTask(val title: String, val hint: String, val done: Strin
 
 private val RestTasks = listOf(
     RestTask("물 먼저 주기", "물그릇을 꺼내 주세요", "마셨어요"),
-    RestTask("10분 산책 · 배변", "주차장 안쪽 안전한 곳에서", "다녀왔어요"),
+    RestTask("10분간 산책 및 배변", "주차장 안쪽 안전한 곳에서", "다녀왔어요"),
     RestTask("리드줄 다시 연결", "출발하기 전에", "연결했어요")
 )
 
@@ -647,9 +759,17 @@ private val RestTasks = listOf(
 @Composable
 fun RestChecklist(state: DrivingSessionState, compact: Boolean, modifier: Modifier) {
     var checked by rememberSaveable(state.rest.restStartedAtEpoch) { mutableStateOf(listOf(false, false, false)) }
-    MgCard(modifier, padding = PaddingValues(start = 28.dp, end = 28.dp, top = 22.dp, bottom = 18.dp)) {
-        Text("쉬는 동안 이렇게 해 주세요", style = Mg.BodyStrong, color = Mg.Ink)
-        Spacer(Modifier.height(if (compact) 12.dp else 16.dp))
+    // Figma 488:10672: 제목 B33, 항목 B24 / R24 (#6B7684), 체크 28 · 글자 시작 +46
+    MgCard(
+        modifier,
+        padding = if (compact) PaddingValues(start = 28.dp, end = 28.dp, top = 22.dp, bottom = 18.dp)
+        else PaddingValues(start = 38.dp, end = 38.dp, top = 44.dp, bottom = 30.dp)
+    ) {
+        Text(
+            if (compact) "쉬는 동안 이렇게 해 주세요" else "쉬는 동안 추천하는 활동이에요",
+            style = if (compact) Mg.BodyStrong else Mg.bold(33, 40), color = Mg.Ink
+        )
+        Spacer(Modifier.height(if (compact) 12.dp else 22.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.SpaceEvenly) {
             RestTasks.forEachIndexed { i, task ->
                 val done = checked[i]
@@ -660,7 +780,7 @@ fun RestChecklist(state: DrivingSessionState, compact: Boolean, modifier: Modifi
                     horizontalArrangement = Arrangement.spacedBy(18.dp)
                 ) {
                     Box(
-                        Modifier.size(28.dp).background(if (done) Mg.Orange else Color.White, RoundedCornerShape(7.dp))
+                        Modifier.padding(start = if (compact) 0.dp else 6.dp).size(28.dp).background(if (done) Mg.Orange else Color.White, RoundedCornerShape(7.dp))
                             .then(if (done) Modifier else Modifier.border(2.dp, Mg.BarGrey, RoundedCornerShape(7.dp))),
                         contentAlignment = Alignment.Center
                     ) { if (done) MgIcon(MgIcons.Check, Color.White, 18.dp) }
@@ -703,7 +823,7 @@ private fun windowTitle(state: DrivingSessionState): String {
 }
 
 private fun windowSpeech(state: DrivingSessionState) = when {
-    state.ttsSpeaking -> "글레오가 같은 내용을 말하고 있어요"
+    state.ttsSpeaking -> "mungo가 같은 내용을 말하고 있어요"
     state.ttsError != null -> "음성 안내를 재생하지 못했어요"
     else -> "반려견의 안전을 위해 창문을 닫아 주세요"
 }

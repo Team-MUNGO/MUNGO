@@ -43,7 +43,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.poco.core.designsystem.MungoLogo
-import com.example.poco.core.theme.pocoNotoFontFamily
 import com.example.poco.data.vehicle.VehicleIdentity
 import com.example.poco.data.vehicle.VehicleLinkState
 import com.example.poco.presentation.design.DesignCanvas
@@ -112,7 +111,7 @@ internal fun SettingsScreen(
     dialog: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    DesignCanvas(RecordRefWidth, RecordRefHeight, fontFamily = pocoNotoFontFamily) {
+    DesignCanvas(RecordRefWidth, RecordRefHeight) {
         Row(Modifier.fillMaxSize()) {
             RecordRail(RailTab.SETTINGS, onNavigate)
             // 설정 메뉴: 134 → 551 (Figma "설정 메뉴")
@@ -311,9 +310,9 @@ internal fun VehiclePage(
             Text(
                 when {
                     !linked -> "연동 해지됨" + (link.changedAt?.let { " · ${unlinkedAtLabel(it)}" } ?: "")
-                    identity == null -> "Pleos 연결됨 · 차량 정보를 읽는 중"
-                    identity.displayName == null -> "Pleos 연결됨 · 차종 정보를 받지 못했어요"
-                    else -> "Pleos 연결됨 · ${syncLabel(identity.readAt)}"
+                    identity == null -> "mungo 연결됨 · 차량 정보를 읽는 중"
+                    identity.displayName == null -> "mungo 연결됨 · 차종 정보를 받지 못했어요"
+                    else -> "mungo 연결됨 · ${syncLabel(identity.readAt)}"
                 },
                 style = Mg.regular(24, 32), color = Mg.Muted
             )
@@ -470,7 +469,7 @@ private val sdkFeatures = listOf(
     SdkFeature(MgIcons.Gauge, "속도 · 가속 · 기어", "Vehicle SDK"),
     SdkFeature(MgIcons.Window, "창문 · 실내 온도", "Vehicle SDK"),
     SdkFeature(MgIcons.Brake, "급정거 · 급커브", "ADAS SDK"),
-    SdkFeature(MgIcons.Mic, "글레오 음성 안내", "Gleo AI SDK"),
+    SdkFeature(MgIcons.Mic, "mungo 음성 안내", "Gleo AI SDK"),
     SdkFeature(MgIcons.Route, "경유지 추가", "NaviHelper SDK")
 )
 

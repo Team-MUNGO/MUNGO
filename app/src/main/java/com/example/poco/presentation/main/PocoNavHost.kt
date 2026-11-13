@@ -25,7 +25,6 @@ import com.example.poco.presentation.onboarding.ProfileSetupRoute
 import com.example.poco.core.designsystem.FitWideWindow
 import com.example.poco.presentation.permission.PermissionGroup
 import com.example.poco.presentation.permission.PermissionRoute
-import com.example.poco.presentation.petmode.PetModeRoute
 import com.example.poco.presentation.record.AppliedInterval
 import com.example.poco.presentation.record.MotionSicknessRoute
 import com.example.poco.presentation.record.RestIntervalRoute
@@ -61,7 +60,6 @@ sealed interface PocoDestination {
     @Serializable data object Boarding : PocoDestination
 
     /** 펫모드 (보호자 외출 중, 홈 펫모드 카드) */
-    @Serializable data object PetMode : PocoDestination
 
     /** 이동 기록 목록 (레일 '이동 기록') — Figma 465:48292 */
     @Serializable data class Records(val period: String = "MONTH") : PocoDestination
@@ -197,12 +195,8 @@ private fun PocoNavGraph(navController: NavHostController, modifier: Modifier) {
                 navigateToPetProfile = { navController.navigate(PocoDestination.PetProfile) },
                 navigateToBoarding = { navController.navigate(PocoDestination.Boarding) },
                 navigateToDriving = { navController.navigate(PocoDestination.Driving) },
-                navigateToPetMode = { navController.navigate(PocoDestination.PetMode) },
                 navigateToWeeklyRecords = { navController.navigateToRailTab(PocoDestination.Records("WEEK")) }
             )
-        } }
-        composable<PocoDestination.PetMode> { FitWideWindow {
-            PetModeRoute(navigateBack = { navController.popBackStack() })
         } }
         composable<PocoDestination.Boarding> { FitWideWindow {
             BoardingRoute(

@@ -11,7 +11,11 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onRoot
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.poco.core.theme.POCOTheme
+import com.example.poco.data.assistant.AssistRequest
+import com.example.poco.data.assistant.AssistResponse
+import com.example.poco.data.assistant.TripSummaryRequest
 import com.example.poco.data.record.MotionRecord
+import com.example.poco.data.repository.AssistantRepository
 import com.example.poco.data.record.TripEntity
 import com.example.poco.data.record.TripEventEntity
 import com.example.poco.data.record.TripEventType
@@ -82,6 +86,9 @@ class RecordScreensGalleryTest {
         override suspend fun setMotionSickness(id: String, record: MotionRecord) {
             trips.value = trips.value.map { if (it.id == id) it.copy(motionSicknessSigns = record.encode()) else it }
         }
+        override suspend fun setOneLine(id: String, text: String) {
+            trips.value = trips.value.map { if (it.id == id) it.copy(aiOneLine = text) else it }
+        }
     }
     private val settings = object : UserSettingsRepository {
         override val restIntervalMinutes = MutableStateFlow(120)
@@ -90,9 +97,22 @@ class RecordScreensGalleryTest {
         override suspend fun setVoiceGuidanceEnabled(enabled: Boolean) { voiceGuidanceEnabled.value = enabled }
     }
 
+    /** "오늘 한 줄" AI 응답 흉내 (네트워크 없이) */
+    private val assistant = object : AssistantRepository {
+        override val configured = true
+        override val connected = true
+        override val anonymousAuth = true
+        override var consented = true
+        override suspend fun connect(invitation: String) = Unit
+        override suspend fun assist(request: AssistRequest): AssistResponse = error("unused")
+        override suspend fun summarizeTrip(request: TripSummaryRequest) =
+            "출발 100분쯤 급정거 말고는 평온했어요. 휴식 뒤 점수도 다시 올랐어요."
+        override fun disconnect() = Unit
+    }
+
     @Test fun recordScreens() {
         val screen = mutableStateOf("history")
-        val detail = TripDetailViewModel(history, settings)
+        val detail = TripDetailViewModel(history, settings, assistant)
         val list = TripHistoryViewModel(history)
         compose.setContent {
             POCOTheme {
@@ -125,7 +145,7 @@ class RecordScreensGalleryTest {
     /** 주행 완료 화면을 Pleos 화면 분할 크기들로 그려 본다 (전체 · 2분할 · 3분할) */
     @Test fun summarySplitSizes() {
         val size = mutableStateOf(1682 to 1210)
-        val detail = TripDetailViewModel(history, settings)
+        val detail = TripDetailViewModel(history, settings, assistant)
         compose.setContent {
             POCOTheme {
                 androidx.compose.foundation.layout.Box(

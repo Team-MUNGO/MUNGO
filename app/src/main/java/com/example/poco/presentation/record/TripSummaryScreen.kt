@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -36,11 +37,11 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
+import androidx.compose.ui.text.style.LineBreak
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.poco.core.theme.pocoNotoFontFamily
 import com.example.poco.R
 import com.example.poco.data.record.MotionRecord
 import com.example.poco.data.record.MotionSign
@@ -67,16 +68,18 @@ fun TripSummaryRoute(tripId: String, onDetail: () -> Unit, onDone: () -> Unit, v
     val trip by viewModel.trip.collectAsStateWithLifecycle()
     val events by viewModel.events.collectAsStateWithLifecycle()
     val all by viewModel.allTrips.collectAsStateWithLifecycle()
+    val line by viewModel.oneLine.collectAsStateWithLifecycle()
     BoxWithConstraints(Modifier.fillMaxSize().background(Mg.Bg)) {
         val split = maxWidth < SplitLayoutMaxWidth
-        DesignCanvas(if (split) 618f else 1220f, 1028f, fontFamily = pocoNotoFontFamily) {
+        DesignCanvas(if (split) 618f else 1220f, 1028f) {
             Column(Modifier.fillMaxSize().padding(horizontal = if (split) 20.dp else 24.dp, vertical = 24.dp)) {
                 Row(Modifier.fillMaxWidth().height(60.dp), verticalAlignment = Alignment.CenterVertically) {
                     DrawableIcon(R.drawable.driving_paw, size = 20.dp)
                     Spacer(Modifier.width(9.dp))
                     Text("mungo", style = Mg.bold(28, 35), color = Mg.Ink)
                     Spacer(Modifier.width(16.dp))
-                    Pill("도착", background = Mg.Peach, color = Mg.OrangeText, height = 40.dp, leading = { MgIcon(MgIcons.Flag, Mg.OrangeText, 16.dp) })
+                    // Figma 488:10786: 전체 화면에선 "도착" 칩이 왼쪽 카드 맨 위로 옮겨 갔다
+                    if (split) Pill("도착", background = Mg.Peach, color = Mg.OrangeText, height = 40.dp, leading = { MgIcon(MgIcons.Flag, Mg.OrangeText, 16.dp) })
                     Spacer(Modifier.weight(1f))
                     Box(Modifier.size(60.dp).clip(CircleShape).background(Color.White).clickable(onClick = onDone), contentAlignment = Alignment.Center) {
                         MgIcon(MgIcons.Close, Mg.Ink, 24.dp)
@@ -88,43 +91,60 @@ fun TripSummaryRoute(tripId: String, onDetail: () -> Unit, onDone: () -> Unit, v
                     Text(if (t == null) "기록을 불러오는 중이에요" else "기록을 정리하는 중이에요", style = Mg.Body, color = Mg.Muted)
                 } else {
                     val previous = previousTrip(all, t)
-                    if (split) SplitSummary(t, events, previous, viewModel::setMotion, onDetail) else FullSummary(t, events, previous, viewModel::setMotion, onDetail)
+                    val oneLine = line ?: OneLineUi(oneLine(t, events))
+                    if (split) SplitSummary(t, oneLine, previous, viewModel::setMotion, onDetail) else FullSummary(t, events, oneLine, previous, viewModel::setMotion, onDetail, onDone)
                 }
             }
         }
     }
 }
 
-private fun summaryTitle(trip: TripEntity) = "오늘 ${trip.petName}는\n${pastComfortLabel(trip.finalScore ?: 0)}"
+/** 출발지 → 도착지 (기록에 없으면 날짜 · 출발 시각) */
+private fun routeLine(trip: TripEntity) = when {
+    trip.origin != null && trip.destination != null -> "${trip.origin} → ${trip.destination}"
+    trip.destination != null -> "→ ${trip.destination}"
+    else -> "${dateText(trip.startedAtEpoch, "M월 d일")} · ${clockText(trip.startedAtEpoch)} 출발"
+}
 
-private fun summaryMeta(trip: TripEntity) =
-    "${koreanDuration(tripDurationMs(trip))} · 휴식 ${trip.restCount ?: 0}번"
-
+/**
+ * Figma 488:10786: 왼쪽 "오늘 요약"(400) — 도착 칩 · 경로 · 시간 | 휴식 · 점수 링(194) · 지난번 비교 · 오늘 한 줄.
+ * 오른쪽(752) — 횟수 타일 128 · 타임라인 330 · 이상징후 171 · 이동기록 보기 100 · 주행 완료 100.
+ */
 @Composable
-private fun FullSummary(trip: TripEntity, events: List<TripEventEntity>, previous: TripEntity?, onMotion: (MotionRecord) -> Unit, onDetail: () -> Unit) {
+private fun FullSummary(trip: TripEntity, events: List<TripEventEntity>, line: OneLineUi, previous: TripEntity?, onMotion: (MotionRecord) -> Unit, onDetail: () -> Unit, onDone: () -> Unit) {
     Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
-        MgCard(Modifier.width(400.dp).fillMaxHeight(), padding = PaddingValues(start = 32.dp, end = 20.dp, top = 30.dp, bottom = 20.dp)) {
-            Text(summaryTitle(trip), style = Mg.bold(34, 48), color = Mg.Ink)
-            Spacer(Modifier.height(8.dp))
-            Text("${dateText(trip.startedAtEpoch, "M월 d일")} · ${clockText(trip.startedAtEpoch)} 출발", style = Mg.Body, color = Mg.Muted)
-            Text(summaryMeta(trip), style = Mg.Body, color = Mg.Muted)
-            if (trip.simulated || trip.status == "INTERRUPTED") {
-                Text(if (trip.simulated) "에뮬레이터 데이터로 기록됐어요" else "비정상 종료된 기록이에요", style = Mg.Caption, color = Mg.OrangeText)
-            }
+        MgCard(Modifier.width(400.dp).fillMaxHeight(), padding = PaddingValues(start = 20.dp, end = 20.dp, top = 57.dp, bottom = 20.dp)) {
             Column(Modifier.fillMaxWidth().weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-                Spacer(Modifier.weight(1f))
-                ScoreRing((trip.finalScore ?: 0) / 100f, 216.dp, 24.dp) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("${trip.finalScore}", style = Mg.bold(84, 104), color = Mg.Ink)
-                        // Figma 464:46775: 라벨이 숫자 바로 아래 (Noto 글줄이 높아 그대로 두면 링 선에 겹친다)
-                        Text("컴포트 점수", Modifier.offset(y = (-22).dp), style = Mg.Body, color = Mg.Muted)
+                Pill("도착", height = 52.dp, horizontalPadding = 34.dp, background = Mg.StatusChip, color = Mg.OrangeText, style = Mg.semi(24, 29))
+                Spacer(Modifier.height(28.dp))
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+                    MgIcon(MgIcons.Flag, Mg.OrangeText, 16.dp)
+                    Text(routeLine(trip), style = Mg.semi(24, 29), color = Mg.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                }
+                Spacer(Modifier.height(7.dp))
+                Text("${koreanDuration(tripDurationMs(trip))} | 휴식 ${trip.restCount ?: 0}번", style = Mg.regular(24, 29), color = Mg.Ink)
+                if (trip.simulated || trip.status == "INTERRUPTED") {
+                    Text(if (trip.simulated) "에뮬레이터 데이터로 기록됐어요" else "비정상 종료된 기록이에요", style = Mg.Caption, color = Mg.OrangeText)
+                }
+                // 링이 Figma(194)보다 커진 만큼 위아래 간격을 똑같이 나눠 가진다
+                Spacer(Modifier.weight(1f).heightIn(min = 16.dp))
+                // 100점이 링 안쪽에 들어가는 크기 기준
+                ScoreRing((trip.finalScore ?: 0) / 100f, 236.dp, 24.dp, description = "컴포트 점수 ${trip.finalScore}") {
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text("${trip.finalScore}", style = Mg.bold(80, 97), color = Mg.Ink)
+                        Text("점", Modifier.padding(start = 2.dp, bottom = 18.dp), style = Mg.medium(24, 29), color = Color(0xFF7C899D))
                     }
                 }
-                Spacer(Modifier.height(30.dp))
-                scoreDeltaText(trip, previous)?.let { Pill(it, leading = { MgIcon(MgIcons.Gauge, Mg.Ink, 18.dp) }) }
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.weight(1f).heightIn(min = 16.dp))
+                // 지난번 기록이 있을 때만 보이지만, 자리는 항상 잡아 둔다 (첫 기록에도 링 · 한 줄 카드 위치가 같게)
+                Box(Modifier.height(DELTA_PILL_HEIGHT), contentAlignment = Alignment.Center) {
+                    scoreDeltaText(trip, previous)?.let {
+                        Pill(it, style = Mg.semi(24, 29), leading = { MgIcon(MgIcons.Gauge, Mg.Ink, 18.dp) })
+                    }
+                }
+                Spacer(Modifier.height(24.dp))
             }
-            OneLineCard(trip, events, Modifier.fillMaxWidth().height(312.dp), compact = false)
+            OneLineCard("${trip.petName}의 오늘 한 줄", line, Modifier.fillMaxWidth().height(312.dp), compact = false)
         }
         Column(Modifier.weight(1f).fillMaxHeight()) {
             Row(Modifier.fillMaxWidth().height(128.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
@@ -136,21 +156,27 @@ private fun FullSummary(trip: TripEntity, events: List<TripEventEntity>, previou
             Spacer(Modifier.height(16.dp))
             MgCard(Modifier.fillMaxWidth().height(330.dp), padding = PaddingValues(horizontal = 30.dp, vertical = 24.dp)) {
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                    Text("흔들림 타임라인", Modifier.weight(1f), style = Mg.BodyStrong, color = Mg.Ink)
+                    Text("흔들림 타임라인", Modifier.weight(1f), style = Mg.semi(24, 29), color = Mg.Ink)
                     Text("막대가 높을수록 많이 흔들렸어요", style = Mg.Body, color = Mg.Muted)
                 }
                 ShakeTimeline(trip, events, Modifier.fillMaxWidth().weight(1f).padding(top = 10.dp))
             }
-            Spacer(Modifier.height(18.dp))
+            Spacer(Modifier.height(19.dp))
             MotionChipsCard(trip, onMotion, compact = false, modifier = Modifier.fillMaxWidth().weight(1f))
-            Spacer(Modifier.height(16.dp))
-            SecondaryButton("이동기록 보기", onDetail, Modifier.fillMaxWidth().height(100.dp), icon = MgIcons.Doc, style = Mg.semi(23, 31))
+            Spacer(Modifier.height(19.dp))
+            SecondaryButton("이동기록 보기", onDetail, Modifier.fillMaxWidth().height(100.dp), icon = MgIcons.Doc, style = Mg.bold(30, 36))
+            Spacer(Modifier.height(15.dp))
+            // Figma 488:11007: 남색 "주행 완료" (닫기와 같은 동작)
+            Box(
+                Modifier.fillMaxWidth().height(100.dp).clip(CircleShape).background(Mg.Ink).clickable(onClick = onDone),
+                contentAlignment = Alignment.Center
+            ) { Text("주행 완료", style = Mg.semi(30, 36), color = Color.White) }
         }
     }
 }
 
 @Composable
-private fun SplitSummary(trip: TripEntity, events: List<TripEventEntity>, previous: TripEntity?, onMotion: (MotionRecord) -> Unit, onDetail: () -> Unit) {
+private fun SplitSummary(trip: TripEntity, line: OneLineUi, previous: TripEntity?, onMotion: (MotionRecord) -> Unit, onDetail: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         MgCard(Modifier.fillMaxWidth().height(188.dp), padding = PaddingValues(horizontal = 30.dp, vertical = 24.dp)) {
             Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(30.dp)) {
@@ -166,7 +192,7 @@ private fun SplitSummary(trip: TripEntity, events: List<TripEventEntity>, previo
                     Text(pastComfortLabel(trip.finalScore ?: 0), style = Mg.bold(34, 46), color = Mg.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(
                         listOfNotNull(koreanDuration(tripDurationMs(trip)), scoreDeltaText(trip, previous)).joinToString(" · "),
-                        style = Mg.Body, color = Mg.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis
+                        style = Mg.regular(22, 30), color = Mg.Muted, maxLines = 1, overflow = TextOverflow.Ellipsis
                     )
                 }
             }
@@ -182,8 +208,9 @@ private fun SplitSummary(trip: TripEntity, events: List<TripEventEntity>, previo
         // 높이를 고정하지 않는다: 칩이 두 줄로 넘어가도 아래 안내 문구가 잘리지 않게
         MotionChipsCard(trip, onMotion, compact = true, modifier = Modifier.fillMaxWidth())
         Spacer(Modifier.height(12.dp))
-        OneLineCard(trip, events, Modifier.fillMaxWidth().weight(1f), compact = true)
-        Spacer(Modifier.height(12.dp))
+        // 높이를 고정하지 않고 내용만큼 (위아래 25). 남는 자리는 버튼 위로
+        OneLineCard("${trip.petName}의 오늘 한 줄", line, Modifier.fillMaxWidth(), compact = true)
+        Spacer(Modifier.weight(1f).heightIn(min = 12.dp))
         SecondaryButton("리포트 자세히 보기", onDetail, Modifier.fillMaxWidth().height(80.dp), icon = MgIcons.Doc)
     }
 }
@@ -216,25 +243,43 @@ private fun SummaryStatTile(
     }
 }
 
+/** Figma 488:10831 / 488:13290: AI가 오늘 기록을 보고 쓴 한 줄 (받는 중엔 정리 중 안내, 못 받으면 규칙 문장) */
 @Composable
-private fun OneLineCard(trip: TripEntity, events: List<TripEventEntity>, modifier: Modifier, compact: Boolean) {
+private fun OneLineCard(title: String, line: OneLineUi, modifier: Modifier, compact: Boolean) {
+    if (!compact) {
+        Column(modifier.background(Mg.Ink, RoundedCornerShape(Mg.Radius)).padding(start = 30.dp, end = 24.dp, top = 28.dp, bottom = 24.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                MgIcon(MgIcons.Bulb, Mg.Orange, 20.dp)
+                Text(title, style = Mg.medium(24, 29), color = Mg.Orange)
+            }
+            Spacer(Modifier.height(25.dp))
+            Text(
+                // 한국어는 어절 단위로 줄바꿈 (낱글자에서 끊기지 않게)
+                line.text, Modifier.padding(start = 24.dp), style = Mg.semi(30, 40).copy(lineBreak = LineBreak.Heading),
+                color = if (line.loading) Mg.OnDarkMuted else Color.White,
+                maxLines = 5, overflow = TextOverflow.Ellipsis
+            )
+        }
+        return
+    }
     Column(
-        modifier.background(Mg.Ink, RoundedCornerShape(Mg.Radius))
-            .padding(horizontal = if (compact) 28.dp else 24.dp, vertical = if (compact) 16.dp else 24.dp),
-        verticalArrangement = Arrangement.spacedBy(if (compact) 10.dp else 14.dp, Alignment.CenterVertically)
+        modifier.background(Mg.Ink, RoundedCornerShape(Mg.Radius)).padding(horizontal = 28.dp, vertical = 25.dp),
+        verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             MgIcon(MgIcons.Bulb, Mg.Orange, 20.dp)
-            Text("${trip.petName}의 오늘 한 줄", style = Mg.BodyStrong, color = Mg.Orange)
+            Text(title, style = Mg.BodyStrong, color = Mg.Orange)
         }
-        // 화면 분할에선 칸 높이가 정해져 있어 줄 수를 묶는다 (넘치면 …)
+        // 한 줄 내용이 다 보이도록 줄 수를 넉넉히 (서버 응답은 70자 이내), 어절 단위로 줄바꿈
         Text(
-            oneLine(trip, events), style = Mg.semi(22, if (compact) 32 else 38), color = Color.White,
-            maxLines = if (compact) 2 else Int.MAX_VALUE, overflow = TextOverflow.Ellipsis
+            line.text, style = Mg.semi(22, 32).copy(lineBreak = LineBreak.Heading),
+            color = if (line.loading) Mg.OnDarkMuted else Color.White, maxLines = 4, overflow = TextOverflow.Ellipsis
         )
-        if (compact) Text("흔들림 타임라인은 리포트에서 볼 수 있어요", style = Mg.Body, color = Mg.OnDarkMuted, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
+
+/** "지난번보다 2점 올랐어요" 알약 자리 (없어도 높이는 유지) */
+private val DELTA_PILL_HEIGHT = 44.dp
 
 private val SummarySigns = listOf(MotionSign.YAWN, MotionSign.DROOL, MotionSign.PANT, MotionSign.SHAKE, MotionSign.VOMIT)
 
@@ -243,7 +288,7 @@ private val SummarySigns = listOf(MotionSign.YAWN, MotionSign.DROOL, MotionSign.
 @Composable
 fun MotionChipsCard(trip: TripEntity, onMotion: (MotionRecord) -> Unit, compact: Boolean, modifier: Modifier) {
     val record = MotionRecord.decode(trip.motionSicknessSigns) ?: MotionRecord()
-    MgCard(modifier, padding = PaddingValues(horizontal = if (compact) 26.dp else 30.dp, vertical = 22.dp)) {
+    MgCard(modifier, padding = if (compact) PaddingValues(horizontal = 26.dp, vertical = 22.dp) else PaddingValues(start = 30.dp, end = 30.dp, top = 25.dp, bottom = 26.dp)) {
         if (compact) {
             Text("${trip.petName}에게 이런 모습이 있었나요?", style = Mg.BodyStrong, color = Mg.Ink)
             Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -251,23 +296,28 @@ fun MotionChipsCard(trip: TripEntity, onMotion: (MotionRecord) -> Unit, compact:
                 Text("고른 모습은 다음 안내에 반영해요", style = Mg.Body, color = Mg.OrangeText)
             }
         } else {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text("${trip.petName}에게 이런 모습이 있었나요?", Modifier.weight(1f), style = Mg.BodyStrong, color = Mg.Ink)
-                MgIcon(MgIcons.Check, Mg.OrangeText, 16.dp)
-                Spacer(Modifier.width(8.dp))
-                Text("다음 안내에 반영해요", style = Mg.BodyStrong, color = Mg.OrangeText)
+            // Figma 488:10925: "이상징후 기록" · 고르면 오른쪽에 "저장됨"
+            Row(Modifier.fillMaxWidth().height(29.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("이상징후 기록", Modifier.weight(1f), style = Mg.semi(24, 29), color = Mg.Ink)
+                if (record.entered) {
+                    MgIcon(MgIcons.Check, Mg.OrangeText, 16.dp)
+                    Spacer(Modifier.width(8.dp))
+                    Text("저장됨", style = Mg.bold(24, 29), color = Mg.OrangeText)
+                }
             }
         }
         // compact는 높이를 내용에 맞춘다 (weight 여백을 쓰면 남은 칸을 다 차지해 버림)
         if (compact) Spacer(Modifier.height(16.dp)) else Spacer(Modifier.weight(1f))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(if (compact) 10.dp else 9.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
             SummarySigns.forEach { sign ->
                 SelectChip(sign.label, record.count(sign) > 0, compact) { onMotion(record.toggle(sign)) }
             }
             SelectChip("괜찮았어요", record.fine, compact) { onMotion(record.markFine()) }
         }
-        if (compact) Spacer(Modifier.height(14.dp)) else Spacer(Modifier.weight(1f))
-        Text("보호자 입력 · 진단이 아니에요", style = Mg.Caption, color = Mg.Faint)
+        if (compact) {
+            Spacer(Modifier.height(14.dp))
+            Text("보호자 입력 · 진단이 아니에요", style = Mg.Caption, color = Mg.Faint)
+        }
     }
 }
 
@@ -278,7 +328,7 @@ private fun SelectChip(text: String, selected: Boolean, compact: Boolean, onClic
         background = if (selected) Mg.Orange else Color.White,
         color = if (selected) Color.White else Mg.Ink,
         border = if (selected) null else Mg.Line,
-        height = if (compact) 56.dp else 84.dp,
+        height = if (compact) 56.dp else 66.dp,
         // Figma 464:46884: 고름 B24 흰 글자 · 안 고름 R24 · 좌우 18 · 체크와 글자 사이 14
         style = if (compact) Mg.semi(22, 29) else if (selected) Mg.bold(24, 32) else Mg.regular(24, 32),
         leading = if (selected) ({ MgIcon(MgIcons.Check, Color.White, 14.dp) }) else null,

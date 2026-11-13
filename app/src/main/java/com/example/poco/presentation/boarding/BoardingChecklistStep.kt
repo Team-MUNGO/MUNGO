@@ -45,7 +45,7 @@ internal fun ColumnScope.ChecklistLeft(uiState: BoardingUiState, actions: Boardi
     VoiceRow(
         isListening = uiState.isListening,
         heardText = uiState.heardText,
-        example = "Gleo, 다 확인했어",
+        example = "mungo, 다 확인했어",
         onMic = actions.onMic
     )
     Spacer(Modifier.height(45.dp))
@@ -99,7 +99,7 @@ internal fun Checklist(uiState: BoardingUiState, actions: BoardingActions) {
             .padding(horizontal = 48.dp),
         verticalArrangement = Arrangement.Center
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        Column(verticalArrangement = Arrangement.spacedBy(19.dp)) { // Figma 488:7706: 139 높이 · 19 간격
             CheckItem.entries.forEach { item ->
                 CheckRow(
                     item = item,
@@ -135,7 +135,7 @@ private fun CheckRow(item: CheckItem, uiState: BoardingUiState, onClick: () -> U
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = 132.dp)
+            .heightIn(min = 139.dp)
             .background(colors.bgSurface, shape)
             .pressable(shape, enabled = auto != true, onClick = onClick)
             .padding(horizontal = 36.dp, vertical = 20.dp),

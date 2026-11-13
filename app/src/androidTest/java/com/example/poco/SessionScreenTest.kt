@@ -54,26 +54,28 @@ class SessionScreenTest {
         val ai = mutableStateOf(AssistantUiState(configured = true, consented = true, anonymousAuth = true))
         compose.setContent { POCOTheme { SessionScreen(state.value, {}, {}, {}, {}, assistantState = ai.value) } }
         val before = compose.onNodeWithText("실내 온도").fetchSemanticsNode().boundsInRoot
-        compose.onNodeWithText("현댕이가 편안하게 가는지 지켜볼게요.").assertDoesNotExist()
-        compose.onNodeWithText("Gleo").assertDoesNotExist()
-        compose.onNodeWithText("“글레오, 현댕이 괜찮아?”").assertDoesNotExist()
+        // Figma 488:10266: 말한 안내가 없어도 음성 카드는 지금 상태 문장을, 아래엔 질문 안내 줄을 늘 보여 준다
+        compose.onNodeWithText("현댕이가 편안하게 가고 있어요", substring = true).assertExists()
+        val mungoLabels = compose.onAllNodesWithText("mungo").fetchSemanticsNodes().size
+        compose.onNodeWithText("“mungo, 현댕이 괜찮아?”").assertExists()
         capture("driving-empty.png")
-        compose.runOnIdle { ai.value = ai.value.copy(phase = AssistantPhase.LISTENING, question = "글레오, 현댕이 괜찮아?") }
-        compose.onNodeWithText("“글레오, 현댕이 괜찮아?”").assertExists()
-        compose.onNodeWithText("Gleo").assertDoesNotExist()
-        val questionBeforeAnswer = compose.onNodeWithText("“글레오, 현댕이 괜찮아?”").fetchSemanticsNode().boundsInRoot
+        compose.runOnIdle { ai.value = ai.value.copy(phase = AssistantPhase.LISTENING, question = "mungo, 현댕이 괜찮아?") }
+        compose.onNodeWithText("“mungo, 현댕이 괜찮아?”").assertExists()
+        assertEquals(mungoLabels, compose.onAllNodesWithText("mungo").fetchSemanticsNodes().size)
+        val questionBeforeAnswer = compose.onNodeWithText("“mungo, 현댕이 괜찮아?”").fetchSemanticsNode().boundsInRoot
         capture("driving-listening.png")
         compose.runOnIdle { ai.value = ai.value.copy(phase = AssistantPhase.THINKING) }
-        compose.onNodeWithText("“글레오, 현댕이 괜찮아?”").assertExists()
+        compose.onNodeWithText("“mungo, 현댕이 괜찮아?”").assertExists()
         compose.runOnIdle {
-            ai.value = ai.value.copy(phase = AssistantPhase.IDLE, answerText = "새로운 글레오 응답입니다.")
-            state.value = SessionUiState(state.value.session.copy(gleoResponse = "새로운 글레오 응답입니다."))
+            ai.value = ai.value.copy(phase = AssistantPhase.IDLE, answerText = "새로운 mungo 응답입니다.")
+            state.value = SessionUiState(state.value.session.copy(gleoResponse = "새로운 mungo 응답입니다."))
         }
-        compose.onNodeWithText("새로운 글레오 응답입니다.").assertExists()
-        val answer = compose.onNodeWithText("새로운 글레오 응답입니다.").fetchSemanticsNode().boundsInRoot
-        val question = compose.onNodeWithText("“글레오, 현댕이 괜찮아?”").fetchSemanticsNode().boundsInRoot
+        compose.onNodeWithText("“새로운 mungo 응답입니다.”").assertExists()
+        val answer = compose.onNodeWithText("“새로운 mungo 응답입니다.”").fetchSemanticsNode().boundsInRoot
+        val question = compose.onNodeWithText("“mungo, 현댕이 괜찮아?”").fetchSemanticsNode().boundsInRoot
         assertTrue(answer.bottom < question.top)
-        assertTrue(question.top > questionBeforeAnswer.top)
+        // 카드 · 질문 줄 자리가 고정이라 답이 와도 질문 줄은 움직이지 않는다
+        assertEquals(questionBeforeAnswer.top, question.top)
         capture("driving-question-answer.png")
         val after = compose.onNodeWithText("실내 온도").fetchSemanticsNode().boundsInRoot
         assertEquals(before, after)
@@ -82,9 +84,9 @@ class SessionScreenTest {
     @Test fun actualTtsShowsGuidanceAndIdleDoesNotShowStaleResponse() {
         val session = mutableStateOf(DrivingSessionState(active = true, gleoResponse = "실제 음성 안내", ttsSpeaking = true))
         compose.setContent { POCOTheme { SessionScreen(SessionUiState(session.value), {}, {}, {}, {}) } }
-        compose.onNodeWithText("실제 음성 안내").assertExists()
+        compose.onNodeWithText("“실제 음성 안내”").assertExists()
         compose.runOnIdle { session.value = session.value.copy(ttsSpeaking = false) }
-        compose.onNodeWithText("실제 음성 안내").assertDoesNotExist()
+        compose.onNodeWithText("“실제 음성 안내”").assertDoesNotExist()
     }
 
     @Test fun proposalPreservesTileGeometryAndUnverifiedPlaceIsDisabled() {
@@ -124,7 +126,7 @@ class SessionScreenTest {
                 }
             }
         }
-        listOf("35", "분", "23", "°C", "1시간 30분 간격", "닫힘").forEach { assertTrue(it, exists(it)) }
+        listOf("35", "분", "23", "°C", "닫힘").forEach { assertTrue(it, exists(it)) }
         capture("driving-full.png")
         compose.runOnIdle { narrow.value = true }
         listOf("35", "분", "23", "°C", "닫힘").forEach { assertTrue(it, exists(it)) }

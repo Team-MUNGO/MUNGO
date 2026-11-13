@@ -175,7 +175,7 @@ fun matchPetsByVoice(heard: String?, pets: List<Pet>): Set<Long> {
         .toSet()
 }
 
-/** "Gleo, 다 확인했어" → true */
+/** "mungo, 다 확인했어" → true */
 fun isAllCheckedReply(heard: String?): Boolean {
     val text = heard?.replace(" ", "") ?: return false
     return ALL_CHECKED_WORDS.any { text.contains(it) }

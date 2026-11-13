@@ -49,7 +49,6 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.poco.core.theme.pocoNotoFontFamily
 import com.example.poco.R
 import com.example.poco.core.driving.DrivingGear
 import com.example.poco.core.driving.RestPhase
@@ -233,9 +232,9 @@ fun SessionScreen(
     BoxWithConstraints(modifier.fillMaxSize().background(Mg.Bg)) {
         val split = maxWidth < SplitLayoutMaxWidth
         // Each layout has its own reference size; the split panel is not a scaled-down full screen.
-        DesignCanvas(if (split) SplitRefWidth else FullRefWidth, RefHeight, fontFamily = pocoNotoFontFamily) {
+        DesignCanvas(if (split) SplitRefWidth else FullRefWidth, RefHeight) {
             Column(Modifier.fillMaxSize().padding(horizontal = if (split) 20.dp else 24.dp, vertical = 24.dp)) {
-                DrivingHeader(state, assistantState, actions)
+                DrivingHeader(state, assistantState, actions, showStatus = split)
                 Spacer(Modifier.height(22.dp))
                 Box(Modifier.weight(1f).fillMaxWidth()) {
                     if (split) SplitDrivingLayout(state, assistantState, actions) else FullDrivingLayout(state, assistantState, actions)
@@ -259,7 +258,7 @@ fun SessionScreen(
 
 /** Figma "멍고 헤더": paw + mungo, status chip, then the round Gleo (voice) button. */
 @Composable
-private fun DrivingHeader(state: DrivingSessionState, ai: AssistantUiState, actions: SessionActions) {
+private fun DrivingHeader(state: DrivingSessionState, ai: AssistantUiState, actions: SessionActions, showStatus: Boolean) {
     val resting = state.active && state.rest.phase != RestPhase.DRIVING
     val parked = state.gear.valueOrNull() == DrivingGear.PARK
     Row(Modifier.fillMaxWidth().height(60.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -267,7 +266,8 @@ private fun DrivingHeader(state: DrivingSessionState, ai: AssistantUiState, acti
         Spacer(Modifier.width(9.dp))
         Text("mungo", style = Mg.bold(28, 35), color = Mg.Ink)
         Spacer(Modifier.width(16.dp))
-        when {
+        // Figma 488:10266 · 488:10634: 전체 화면에선 상태 칩이 왼쪽 카드 맨 위로 옮겨 갔다 (헤더엔 로고만)
+        if (showStatus) when {
             !state.active -> Pill("주행 준비", background = Mg.Chip, color = Mg.Muted, height = 40.dp)
             resting -> Pill(
                 "휴식 중", background = Mg.Peach, color = Mg.OrangeText, height = 40.dp,
@@ -329,10 +329,11 @@ private fun FullDrivingLayout(state: DrivingSessionState, ai: AssistantUiState, 
         if (resting) {
             RestSummaryFull(state, Modifier.width(420.dp).fillMaxHeight())
             Column(Modifier.weight(1f).fillMaxHeight()) {
-                RestChecklist(state, compact = false, modifier = Modifier.fillMaxWidth().height(386.dp))
-                Spacer(Modifier.weight(1f))
+                // Figma 488:10672 ~ 488:10701: 412 · 30 · 186 · 29 · 120 · 25 · 96
+                RestChecklist(state, compact = false, modifier = Modifier.fillMaxWidth().height(412.dp))
+                Spacer(Modifier.height(30.dp))
                 GleoSlot(state, ai, actions, compact = false, modifier = Modifier.fillMaxWidth().height(186.dp), restMode = true)
-                Spacer(Modifier.weight(1f))
+                Spacer(Modifier.height(29.dp))
                 RestPlaceCard(state, compact = false, modifier = Modifier.fillMaxWidth().height(120.dp))
                 Spacer(Modifier.weight(1f))
                 RestDepartButton(state, actions, Modifier.fillMaxWidth().height(96.dp))
@@ -411,7 +412,7 @@ private fun RestDepartButton(state: DrivingSessionState, actions: SessionActions
             )
         }
     } else {
-        PrimaryButton("다시 출발 준비", actions.onReadyToDepart, modifier, style = Mg.semi(23, 30))
+        PrimaryButton("다시 출발 준비", actions.onReadyToDepart, modifier, style = Mg.semi(30, 36))
     }
 }
 

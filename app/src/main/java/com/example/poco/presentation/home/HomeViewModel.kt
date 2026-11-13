@@ -13,6 +13,7 @@ import com.example.poco.data.repository.NaviRepository
 import com.example.poco.data.repository.PetRepository
 import com.example.poco.data.repository.TripRepository
 import com.example.poco.data.repository.WindowRepository
+import com.example.poco.data.settings.UserSettingsRepository
 import com.example.poco.data.vehicle.VehicleLinkRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.DayOfWeek
@@ -48,7 +49,8 @@ class HomeViewModel @Inject constructor(
     private val tripRepository: TripRepository,
     private val naviRepository: NaviRepository,
     private val toastMessenger: ToastMessenger,
-    private val vehicleLink: VehicleLinkRepository
+    private val vehicleLink: VehicleLinkRepository,
+    private val userSettings: UserSettingsRepository
 ) : ViewModel() {
     private val linked = vehicleLink.state.map { it.linked }.distinctUntilChanged()
 
@@ -64,7 +66,27 @@ class HomeViewModel @Inject constructor(
         observeTripSettings()
         observeLastTrip()
         observeWeekTrips()
+        observeRestInterval()
         checkWindows()
+    }
+
+    private fun observeRestInterval() {
+        viewModelScope.launch {
+            userSettings.restIntervalMinutes
+                .catch { Timber.w(it, "휴식 간격 조회 실패") }
+                .collect { minutes -> _uiState.update { it.copy(restIntervalMinutes = minutes) } }
+        }
+    }
+
+    /** 차종 이름은 연동 중에만 읽을 수 있다. 해지 후 홈에서도 '그랜저 · 연동이 꺼져 있어요'로 쓰려고 기억해 둔다 */
+    private fun loadVehicleName() {
+        if (!vehicleLink.isLinked) return
+        viewModelScope.launch {
+            runCatching { vehicleLink.identity().displayName }
+                .onFailure { Timber.w(it, "차종 조회 실패") }
+                .getOrNull()
+                ?.let { name -> _uiState.update { it.copy(vehicleName = name) } }
+        }
     }
 
     /** 연동을 해지하면 차량 값을 비우고, 다시 연결하면 온도 · 창문을 다시 읽는다 */
@@ -83,6 +105,7 @@ class HomeViewModel @Inject constructor(
                     _uiState.value.pet?.let { loadSeatTemperature(it) }
                     checkWindows()
                 }
+                if (isLinked && _uiState.value.vehicleName == null) loadVehicleName()
                 wasLinked = isLinked
             }
         }
@@ -156,7 +179,7 @@ class HomeViewModel @Inject constructor(
         }
     }
 
-    /** Pleos 내비에서 길 안내를 시작하면 주행 화면으로 (기어 D와 같은 효과) */
+    /** 차량 내비에서 길 안내를 시작하면 주행 화면으로 (기어 D와 같은 효과) */
     private fun observeRouteStart() {
         viewModelScope.launch {
             linked.flatMapLatest { if (it) naviRepository.observeEvents() else emptyFlow() }
@@ -247,10 +270,6 @@ class HomeViewModel @Inject constructor(
 
     fun setVoiceGuideEnabled(enabled: Boolean) {
         viewModelScope.launch { departureRepository.setVoiceGuideEnabled(enabled) }
-    }
-
-    fun setRearTempWatchEnabled(enabled: Boolean) {
-        viewModelScope.launch { departureRepository.setRearTempWatchEnabled(enabled) }
     }
 
     private fun minuteTicker(): Flow<Long> = flow {

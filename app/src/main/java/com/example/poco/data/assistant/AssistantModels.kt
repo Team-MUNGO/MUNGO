@@ -104,3 +104,39 @@ fun AssistResponse.validate(request: AssistRequest): AssistResponse {
 fun AssistPlace.toVerifiedPlace(response: AssistResponse): VerifiedPlace? =
     takeIf { canAddWaypoint && response.sources.places == "google_maps" }
         ?.let { VerifiedPlace(placeId, name, latitude, longitude, address) }
+
+/** "멍고의 오늘 한 줄" (/summary): only recorded trip values, no coordinates or vehicle identifiers. */
+@Serializable
+data class TripSummaryCounts(
+    val rapidBraking: Int,
+    val sharpTurn: Int,
+    val speedBump: Int,
+    val rapidAcceleration: Int,
+    val windowWarning: Int,
+    val temperatureAlert: Int
+)
+
+/** [minute] = minutes since departure (clock times are never sent, so the AI cannot invent them). */
+@Serializable
+data class TripSummaryEvent(val minute: Int, val kind: String, val scoreDelta: Int? = null)
+
+@Serializable
+data class TripSummaryInput(
+    val petName: String,
+    val durationMinutes: Int,
+    val finalScore: Int,
+    val minScore: Int? = null,
+    /** Only when an earlier completed trip exists */
+    val previousScore: Int? = null,
+    val restCount: Int,
+    val restMinutes: Int,
+    val counts: TripSummaryCounts,
+    val events: List<TripSummaryEvent>,
+    val motionSigns: List<String>
+)
+
+@Serializable
+data class TripSummaryRequest(val requestId: String, val trip: TripSummaryInput)
+
+@Serializable
+data class TripSummaryResponse(val requestId: String, val text: String)

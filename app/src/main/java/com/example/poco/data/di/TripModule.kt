@@ -6,6 +6,7 @@ import androidx.room.Room
 import com.example.poco.data.assistant.LocationStream
 import com.example.poco.data.assistant.PleosLocationStream
 import com.example.poco.data.record.TRIP_MIGRATION_1_2
+import com.example.poco.data.record.TRIP_MIGRATION_2_3
 import com.example.poco.data.record.TripDao
 import com.example.poco.data.record.TripDatabase
 import com.example.poco.data.record.TripHistoryRepository
@@ -43,7 +44,7 @@ abstract class TripBindings {
 object TripModule {
     @Provides @Singleton
     fun database(@ApplicationContext context: Context): TripDatabase =
-        Room.databaseBuilder(context, TripDatabase::class.java, "poco_trips.db").addMigrations(TRIP_MIGRATION_1_2).build()
+        Room.databaseBuilder(context, TripDatabase::class.java, "poco_trips.db").addMigrations(TRIP_MIGRATION_1_2, TRIP_MIGRATION_2_3).build()
 
     @Provides
     fun dao(db: TripDatabase): TripDao = db.trips()

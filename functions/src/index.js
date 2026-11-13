@@ -8,6 +8,7 @@ import { readFileSync } from 'node:fs';
 import { ApiError, credential, exactKeys, generateAnswer, validateQuestion } from './assistant.js';
 import { AssistantStore } from './store.js';
 import { assist, validateAssist } from './assist.js';
+import { summarize, validateSummary } from './summary.js';
 initializeApp();
 const geminiKey=defineSecret('GEMINI_API_KEY');
 const ipSalt=defineSecret('ASSISTANT_IP_SALT');
@@ -31,17 +32,20 @@ export const assistantApi=onRequest({region:'asia-northeast3',serviceAccount:ser
       await store.bootstrapAttempt(ipHash(),now);
       exactKeys(req.body,['invitation']);
       res.json(await store.exchange(req.body.invitation,now));
-    } else if (path === '/answer' || path === '/assist') {
+    } else if (path === '/answer' || path === '/assist' || path === '/summary') {
       const cred=credential(req.get('authorization'));
       const structured=path === '/assist';
-      const input=structured ? validateAssist(req.body) : validateQuestion(req.body);
+      const summary=path === '/summary';
+      const input=summary ? validateSummary(req.body) : structured ? validateAssist(req.body) : validateQuestion(req.body);
       if (cred.kind === 'firebase') {
         // Judge/app path: Firebase Auth (anonymous) ID token, signature/audience/expiry verified by Admin SDK.
         let uid;
         try { uid=(await auth.verifyIdToken(cred.token)).uid; } catch { throw new ApiError(401,'UNAUTHENTICATED','AI 연결이 만료되었어요. 다시 연결해 주세요.'); }
         await store.reserveUser(uid,ipHash(),now);
       } else await store.reserve(cred.token,now);
-      if (structured) {
+      if (summary) {
+        res.json(await summarize(input,{geminiKey:geminiKey.value(),model:model.value()}));
+      } else if (structured) {
         res.json(await assist(input,{geminiKey:geminiKey.value(),mapsKey:mapsKey.value(),model:model.value(),reserveMaps:()=>store.reserveMaps(now)}));
       } else {
         res.json(await generateAnswer(input,{apiKey:geminiKey.value(),model:model.value(),catalog,now}));

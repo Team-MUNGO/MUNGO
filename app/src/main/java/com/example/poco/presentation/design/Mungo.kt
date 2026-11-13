@@ -72,8 +72,17 @@ object Mg {
     val Orange = Color(0xFFFF8200)
     val OrangeText = Color(0xFFB35400)
     val Peach = Color(0xFFFFF7EE)
+    /** Figma 488:10409 · 10759 · 11013: 전체 화면 카드 맨 위 상태 칩 (주행중 · 휴식중 · 도착) */
+    val StatusChip = Color(0xFFFFF9E7)
     val IconBg = Color(0xFFFFF1E2)
     val WarnBorder = Color(0xFFFF9F3C)
+
+    /** 값이 기준을 벗어난 상태 타일 (Figma 488:12312 실내 온도 경고): 연한 망고 면 + 망고 3px 테두리 */
+    /** 주행 컴포트 말풍선 (Figma 488:10411) */
+    val Bubble = Color(0xFF1E3351)
+    val AlertBg = Color(0xFFFFF1E2)
+    val AlertStroke = Color(0xFFFF8200)
+    val AlertStrokeWidth = 3.dp
     val Chip = Color(0xFFF2F4F6)
     val Segment = Color(0xFFE8EBEE)
     val Yellow = Color(0xFFFFF9E7)
@@ -142,12 +151,13 @@ fun MgCard(
     border: Color? = null,
     radius: Dp = Mg.Radius,
     padding: PaddingValues = PaddingValues(24.dp),
+    borderWidth: Dp = 2.dp,
     content: @Composable ColumnScope.() -> Unit
 ) {
     val shape = RoundedCornerShape(radius)
     Column(
         modifier.clip(shape).background(color, shape)
-            .then(if (border != null) Modifier.border(2.dp, border, shape) else Modifier)
+            .then(if (border != null) Modifier.border(borderWidth, border, shape) else Modifier)
             .padding(padding),
         content = content
     )
