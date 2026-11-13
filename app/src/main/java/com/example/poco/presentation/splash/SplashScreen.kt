@@ -24,6 +24,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -32,6 +34,7 @@ import com.example.poco.R
 import com.example.poco.core.designsystem.MungoLogo
 import com.example.poco.core.theme.POCOTheme
 import com.example.poco.core.theme.PocoSpacing
+import com.example.poco.presentation.design.Mg
 
 @Composable
 fun SplashRoute(
@@ -116,21 +119,22 @@ private fun SplashScreen(modifier: Modifier = Modifier) {
             .safeDrawingPadding()
     ) {
         Column(
-            modifier = Modifier.align(Alignment.Center),
+            // Figma 470:54315: 로고 160 (y 450) · 소개 R30 (y 653) · 가운데보다 조금 위
+            modifier = Modifier.align(Alignment.Center).offset(y = (-58).dp),
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            MungoLogo(height = 140.dp)
-            Spacer(Modifier.height(PocoSpacing.space48))
+            MungoLogo(height = 160.dp)
+            Spacer(Modifier.height(43.dp))
             Text(
                 text = "소중한 반려동물과 함께하는 안심 드라이브",
-                style = POCOTheme.typography.body1,
-                color = colors.textTertiary
+                style = Mg.regular(30, 36),
+                color = colors.textSecondary
             )
         }
         Text(
             text = "Pleos Connect ©",
-            style = POCOTheme.typography.body3,
-            color = colors.textTertiary,
+            style = Mg.regular(22, 26),
+            color = Color(0xFF9AA4B0),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .padding(bottom = PocoSpacing.space48)

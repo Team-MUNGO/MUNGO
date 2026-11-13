@@ -65,8 +65,9 @@
             android:exported="true"
             android:label="@string/app_name"
             android:theme="@style/Theme.POCO"
-            android:screenOrientation="landscape"
             android:windowSoftInputMode="adjustResize">
+            <!-- 방향을 고정하지 않는다: Pleos 화면 분할(2분할 · 3분할)에서 앱 창이 세로로 좁아져도
+                 "창 크기를 넓게 조정하세요"로 막히지 않도록 -->
             <!-- 주행 중(기어 D)에도 화면을 띄울 수 있도록 "주의 분산 최적화" 선언.
                  없으면 AAOS가 주행 중 앱을 가린다 (주행 모드 화면 필수) -->
             <meta-data

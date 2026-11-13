@@ -13,11 +13,14 @@ import com.example.poco.data.assistant.AssistResponse
 import com.example.poco.data.assistant.AssistStatus
 import com.example.poco.data.assistant.AssistType
 import com.example.poco.data.assistant.AssistantLocationSource
+import com.example.poco.data.assistant.RestRecommendationCoordinator
 import com.example.poco.data.assistant.toVerifiedPlace
 import com.example.poco.data.model.DrivingSessionState
+import com.example.poco.data.model.NaviEvent
 import com.example.poco.data.model.PlaceProposal
 import com.example.poco.data.repository.AssistantRepository
 import com.example.poco.data.repository.DrivingSessionRepository
+import com.example.poco.data.repository.NaviRepository
 import com.example.poco.data.repository.SttRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.util.UUID
@@ -31,6 +34,9 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/** 내비 목적지 안내 한 번 (받은 시각 기준 남은 시간) */
+data class RouteSnapshot(val destination: String, val remainSec: Int, val receivedAt: Long)
+
 enum class AssistantPhase { IDLE, CONNECTING, LISTENING, THINKING }
 data class AssistantUiState(
     val phase: AssistantPhase = AssistantPhase.IDLE,
@@ -39,8 +45,12 @@ data class AssistantUiState(
     val anonymousAuth: Boolean = false,
     val consented: Boolean = false,
     val question: String = "",
+    /** Real response paired with the current recognized question; never a placeholder. */
+    val answerText: String? = null,
     val error: String? = null,
-    val needsLocationPermission: Boolean = false
+    val needsLocationPermission: Boolean = false,
+    /** 휴식 자동 제안이 위치 권한 때문에 보류됨 → '위치 권한 허용' 버튼을 보여 준다 */
+    val restNeedsLocation: Boolean = false
 )
 
 /**
@@ -53,12 +63,17 @@ class AssistantViewModel @Inject constructor(
     private val assistant: AssistantRepository,
     private val stt: SttRepository,
     private val location: AssistantLocationSource,
-    private val session: DrivingSessionRepository
+    private val session: DrivingSessionRepository,
+    private val navi: NaviRepository,
+    private val restCoordinator: RestRecommendationCoordinator
 ) : ViewModel() {
     private val mutableState = MutableStateFlow(snapshotState())
     val state = mutableState.asStateFlow()
     private var work: Job? = null
     private var pendingSearch: Pair<String, String>? = null
+
+    /** 내비가 마지막으로 알려 준 목적지 (길 안내 중일 때만). 질문할 때 남은 시간으로 바꿔 보낸다 */
+    @Volatile private var route: RouteSnapshot? = null
 
     private fun snapshotState(base: AssistantUiState = AssistantUiState()) = base.copy(
         configured = assistant.configured,
@@ -68,6 +83,27 @@ class AssistantViewModel @Inject constructor(
     )
 
     init {
+        viewModelScope.launch {
+            restCoordinator.needsLocationPermission.collect { needed ->
+                mutableState.update { it.copy(restNeedsLocation = needed) }
+            }
+        }
+        viewModelScope.launch {
+            runCatching {
+                navi.observeEvents().collect { event ->
+                    when (event) {
+                        is NaviEvent.Destination -> route = RouteSnapshot(
+                            event.name, event.remainTimeSec, System.currentTimeMillis()
+                        )
+                        is NaviEvent.RouteStarted -> route = RouteSnapshot(
+                            event.name, event.durationSec, System.currentTimeMillis()
+                        )
+                        NaviEvent.RouteEnded, NaviEvent.RouteCancelled, is NaviEvent.Arrived -> route = null
+                        else -> Unit
+                    }
+                }
+            }
+        }
         viewModelScope.launch {
             var wasActive = session.state.value.active
             session.state.collect { vehicle ->
@@ -130,7 +166,19 @@ class AssistantViewModel @Inject constructor(
         }
     }
 
+    /** 휴식 제안의 '위치 권한 허용' 버튼 → 화면이 권한 요청을 띄우도록 */
+    fun requestRestLocation() {
+        mutableState.update { it.copy(needsLocationPermission = true) }
+    }
+
+    /** 설정 화면에서 권한을 켜고 돌아왔을 때: 보류한 휴식 제안을 이어서 찾는다 */
+    fun onResumed() {
+        if (location.hasPermission()) restCoordinator.retryWithLocation()
+    }
+
     fun locationPermission(granted: Boolean) {
+        mutableState.update { it.copy(needsLocationPermission = false) }
+        if (granted) restCoordinator.retryWithLocation()
         val (question, searchQuery) = pendingSearch ?: return
         pendingSearch = null
         mutableState.update { it.copy(needsLocationPermission = false) }
@@ -158,7 +206,7 @@ class AssistantViewModel @Inject constructor(
                 requestId = UUID.randomUUID().toString().take(32),
                 question = question,
                 searchQuery = searchQuery?.takeIf { it.isNotBlank() },
-                context = questionContext(vehicle),
+                context = questionContext(vehicle, route, System.currentTimeMillis()),
                 location = here
             )
         )
@@ -169,6 +217,7 @@ class AssistantViewModel @Inject constructor(
         if (response.places.isNotEmpty()) {
             session.showProposal(PlaceProposal(response.requestId, response, automatic = false))
         } else {
+            mutableState.update { it.copy(answerText = response.displayText) }
             session.announce(
                 Guidance(response.requestId, GuidancePriority.AI_ANSWER, response.displayText, response.ttsText)
             )
@@ -181,7 +230,11 @@ class AssistantViewModel @Inject constructor(
         work = viewModelScope.launch {
             previous?.cancelAndJoin()
             mutableState.update {
-                it.copy(phase = phase, error = null, question = if (phase == AssistantPhase.LISTENING) "" else it.question)
+                it.copy(
+                    phase = phase, error = null,
+                    question = if (phase == AssistantPhase.LISTENING) "" else it.question,
+                    answerText = if (phase == AssistantPhase.LISTENING) null else it.answerText
+                )
             }
             try {
                 block()
@@ -225,8 +278,14 @@ class AssistantViewModel @Inject constructor(
 
     companion object {
         /** Small measured context only; location is never part of a general question. */
-        fun questionContext(s: DrivingSessionState): AssistContext {
+        fun questionContext(
+            s: DrivingSessionState,
+            route: RouteSnapshot? = null,
+            now: Long = System.currentTimeMillis()
+        ): AssistContext {
             val temp = s.temperature.valueOrNull()
+            // 내비 값은 받은 뒤 흐른 시간만큼 빼서 보낸다. 5분 넘게 갱신이 없으면 오래된 값이라 보내지 않는다
+            val liveRoute = route?.takeIf { now - it.receivedAt in 0..ROUTE_STALE_MS && it.remainSec >= 0 }
             return AssistContext(
                 comfortScore = s.comfort.score,
                 elapsedMinutes = s.elapsedMs / 60_000,
@@ -238,8 +297,15 @@ class AssistantViewModel @Inject constructor(
                 temperatureStatus = s.settings?.let { temperatureStatus(temp, it).name },
                 windowPercent = s.windowPercent.valueOrNull(),
                 petSize = s.settings?.petSize?.name,
-                petWeightKg = s.settings?.weightTenths?.let { it / 10.0 }
+                petWeightKg = s.settings?.weightTenths?.let { it / 10.0 },
+                petName = s.settings?.petName?.trim()?.takeIf { it.isNotEmpty() }?.take(20),
+                routeDestination = liveRoute?.destination?.trim()?.takeIf { it.isNotEmpty() }?.take(100),
+                routeRemainingMinutes = liveRoute?.let {
+                    (it.remainSec - (now - it.receivedAt) / 1000).coerceAtLeast(0) / 60
+                }
             )
         }
+
+        private const val ROUTE_STALE_MS = 5 * 60_000L
     }
 }

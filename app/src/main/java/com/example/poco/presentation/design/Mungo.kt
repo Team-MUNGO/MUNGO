@@ -28,6 +28,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -46,6 +47,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.PlatformTextStyle
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.LineHeightStyle
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Density
@@ -53,14 +55,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.poco.R
-import com.example.poco.core.theme.pocoFontBold
-import com.example.poco.core.theme.pocoFontMedium
-import com.example.poco.core.theme.pocoFontSemiBold
+import com.example.poco.core.theme.pocoFontFamily
 
 /**
  * Design tokens sampled from Figma "Danzle_프론트 참고" Page 3 (464:45661). All sizes below are in
  * Figma frame pixels; [DesignCanvas] maps one Figma pixel to one dp at the reference size.
  */
+val LocalDesignFont = staticCompositionLocalOf { pocoFontFamily }
+
 object Mg {
     val Bg = Color(0xFFF4F5F7)
     val Card = Color.White
@@ -84,27 +86,35 @@ object Mg {
 
     val Radius = 24.dp
 
-    private fun style(family: FontFamily, size: Int, line: Int) = TextStyle(
-        fontFamily = family,
+    @Composable
+    private fun style(weight: FontWeight, size: Int, line: Int) = TextStyle(
+        fontFamily = LocalDesignFont.current,
+        fontWeight = weight,
         fontSize = size.sp,
         lineHeight = line.sp,
         platformStyle = PlatformTextStyle(includeFontPadding = false),
         lineHeightStyle = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None)
     )
 
-    fun bold(size: Int, line: Int = (size * 1.3f).toInt()) = style(pocoFontBold, size, line)
-    fun semi(size: Int, line: Int = (size * 1.32f).toInt()) = style(pocoFontSemiBold, size, line)
-    fun medium(size: Int, line: Int = (size * 1.32f).toInt()) = style(pocoFontMedium, size, line)
+    @Composable
+    fun bold(size: Int, line: Int = (size * 1.3f).toInt()) = style(FontWeight.Bold, size, line)
+    @Composable
+    fun semi(size: Int, line: Int = (size * 1.32f).toInt()) = style(FontWeight.SemiBold, size, line)
+    @Composable
+    fun medium(size: Int, line: Int = (size * 1.32f).toInt()) = style(FontWeight.Medium, size, line)
 
-    /** 29 px text boxes in Figma. */
-    val Body = medium(22, 29)
-    val BodyStrong = semi(22, 29)
-    val Caption = medium(18, 25)
-    val Title = bold(31, 41)
-    val Quote = semi(30, 42)
-    val Value = bold(56, 70)
-    val ValueSplit = bold(42, 53)
-    val Unit = medium(22, 29)
+    @Composable
+    fun regular(size: Int, line: Int = (size * 1.3f).toInt()) = style(FontWeight.Normal, size, line)
+
+    /** Page 3 driving text boxes. */
+    val Body: TextStyle @Composable get() = regular(24, 32)
+    val BodyStrong: TextStyle @Composable get() = bold(24, 32)
+    val Caption: TextStyle @Composable get() = regular(20, 27)
+    val Title: TextStyle @Composable get() = bold(34, 44)
+    val Quote: TextStyle @Composable get() = semi(35, 46)
+    val Value: TextStyle @Composable get() = bold(58, 73)
+    val ValueSplit: TextStyle @Composable get() = bold(44, 55)
+    val Unit: TextStyle @Composable get() = regular(24, 32)
 }
 
 /**
@@ -112,11 +122,14 @@ object Mg {
  * scaled uniformly to the actual window. Full and split layouts use their own references.
  */
 @Composable
-fun DesignCanvas(refWidth: Float, refHeight: Float, modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
+fun DesignCanvas(refWidth: Float, refHeight: Float, modifier: Modifier = Modifier, fontFamily: FontFamily = pocoFontFamily, content: @Composable BoxScope.() -> Unit) {
     BoxWithConstraints(modifier.fillMaxSize().background(Mg.Bg)) {
         val density = LocalDensity.current
         val scale = minOf(maxWidth.value / refWidth, maxHeight.value / refHeight).coerceIn(0.35f, 2f)
-        CompositionLocalProvider(LocalDensity provides Density(density.density * scale, density.fontScale)) {
+        CompositionLocalProvider(
+            LocalDensity provides Density(density.density * scale, density.fontScale),
+            LocalDesignFont provides fontFamily
+        ) {
             Box(Modifier.fillMaxSize(), content = content)
         }
     }
@@ -175,15 +188,17 @@ fun Pill(
     border: Color? = null,
     height: Dp = 44.dp,
     leading: (@Composable () -> Unit)? = null,
-    onClick: (() -> Unit)? = null
+    onClick: (() -> Unit)? = null,
+    horizontalPadding: Dp = 16.dp,
+    iconGap: Dp = 8.dp
 ) {
     Row(
         modifier.height(height).clip(CircleShape).background(background, CircleShape)
             .then(if (border != null) Modifier.border(2.dp, border, CircleShape) else Modifier)
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
-            .padding(horizontal = 16.dp),
+            .padding(horizontal = horizontalPadding),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
+        horizontalArrangement = Arrangement.spacedBy(iconGap)
     ) {
         leading?.invoke()
         Text(text, style = style, color = color, maxLines = 1)
@@ -274,11 +289,11 @@ fun PetAvatar(size: Dp, modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun ValueText(value: String, unit: String?, valueStyle: TextStyle, color: Color = Mg.Ink, unitColor: Color = color) {
+fun ValueText(value: String, unit: String?, valueStyle: TextStyle, color: Color = Mg.Ink, unitColor: Color = color, unitStyle: TextStyle = Mg.Unit) {
     Row(verticalAlignment = Alignment.Bottom) {
         Text(value, style = valueStyle, color = color, maxLines = 1)
         if (unit != null) {
-            Text(unit, Modifier.padding(start = 6.dp, bottom = 8.dp), style = Mg.Unit, color = unitColor, maxLines = 1)
+            Text(unit, Modifier.padding(start = 6.dp, bottom = 8.dp), style = unitStyle, color = unitColor, maxLines = 1)
         }
     }
 }
@@ -289,10 +304,10 @@ fun SectionTitle(text: String, modifier: Modifier = Modifier, style: TextStyle =
 }
 
 @Composable
-fun InfoNote(text: String, modifier: Modifier = Modifier) {
+fun InfoNote(text: String, modifier: Modifier = Modifier, style: TextStyle = Mg.Caption) {
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         MgIcon(MgIcons.Info, Mg.Faint, 20.dp)
-        Text(text, style = Mg.Caption, color = Mg.Muted)
+        Text(text, style = style, color = Mg.Muted)
     }
 }
 
@@ -358,6 +373,8 @@ object MgIcons {
     val Clock = line("clock", CIRCLE, "M12 7.5V12l3 2")
     val Thermo = line("thermo", "M10 14.5V5a2 2 0 0 1 4 0v9.5a4 4 0 1 1-4 0z", "M12 10v6")
     val Paw = line("paw", "M12 12.5c-3 0-5.5 3-5.5 5a2.5 2.5 0 0 0 3 2.3c1.6-.4 3.4-.4 5 0a2.5 2.5 0 0 0 3-2.3c0-2-2.5-5-5.5-5z", "M5.5 8.5a1.8 2.2 0 1 0 0.1 0z", "M9.5 4.5a1.8 2.2 0 1 0 0.1 0z", "M14.5 4.5a1.8 2.2 0 1 0 0.1 0z", "M18.5 8.5a1.8 2.2 0 1 0 0.1 0z", filled = setOf(0, 1, 2, 3, 4))
+    val Car = line("car", "M4 16.5V12.5l2.2-5A2 2 0 0 1 8 6.3h8a2 2 0 0 1 1.8 1.2l2.2 5v4z", "M4 12.5h16", "M7.5 16.5v2", "M16.5 16.5v2")
+    val Bell = line("bell", "M6 16.5V11a6 6 0 0 1 12 0v5.5l1.5 1.5h-15z", "M10 20.5h4")
     val Plus = line("plus", "M12 5v14", "M5 12h14")
     val Minus = line("minus", "M5 12h14")
 }

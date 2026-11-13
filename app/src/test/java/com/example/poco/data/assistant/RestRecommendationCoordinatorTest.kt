@@ -16,6 +16,10 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.yield
 
 /** Mock test of the automatic REST_RECOMMENDATION path (#23, #26). Real Gemini/Maps are not called. */
 class RestRecommendationCoordinatorTest {
@@ -62,8 +66,10 @@ class RestRecommendationCoordinatorTest {
         override fun addWaypoint(place: VerifiedPlace) = Unit
         override fun cancelWaypoint() = Unit
     }
+    private var locationAllowed = true
     private val coordinator = RestRecommendationCoordinator(session, assistant, object : AssistantLocationSource {
         override suspend fun current() = AssistantLocation(37.2, 127.3, 500)
+        override fun hasPermission() = locationAllowed
     })
     private val due = RestRecommendationDue("trip-1", 1, "rest-trip-1-1", 19 * 60_000L)
 
@@ -91,5 +97,30 @@ class RestRecommendationCoordinatorTest {
         assistant.consented = true
         coordinator.handle(due.copy(tripId = "old-trip"))
         assertTrue(requests.isEmpty())
+    }
+
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    @Test fun withoutLocationPermissionTheProposalWaitsAndResumesAfterGrant() = runBlocking {
+        kotlinx.coroutines.Dispatchers.setMain(kotlinx.coroutines.test.UnconfinedTestDispatcher())
+        try { permissionFlow() } finally { kotlinx.coroutines.Dispatchers.resetMain() }
+    }
+
+    private suspend fun permissionFlow() {
+        assistant.consented = true
+        locationAllowed = false
+        coordinator.handle(due)
+        assertTrue(requests.isEmpty())
+        assertTrue(coordinator.needsLocationPermission.value)
+        assertTrue(status!!.contains("위치 권한"))
+
+        coordinator.retryWithLocation() // still off → nothing
+        assertTrue(requests.isEmpty())
+
+        locationAllowed = true
+        coordinator.retryWithLocation()
+        withTimeout(5_000) { while (proposals.isEmpty()) yield() }
+        assertEquals(1, requests.size)
+        assertEquals("rest-trip-1-1", requests.single().eventId)
+        assertEquals(false, coordinator.needsLocationPermission.value)
     }
 }

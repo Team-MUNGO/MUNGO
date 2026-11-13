@@ -4,6 +4,7 @@ import ai.pleos.playground.location.fused.FusedLocation
 import ai.pleos.playground.location.fused.listener.FusedLocationListener
 import ai.pleos.playground.location.fused.model.LocationData
 import android.content.Context
+import android.content.pm.PackageManager
 import dagger.hilt.android.qualifiers.ApplicationContext
 import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
@@ -15,11 +16,19 @@ import kotlinx.coroutines.withTimeout
 
 interface AssistantLocationSource {
     suspend fun current(): AssistantLocation
+
+    /** Pleos 위치 권한이 허용돼 있는지. 꺼져 있으면 [current]는 SecurityException으로 실패한다 */
+    fun hasPermission(): Boolean = true
 }
+
+const val FUSED_LOCATION_PERMISSION = "pleos.car.permission.FUSED_LOCATION"
 
 /** On-demand public Pleos location only. Unknown timestamp semantics fail closed. */
 class PleosLocationSource @Inject constructor(@ApplicationContext private val context: Context) :
     AssistantLocationSource {
+    override fun hasPermission() =
+        context.checkSelfPermission(FUSED_LOCATION_PERMISSION) == PackageManager.PERMISSION_GRANTED
+
     override suspend fun current(): AssistantLocation {
         val sdk = FusedLocation(context)
         check(sdk.isSupported()) { "이 차량에서 위치 정보를 사용할 수 없어요." }

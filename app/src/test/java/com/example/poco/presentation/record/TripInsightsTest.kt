@@ -61,25 +61,32 @@ class TripInsightsTest {
         assertEquals("경유지 도착 후 휴식", items[3].detail)
     }
 
-    @Test fun recommendationOnlyWhenSignsWereRecorded() {
-        assertNull(recommendedInterval(120, null))
-        assertNull(recommendedInterval(120, MotionRecord(fine = true)))
-        assertEquals(90, recommendedInterval(120, MotionRecord(mapOf(MotionSign.YAWN to 3))))
-        assertNull(recommendedInterval(30, MotionRecord(mapOf(MotionSign.YAWN to 1)))) // already at minimum
+    /** Insight and recommendation come from one analysis; the window maps back to stored trips. */
+    @Test fun motionAnalysisDrivesInsightAndRecommendation() {
+        val day = 24 * 60 * m
+        val trips = listOf(
+            trip("a", 0, 30, "FINE"),
+            trip("b", day, 40, "YAWN:1"),
+            trip("c", 2 * day, 90, "YAWN:3"),
+            trip("d", 3 * day, 120, "YAWN:4,DROOL:2")
+        )
+        val now = trips.last()
+        val analysis = motionAnalysis(trips, now, 120)
+        assertEquals(listOf("a", "b", "c", "d"), windowTrips(trips, now, analysis).map { it.first.id })
+        assertEquals("긴 이동에서 불편 징후가 더 자주 관찰됐어요.", insightTip(analysis.insight).title)
+        assertEquals(90, analysis.recommendedMinutes)
+        // A plain count increase on the detail screen never shortens the interval by itself.
+        val calm = motionAnalysis(listOf(trips[0], trips[1]), trips[1], 120)
+        assertNull(calm.recommendedMinutes)
+        assertEquals("이동 중 반려견 상태를 조금 더 살펴 주세요.", detailTip(trips[1], trips[0], 120, calm).body)
     }
 
-    /** "1시간 넘게 달린 날 징후가 늘었어요" only when long and short entries both exist. */
-    @Test fun patternNeedsLongAndShortEntries() {
-        val day = 24 * 60 * m
-        val short = trip("a", 0, 25, "FINE", 92)
-        val mid = trip("b", day, 80, "YAWN:1", 86)
-        val now = trip("c", 2 * day, 154, "YAWN:3,DROOL:1", 88)
-        val recent = recentMotionTrips(listOf(now, mid, short), now)
-        assertEquals(listOf("a", "b", "c"), recent.map { it.first.id })
-        val p = motionPattern(recent)!!
-        assertEquals("1시간 넘게 달린 날 징후가 늘었어요.", p.title)
-        assertTrue(p.body.startsWith("25분 이동"))
-        assertNull(motionPattern(recentMotionTrips(listOf(now, mid), now)))
+    @Test fun cautionAndRepeatedSignTextUseParticles() {
+        val now = trip("v", 0, 30, "VOMIT:1")
+        val tip = insightTip(motionAnalysis(listOf(now), now, 120).insight)
+        assertEquals("이번 이동에서 구토가 관찰됐어요. 반려견의 상태를 확인해 주세요.", tip.title)
+        assertEquals("시간당 1.5회", rateText(1.5))
+        assertEquals("시간당 2회", rateText(2.0))
     }
 
     @Test fun scoreComparisonUsesThePreviousCompletedTrip() {
@@ -96,4 +103,32 @@ class TripInsightsTest {
         assertEquals("가", subjectParticle("과속방지턱 2회"))
         assertEquals("이", subjectParticle("휴식 16분"))
     }
+    @Test fun restBandsUseRecordedTimesAndRecoverCompletedDuration() {
+        assertEquals(listOf(40 * m to 56 * m), restBands(listOf(
+            e(56 * m, TripEventType.REST_COMPLETED, detail = "${16 * m}"),
+            e(40 * m, TripEventType.REST_STARTED)
+        )))
+        assertEquals(listOf(40 * m to 56 * m), restBands(listOf(
+            e(56 * m, TripEventType.REST_COMPLETED, detail = "${16 * m}")
+        )))
+        assertTrue(restBands(listOf(e(56 * m, TripEventType.REST_COMPLETED, detail = "invalid"))).isEmpty())
+        assertTrue(restBands(listOf(e(56 * m, TripEventType.REST_CANCELLED))).isEmpty())
+    }
+
+    @Test fun eventDetailUsesEventSnapshotAndPreservesGroupedBeforeScore() {
+        val first = e(10 * m, TripEventType.SCORE_PENALTY, -2, 98, "SPEED_BUMP").copy(
+            scoreBefore = 100, latitude = 37.0, longitude = 127.0,
+            temperatureC = 23f, windowPercent = 0.0, seat = "PASSENGER", guidanceText = "안내 기록"
+        )
+        val second = e(11 * m, TripEventType.SCORE_PENALTY, -3, 95, "SPEED_BUMP").copy(scoreBefore = 98)
+        val item = timelineItems(trip("t", 0, 60), listOf(first, second)).single()
+        assertEquals(100, item.scoreBefore)
+        assertEquals(95, item.scoreAfter)
+        assertEquals(-5, item.delta)
+        assertEquals(first, item.snapshot)
+        assertEquals("23°C / 창문 닫힘", eventCabinText(item, emptyList()))
+        assertEquals("37.00000, 127.00000", eventLocationText(item))
+        assertNull(eventLocationText(item.copy(snapshot = null)))
+    }
+
 }

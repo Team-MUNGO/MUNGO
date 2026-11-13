@@ -13,6 +13,7 @@ import com.example.poco.data.repository.NaviRepository
 import com.example.poco.data.repository.PetRepository
 import com.example.poco.data.repository.TripRepository
 import com.example.poco.data.repository.WindowRepository
+import com.example.poco.data.vehicle.VehicleLinkRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import java.time.DayOfWeek
 import java.time.Instant
@@ -28,12 +29,15 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.emptyFlow
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
+@OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val petRepository: PetRepository,
@@ -43,12 +47,16 @@ class HomeViewModel @Inject constructor(
     private val departureRepository: DepartureRepository,
     private val tripRepository: TripRepository,
     private val naviRepository: NaviRepository,
-    private val toastMessenger: ToastMessenger
+    private val toastMessenger: ToastMessenger,
+    private val vehicleLink: VehicleLinkRepository
 ) : ViewModel() {
+    private val linked = vehicleLink.state.map { it.linked }.distinctUntilChanged()
+
     private val _uiState = MutableStateFlow(HomeUiState())
     val uiState = _uiState.asStateFlow()
 
     init {
+        observeLink()
         observePet()
         observeGear()
         observeRouteStart()
@@ -58,6 +66,30 @@ class HomeViewModel @Inject constructor(
         observeWeekTrips()
         checkWindows()
     }
+
+    /** 연동을 해지하면 차량 값을 비우고, 다시 연결하면 온도 · 창문을 다시 읽는다 */
+    private fun observeLink() {
+        viewModelScope.launch {
+            var wasLinked = vehicleLink.isLinked
+            linked.collect { isLinked ->
+                _uiState.update {
+                    if (isLinked) it.copy(isVehicleLinked = true)
+                    else it.copy(
+                        isVehicleLinked = false, isParked = null, seatTemperature = null,
+                        isAllWindowsClosed = null, shouldStartDriving = false
+                    )
+                }
+                if (isLinked && !wasLinked) {
+                    _uiState.value.pet?.let { loadSeatTemperature(it) }
+                    checkWindows()
+                }
+                wasLinked = isLinked
+            }
+        }
+    }
+
+    /** 차량 연동 다시 켜기 (홈 '다시 연결하기') */
+    fun relinkVehicle() = vehicleLink.relink()
 
     /** 이번 주 월요일 0시부터 요일별 이동 횟수 */
     private fun observeWeekTrips() {
@@ -94,7 +126,7 @@ class HomeViewModel @Inject constructor(
                 .catch { Timber.e(it, "펫 조회 실패") }
                 .collectLatest { pet ->
                     _uiState.update { it.copy(pet = pet) }
-                    pet?.let { loadSeatTemperature(it) }
+                    if (vehicleLink.isLinked) pet?.let { loadSeatTemperature(it) }
                 }
         }
     }
@@ -107,12 +139,13 @@ class HomeViewModel @Inject constructor(
 
     private fun observeGear() {
         viewModelScope.launch {
-            gearRepository.observeIsParked()
+            linked.flatMapLatest { if (it) gearRepository.observeIsParked() else emptyFlow() }
                 .catch { Timber.w(it, "기어 상태 관찰 실패") }
                 .collect { isParked ->
                     _uiState.update {
                         // 정차(P)에서 기어를 바꾸면 자동으로 주행 화면으로
-                        val leftPark = it.isParked == true && !isParked
+                        // 홈이 보일 때 바뀐 기어만 주행 시작으로 본다 (주행 · 요약 화면 뒤에 남아 있을 때 바뀐 건 무시)
+                        val leftPark = screenVisible && it.isParked == true && !isParked
                         it.copy(
                             isParked = isParked,
                             shouldStartDriving =
@@ -126,10 +159,10 @@ class HomeViewModel @Inject constructor(
     /** Pleos 내비에서 길 안내를 시작하면 주행 화면으로 (기어 D와 같은 효과) */
     private fun observeRouteStart() {
         viewModelScope.launch {
-            naviRepository.observeEvents()
+            linked.flatMapLatest { if (it) naviRepository.observeEvents() else emptyFlow() }
                 .catch { Timber.w(it, "내비 관찰 실패 - 기어로만 주행 시작") }
                 .collect { event ->
-                    if (event is NaviEvent.RouteStarted) {
+                    if (event is NaviEvent.RouteStarted && screenVisible) {
                         _uiState.update { it.copy(shouldStartDriving = true) }
                     }
                 }
@@ -139,6 +172,15 @@ class HomeViewModel @Inject constructor(
     /** 펫이 없으면 자리를 바꿀 수 없으니 먼저 펫 추가로 안내 */
     fun onSeatChangeWithoutPet() {
         toastMessenger.show("먼저 펫을 추가해 주세요")
+    }
+
+    @Volatile
+    private var screenVisible = false
+
+    /** 홈 화면이 보이는지 (RESUMED). 다른 화면 뒤에 있을 때 쌓인 주행 시작 신호는 버린다 */
+    fun onScreenVisible(visible: Boolean) {
+        screenVisible = visible
+        if (!visible) _uiState.update { it.copy(shouldStartDriving = false) }
     }
 
     fun onDrivingStarted() {
@@ -172,6 +214,7 @@ class HomeViewModel @Inject constructor(
 
     /** 지원하는 모든 창문이 최소 위치(닫힘)인지 확인 */
     private fun checkWindows() {
+        if (!vehicleLink.isLinked) return
         viewModelScope.launch {
             val windows = windowRepository.getSupportedWindows()
                 .onFailure { Timber.w(it, "창문 정보 조회 실패") }

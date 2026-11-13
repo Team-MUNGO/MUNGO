@@ -49,12 +49,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.poco.core.designsystem.clearFocusOnTap
 import com.example.poco.core.designsystem.MungoIcon
 import com.example.poco.core.designsystem.MungoIconView
 import com.example.poco.core.designsystem.PetPhoto
 import com.example.poco.core.designsystem.component.pressable
 import com.example.poco.core.designsystem.hasFullPetImage
 import com.example.poco.core.theme.MungoRadius
+import com.example.poco.presentation.design.Mg
 import com.example.poco.core.theme.POCOTheme
 import com.example.poco.core.util.toMonthDay
 import com.example.poco.data.model.MotionSensitivity
@@ -163,6 +165,7 @@ private fun MyPetScreen(
         modifier = modifier
             .fillMaxSize()
             .background(colors.bgCanvas)
+            .clearFocusOnTap()
             .safeDrawingPadding()
     ) {
         MungoNavRail(selected = RailTab.MY_PET, onHome = actions.onHome, onMyPet = {})
@@ -173,7 +176,7 @@ private fun MyPetScreen(
             modifier = Modifier
                 .weight(1f)
                 .fillMaxHeight()
-                .padding(horizontal = 44.dp, vertical = 40.dp)
+                .padding(start = 44.dp, end = 44.dp, top = 58.dp, bottom = 44.dp) // Figma 470:55852
         ) {
             when {
                 uiState.isEditing -> PetEditor(uiState = uiState, actions = actions)
@@ -204,7 +207,7 @@ private fun PetListPanel(uiState: MyPetUiState, actions: MyPetActions) {
     ) {
         Text(
             text = "마이펫",
-            style = POCOTheme.typography.title1,
+            style = Mg.bold(37, 46),
             color = colors.textPrimary,
             modifier = Modifier.padding(start = 12.dp, bottom = 24.dp)
         )
@@ -249,7 +252,7 @@ private fun PetListCard(pet: Pet, selected: Boolean, onClick: () -> Unit) {
             )
             Text(
                 text = pet.listSummary(),
-                style = POCOTheme.typography.body3,
+                style = Mg.regular(23, 30),
                 color = colors.textSecondary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -284,7 +287,7 @@ private fun AddPetCard(selected: Boolean, onClick: () -> Unit) {
         Spacer(Modifier.width(24.dp))
         Text(
             text = "반려견 추가",
-            style = POCOTheme.typography.title2.copy(fontWeight = FontWeight.Bold),
+            style = Mg.bold(27, 32),
             color = colors.textPrimary
         )
     }
@@ -319,8 +322,8 @@ private fun PetDetail(pet: Pet, stats: TripStats, canEdit: Boolean, actions: MyP
         if (!canEdit) {
             Text(
                 text = "정차 중에만 수정할 수 있어요",
-                style = POCOTheme.typography.body3,
-                color = colors.textTertiary,
+                style = Mg.regular(23, 30),
+                color = colors.textSecondary,
                 modifier = Modifier
                     .align(Alignment.End)
                     .padding(top = 8.dp)
@@ -386,8 +389,8 @@ private fun CareCard(
         Spacer(Modifier.height(8.dp))
         Text(
             text = "해당하는 걸 모두 골라 주세요",
-            style = POCOTheme.typography.body3,
-            color = colors.textTertiary
+            style = Mg.regular(23, 30),
+            color = colors.textSecondary
         )
         Spacer(Modifier.height(24.dp))
         FlowRow(
@@ -434,14 +437,14 @@ private fun StatsRow(stats: TripStats) {
 private fun StatCard(label: String, value: String, unit: String?, modifier: Modifier = Modifier) {
     val colors = POCOTheme.colors
     WhiteCard(modifier = modifier, vertical = 32.dp) {
-        Text(text = label, style = POCOTheme.typography.body2, color = colors.textSecondary)
+        Text(text = label, style = Mg.regular(24, 32), color = colors.textSecondary)
         Spacer(Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.Bottom) {
             Text(text = value, style = POCOTheme.typography.h2, color = colors.textPrimary)
             unit?.let {
                 Text(
                     text = it,
-                    style = POCOTheme.typography.body1,
+                    style = Mg.regular(27, 32),
                     color = colors.textPrimary,
                     modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
                 )
@@ -504,13 +507,13 @@ private fun InfoRow(label: String, value: String) {
     ) {
         Text(
             text = label,
-            style = POCOTheme.typography.body2,
+            style = Mg.regular(25, 33),
             color = colors.textSecondary,
             modifier = Modifier.weight(1f)
         )
         Text(
             text = value,
-            style = POCOTheme.typography.title3.copy(fontWeight = FontWeight.Bold),
+            style = Mg.semi(25, 33),
             color = colors.textPrimary
         )
     }
@@ -538,7 +541,7 @@ internal fun CareChip(text: String, selected: Boolean, onClick: (() -> Unit)?) {
         Text(
             text = text,
             style = POCOTheme.typography.title3.copy(
-                fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium
+                fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
             ),
             color = if (selected) colors.textOnAccent else colors.textPrimary
         )
@@ -581,7 +584,7 @@ internal fun PillButton(
         }
         Text(
             text = text,
-            style = POCOTheme.typography.title3.copy(fontWeight = FontWeight.Bold),
+            style = Mg.bold(25, 30),
             color = content
         )
     }
@@ -637,7 +640,7 @@ internal val previewPets = listOf(
 
 @Preview(widthDp = 1700, heightDp = 1184)
 @Composable
-private fun MyPetDetailPreview() {
+internal fun MyPetDetailPreview() {
     POCOTheme {
         MyPetScreen(
             uiState = MyPetUiState(
@@ -653,7 +656,7 @@ private fun MyPetDetailPreview() {
 
 @Preview(widthDp = 1700, heightDp = 1184)
 @Composable
-private fun MyPetEditPreview() {
+internal fun MyPetEditPreview() {
     POCOTheme {
         MyPetScreen(
             uiState = MyPetUiState(

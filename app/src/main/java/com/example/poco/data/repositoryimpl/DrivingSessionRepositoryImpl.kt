@@ -40,6 +40,7 @@ import com.example.poco.data.record.TripEventEntity
 import com.example.poco.data.record.TripEventType
 import com.example.poco.data.record.TripRecordSink
 import com.example.poco.data.repository.DrivingSessionRepository
+import com.example.poco.data.repository.VehicleMotionRepository
 import com.example.poco.data.repository.HvacRepository
 import com.example.poco.data.repository.NaviRepository
 import com.example.poco.data.repository.RestRecommendationDue
@@ -95,7 +96,8 @@ class DrivingSessionRepositoryImpl @Inject constructor(
     private val recorder: TripRecordSink,
     private val waypoints: AssistantWaypointSource,
     private val location: LocationStream,
-    private val origin: DataOrigin
+    private val origin: DataOrigin,
+    private val motion: VehicleMotionRepository
 ) : DrivingSessionRepository {
     private val mutableState = MutableStateFlow(DrivingSessionState())
     override val state = mutableState.asStateFlow()
@@ -123,17 +125,33 @@ class DrivingSessionRepositoryImpl @Inject constructor(
     private var started = 0L
     private var startedEpoch = 0L
     private var restStartScore: Int? = null
+    private var latestLocation: com.example.poco.data.assistant.LocationFix? = null
 
     private fun epoch(mono: Long) = startedEpoch + (mono - started)
 
     private fun record(type: String, delta: Int? = null, after: Int? = null, detail: String? = null, key: String? = null, at: Long = clock.now()) {
-        val trip = state.value.tripId ?: return
-        recorder.event(TripEventEntity(tripId = trip, atEpoch = epoch(at), type = type, scoreDelta = delta, scoreAfter = after, detail = detail, dedupeKey = key))
+        val snapshot = state.value
+        val trip = snapshot.tripId ?: return
+        val eventEpoch = epoch(at)
+        val fix = latestLocation?.takeIf {
+            eventEpoch - it.epochMs in 0..30_000 && it.latitude.isFinite() && it.longitude.isFinite() &&
+                it.latitude in -90.0..90.0 && it.longitude in -180.0..180.0
+        }
+        recorder.event(TripEventEntity(
+            tripId = trip, atEpoch = eventEpoch, type = type, scoreDelta = delta,
+            scoreAfter = after, detail = detail, dedupeKey = key,
+            scoreBefore = if (after != null && delta != null) after - delta else null,
+            latitude = fix?.latitude, longitude = fix?.longitude, locationAtEpoch = fix?.epochMs,
+            temperatureC = snapshot.temperature.valueOrNull(), windowPercent = snapshot.windowPercent.valueOrNull(),
+            seat = snapshot.settings?.seat?.name,
+            guidanceText = snapshot.guidance?.displayText ?: snapshot.gleoResponse
+        ))
     }
 
     override fun start(settings: DrivingSettings) {
         if (state.value.active) return
         val token = ++generation
+        latestLocation = null
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         sessionScope = scope
         detector = DrivingEventDetector(config) { reason ->
@@ -245,10 +263,19 @@ class DrivingSessionRepositoryImpl @Inject constructor(
         scope.launch {
             location.observe().catch { }.collect { fix ->
                 if (!current()) return@collect
+                latestLocation = fix
                 val heading = fix.headingDegrees ?: return@collect
                 val sample = state.value.speed.valueOrNull() ?: return@collect
                 if (clock.now() - sample.at > config.sensorStaleMs) return@collect
                 applyEvents(detector.onHeading(clock.now(), heading, sample.kmh))
+            }
+        }
+        scope.launch {
+            // Vehicle API steering angle (Pleos SteeringWheel, falling back to PERF_STEERING_ANGLE).
+            // Optional: without it, sharp turns still come from the GPS heading below.
+            motion.observeSteeringAngle().catch { Timber.w(it, "조향각 수신 실패") }.collect { angle ->
+                if (!current()) return@collect
+                applyEvents(detector.onSteering(clock.now(), angle.toDouble()))
             }
         }
         scope.launch { observeWindow(settings, ::current) }
@@ -634,7 +661,8 @@ class DrivingSessionRepositoryImpl @Inject constructor(
             windowUnavailable("창문 위치 데이터 없음")
             return
         }
-        val entered = warningDetector.update(percent)
+        // 설정 > 알림 '창문 안전 알림'을 끄면 열림 경고 · 음성 안내를 하지 않는다 (위치 값은 계속 보여 준다)
+        val entered = warningDetector.update(percent) && mutableState.value.settings?.windowAlerts != false
         mutableState.update {
             val closing = it.closeStatus == WindowCloseStatus.REQUESTING || it.closeStatus == WindowCloseStatus.VERIFYING
             it.copy(
@@ -740,6 +768,7 @@ class DrivingSessionRepositoryImpl @Inject constructor(
             }
         }
         generation++
+        latestLocation = null
         sessionScope?.cancel()
         sessionScope = null
         closeJob = null

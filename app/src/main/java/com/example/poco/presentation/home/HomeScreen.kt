@@ -30,6 +30,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -41,6 +42,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.poco.core.designsystem.MungoIcon
 import com.example.poco.core.designsystem.MungoIconView
@@ -51,7 +53,9 @@ import com.example.poco.core.designsystem.component.pressable
 import com.example.poco.core.designsystem.hasFullPetImage
 import com.example.poco.core.designsystem.previewTrip
 import com.example.poco.core.theme.MungoRadius
+import com.example.poco.presentation.design.Mg
 import com.example.poco.core.theme.POCOTheme
+import com.example.poco.core.util.eulReul
 import com.example.poco.core.util.toMonthDay
 import com.example.poco.data.model.MotionSensitivity
 import com.example.poco.data.model.Pet
@@ -76,9 +80,15 @@ fun HomeRoute(
     navigateToBoarding: () -> Unit,
     navigateToDriving: () -> Unit,
     navigateToPetMode: () -> Unit,
+    navigateToWeeklyRecords: () -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+
+    LifecycleResumeEffect(viewModel) {
+        viewModel.onScreenVisible(true)
+        onPauseOrDispose { viewModel.onScreenVisible(false) }
+    }
 
     // 기어를 D로 바꾸거나 내비 길 안내를 시작하면 자동으로 주행 시작
     LaunchedEffect(uiState.shouldStartDriving) {
@@ -93,7 +103,9 @@ fun HomeRoute(
         onOpenPet = navigateToPetProfile,
         onStartDrive = navigateToBoarding,
         onPetModeChange = viewModel::setRearTempWatchEnabled,
-        onOpenPetMode = navigateToPetMode
+        onOpenPetMode = navigateToPetMode,
+        onRelink = viewModel::relinkVehicle,
+        onOpenWeekTrips = navigateToWeeklyRecords
     )
 }
 
@@ -104,7 +116,9 @@ private fun HomeScreen(
     onStartDrive: () -> Unit,
     onPetModeChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    onOpenPetMode: () -> Unit = {}
+    onOpenPetMode: () -> Unit = {},
+    onRelink: () -> Unit = {},
+    onOpenWeekTrips: () -> Unit = {}
 ) {
     val colors = POCOTheme.colors
     Row(
@@ -133,6 +147,8 @@ private fun HomeScreen(
             DriveCard(
                 pet = uiState.pet,
                 onStartDrive = onStartDrive,
+                linked = uiState.isVehicleLinked,
+                onRelink = onRelink,
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1.4f)
@@ -144,7 +160,7 @@ private fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(24.dp)
             ) {
                 ComfortCard(score = uiState.lastTrip?.comfortScore, modifier = cell())
-                WeekTripCard(counts = uiState.weekTripCounts, modifier = cell())
+                WeekTripCard(counts = uiState.weekTripCounts, modifier = cell(), onClick = onOpenWeekTrips)
                 PetModeCard(
                     temperature = uiState.seatTemperature,
                     enabled = uiState.isRearTempWatchEnabled,
@@ -170,10 +186,11 @@ private fun PetPanel(uiState: HomeUiState, onOpenPet: () -> Unit, modifier: Modi
     Column(
         modifier = modifier
             .background(colors.bgSurface)
-            .padding(horizontal = 32.dp, vertical = 32.dp)
+            .padding(start = 32.dp, end = 32.dp, top = 44.dp, bottom = 46.dp)
     ) {
-        Text(text = today, style = typography.body2, color = colors.textTertiary)
-        Spacer(Modifier.height(24.dp))
+        // Figma 470:55182 정보 패널: 날짜 47 · 사진 124 · 이름 292 · 구분선 469 · 상태 칸 670
+        Text(text = today, style = Mg.regular(22, 28), color = colors.textTertiary)
+        Spacer(Modifier.height(48.dp))
         // 펫 사진 · 이름 (누르면 마이펫)
         Column(
             modifier = Modifier.pressable(RoundedCornerShape(MungoRadius.md), onClick = onOpenPet)
@@ -192,11 +209,11 @@ private fun PetPanel(uiState: HomeUiState, onOpenPet: () -> Unit, modifier: Modi
                     )
                 )
             }
-            Spacer(Modifier.height(24.dp))
+            Spacer(Modifier.height(36.dp))
             Row(verticalAlignment = Alignment.Bottom) {
                 Text(
                     text = pet?.name ?: "펫을 추가해 주세요",
-                    style = if (pet != null) typography.h3 else typography.title1,
+                    style = if (pet != null) Mg.bold(45, 55) else typography.title1,
                     color = colors.textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -217,32 +234,37 @@ private fun PetPanel(uiState: HomeUiState, onOpenPet: () -> Unit, modifier: Modi
         pet?.tags()?.takeIf { it.isNotEmpty() }?.let { tags ->
             Spacer(Modifier.height(16.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                tags.forEach { PetTag(it) }
+                tags.forEach { PetTag(it, linked = uiState.isVehicleLinked) }
             }
         }
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(60.dp))
         HorizontalDivider(color = colors.borderDefault)
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(58.dp))
 
         // 차량 상태
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
-                text = when (uiState.isParked) {
-                    true -> "차량 정차 중"
-                    false -> "주행 중"
-                    null -> "차량 확인 중"
+                text = when {
+                    !uiState.isVehicleLinked -> "연결 안 됨"
+                    uiState.isParked == true -> "차량 정차 중"
+                    uiState.isParked == false -> "주행 중"
+                    else -> "차량 확인 중"
                 },
-                style = typography.title1,
-                color = colors.textPrimary
+                style = Mg.bold(37, 46),
+                color = if (uiState.isVehicleLinked) colors.textPrimary else colors.textTertiary
             )
             if (uiState.isParked != null) {
                 Spacer(Modifier.width(12.dp))
                 GearBadge(if (uiState.isParked) "P" else "D")
             }
         }
-        Spacer(Modifier.height(8.dp))
-        Text(text = "Pleos Connect", style = typography.body3, color = colors.textTertiary)
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(12.dp))
+        Text(
+            text = if (uiState.isVehicleLinked) "Pleos Connect" else "차량 연동이 꺼져 있어요",
+            style = Mg.regular(24, 31),
+            color = colors.textSecondary
+        )
+        Spacer(Modifier.height(54.dp))
 
         // 2 × 2 상태 칸
         val petModeOn = uiState.isRearTempWatchEnabled
@@ -283,17 +305,25 @@ private fun PetPanel(uiState: HomeUiState, onOpenPet: () -> Unit, modifier: Modi
     }
 }
 
+/**
+ * 프로필 칩: 모양(알약)은 같고 연동 상태에 따라 색만 바뀐다 (Figma 470:55188 연동 중 · 470:56703 연결해제)
+ * 연동 중 = 연한 망고 배경 + 망고 글자, 해지 = 회색 배경 + 진한 글자
+ */
 @Composable
-private fun PetTag(text: String) {
+private fun PetTag(text: String, linked: Boolean) {
     val colors = POCOTheme.colors
     Box(
         modifier = Modifier
             .heightIn(min = 44.dp)
-            .background(colors.bgAccentSubtle, RoundedCornerShape(MungoRadius.sm))
-            .padding(horizontal = 14.dp),
+            .background(if (linked) colors.bgAccentSubtle else colors.bgSurfaceSunken, CircleShape)
+            .padding(horizontal = 20.dp),
         contentAlignment = Alignment.Center
     ) {
-        Text(text = text, style = POCOTheme.typography.body3, color = colors.textAccent)
+        Text(
+            text = text,
+            style = Mg.semi(24, 31),
+            color = if (linked) colors.textAccent else colors.textPrimary
+        )
     }
 }
 
@@ -308,7 +338,7 @@ private fun GearBadge(gear: String) {
     ) {
         Text(
             text = gear,
-            style = POCOTheme.typography.title2.copy(fontWeight = FontWeight.Bold),
+            style = Mg.bold(26, 34),
             color = colors.textOnAccent
         )
     }
@@ -360,7 +390,7 @@ private fun RowScope.StatusTile(
         Spacer(Modifier.weight(1f))
         Text(
             text = value,
-            style = POCOTheme.typography.title1,
+            style = Mg.semi(35, 44),
             color = if (highlighted) colors.textAccent else colors.textPrimary,
             modifier = Modifier.align(Alignment.End)
         )
@@ -372,7 +402,13 @@ private fun RowScope.StatusTile(
 // region 드라이브 카드
 
 @Composable
-private fun DriveCard(pet: Pet?, onStartDrive: () -> Unit, modifier: Modifier = Modifier) {
+private fun DriveCard(
+    pet: Pet?,
+    onStartDrive: () -> Unit,
+    modifier: Modifier = Modifier,
+    linked: Boolean = true,
+    onRelink: () -> Unit = {}
+) {
     val colors = POCOTheme.colors
     val typography = POCOTheme.typography
     val name = pet?.name ?: "우리 아이"
@@ -386,39 +422,57 @@ private fun DriveCard(pet: Pet?, onStartDrive: () -> Unit, modifier: Modifier = 
                 // 상태 칩
                 Row(
                     modifier = Modifier
-                        .background(colors.bgSurfaceSunken, CircleShape)
-                        .heightIn(min = 56.dp)
-                        .padding(horizontal = 24.dp),
+                        .background(if (linked) colors.bgSurfaceSunken else colors.bgAccentSubtle, CircleShape)
+                        .heightIn(min = 62.dp)
+                        .padding(horizontal = 32.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    MungoIconView(MungoIcon.CAR, size = 24.dp)
+                    MungoIconView(
+                        MungoIcon.CAR,
+                        tint = if (linked) colors.textPrimary else colors.textAccent,
+                        size = 24.dp
+                    )
                     Spacer(Modifier.width(10.dp))
-                    Text(text = "탑승 준비 전", style = typography.title3, color = colors.textPrimary)
+                    Text(
+                        text = if (linked) "탑승 준비 전" else "차량 연동이 꺼져 있어요",
+                        style = Mg.semi(23, 30),
+                        color = if (linked) colors.textPrimary else colors.textAccent
+                    )
                 }
                 Spacer(Modifier.height(36.dp))
                 Text(
-                    text = "$name,\n드라이브 갈까요?",
-                    style = typography.h1,
+                    text = if (linked) "$name,\n드라이브 갈까요?" else "차량을 연결하면\n${name.eulReul} 지켜볼게요",
+                    style = Mg.bold(65, 81),
                     color = colors.textPrimary
                 )
+                if (!linked) {
+                    Spacer(Modifier.height(16.dp))
+                    Text(
+                        text = "이동 기록과 프로필은 그대로 있어요",
+                        style = typography.body2,
+                        color = colors.textSecondary
+                    )
+                }
                 Spacer(Modifier.weight(1f))
                 // 가장 큰 터치 영역: 탑승 준비 시작 → 탑승 준비 (기어 D · 내비 길 안내면 바로 주행)
                 val shape = CircleShape
                 Row(
                     modifier = Modifier
                         .background(colors.bgAccent, shape)
-                        .pressable(shape = shape, onClick = onStartDrive)
-                        .heightIn(min = 104.dp)
+                        .pressable(shape = shape, onClick = if (linked) onStartDrive else onRelink)
+                        .heightIn(min = 108.dp)
                         .padding(horizontal = 48.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "탑승 준비 시작",
-                        style = typography.title1,
+                        text = if (linked) "탑승 준비 시작" else "다시 연결하기",
+                        style = Mg.bold(40, 52),
                         color = colors.textOnAccent
                     )
-                    Spacer(Modifier.width(20.dp))
-                    MungoIconView(MungoIcon.PLAY_FILLED, tint = colors.textOnAccent, size = 28.dp)
+                    if (linked) {
+                        Spacer(Modifier.width(16.dp))
+                        MungoIconView(MungoIcon.PLAY_FILLED, tint = colors.textOnAccent, size = 32.dp)
+                    }
                 }
             }
             Box(
@@ -457,9 +511,9 @@ private fun ComfortCard(score: Int?, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun WeekTripCard(counts: List<Int>, modifier: Modifier = Modifier) {
+private fun WeekTripCard(counts: List<Int>, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
     val colors = POCOTheme.colors
-    HomeCard(modifier = modifier) {
+    HomeCard(modifier = modifier.pressable(RoundedCornerShape(MungoRadius.xl), onClick = onClick)) {
         CardHeader(icon = MungoIcon.CALENDAR, title = "이번 주 이동")
         Spacer(Modifier.height(16.dp))
         BigValue(value = counts.sum().toString(), unit = "회")
@@ -487,7 +541,7 @@ private fun WeekTripCard(counts: List<Int>, modifier: Modifier = Modifier) {
                     Spacer(Modifier.height(10.dp))
                     Text(
                         text = day,
-                        style = POCOTheme.typography.caption1,
+                        style = Mg.regular(17, 22),
                         color = colors.textTertiary
                     )
                 }
@@ -535,8 +589,8 @@ private fun CardHeader(icon: MungoIcon, title: String) {
         Spacer(Modifier.width(14.dp))
         Text(
             text = title,
-            style = POCOTheme.typography.title3,
-            color = colors.textSecondary,
+            style = Mg.regular(28, 36),
+            color = Color(0xFF4D4D4D),
             modifier = Modifier.weight(1f)
         )
         MungoIconView(MungoIcon.CHEVRON_RIGHT, tint = colors.textTertiary, size = 28.dp)
@@ -547,12 +601,12 @@ private fun CardHeader(icon: MungoIcon, title: String) {
 private fun BigValue(value: String, unit: String?) {
     val colors = POCOTheme.colors
     Row(verticalAlignment = Alignment.Bottom) {
-        Text(text = value, style = POCOTheme.typography.h1, color = colors.textPrimary)
+        Text(text = value, style = Mg.bold(if (unit == null) 64 else 67, 80), color = colors.textPrimary)
         unit?.let {
             Spacer(Modifier.width(8.dp))
             Text(
                 text = it,
-                style = POCOTheme.typography.title2,
+                style = Mg.semi(30, 38),
                 color = colors.textPrimary,
                 modifier = Modifier.padding(bottom = 10.dp)
             )
@@ -663,7 +717,7 @@ private fun previewState() = HomeUiState(
 
 @Preview(widthDp = 1700, heightDp = 1184)
 @Composable
-private fun HomeScreenPreview() {
+internal fun HomeScreenPreview() {
     POCOTheme(darkTheme = false) { HomeScreen(previewState(), {}, {}, {}) }
 }
 

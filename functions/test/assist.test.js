@@ -112,3 +112,20 @@ test('#30 Maps daily cap is enforced independently', async () => {
   await store.reserveMaps(0, 2); await store.reserveMaps(0, 2);
   await assert.rejects(store.reserveMaps(0, 2), { code:'MAPS_LIMITED' });
 });
+
+test('ANSWER time claims are allowed only when they match values the app sent', async () => {
+  const { unsupportedTimeClaim } = await import('../src/assist.js');
+  assert.equal(unsupportedTimeClaim('서울역까지 40분 걸려요.', { routeRemainingMinutes:40 }), false);
+  assert.equal(unsupportedTimeClaim('서울역까지 1시간 5분 걸려요.', { routeRemainingMinutes:65 }), false);
+  assert.equal(unsupportedTimeClaim('25분 후에 쉬어 가요.', { minutesToRest:25 }), false);
+  assert.equal(unsupportedTimeClaim('30분 후 도착해요.', { routeRemainingMinutes:40 }), true);
+  assert.equal(unsupportedTimeClaim('40분 걸려요.', {}), true);
+  assert.equal(unsupportedTimeClaim('도착 예정 시간은 알 수 없어요.', {}), true);
+  assert.equal(unsupportedTimeClaim('다음 휴식까지 25분 남았어요.', {}), false);
+});
+
+test('petName is accepted and validated', () => {
+  const base = { type:'USER_QUESTION', requestId:'r1', question:'괜찮아?' };
+  assert.equal(validateAssist({ ...base, context:{ petName:'현댕이' } }).context.petName, '현댕이');
+  assert.throws(() => validateAssist({ ...base, context:{ petName:'x'.repeat(21) } }));
+});

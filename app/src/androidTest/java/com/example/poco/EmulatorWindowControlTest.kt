@@ -92,7 +92,13 @@ class EmulatorWindowControlTest {
             object : com.example.poco.data.assistant.LocationStream {
                 override fun observe() = emptyFlow<com.example.poco.data.assistant.LocationFix>()
             },
-            com.example.poco.data.repositoryimpl.DataOrigin { true }
+            com.example.poco.data.repositoryimpl.DataOrigin { true },
+            object : com.example.poco.data.repository.VehicleMotionRepository {
+                override fun observeSpeedKmh() = kotlinx.coroutines.flow.emptyFlow<Float>()
+                override fun observeSteeringAngle() = kotlinx.coroutines.flow.emptyFlow<Float>()
+                override fun observeBrakePedalPressed() = kotlinx.coroutines.flow.emptyFlow<Boolean>()
+                override fun observeLocation() = kotlinx.coroutines.flow.emptyFlow<com.example.poco.data.model.VehicleLocation>()
+            }
         )
         var initial: Int? = null
         var stage = "capabilities"

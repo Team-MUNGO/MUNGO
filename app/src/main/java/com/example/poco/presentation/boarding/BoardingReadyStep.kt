@@ -29,7 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
@@ -38,6 +38,7 @@ import com.example.poco.core.designsystem.MungoIconView
 import com.example.poco.core.designsystem.PetPhoto
 import com.example.poco.core.designsystem.component.pressable
 import com.example.poco.core.theme.MungoRadius
+import com.example.poco.presentation.design.Mg
 import com.example.poco.core.theme.POCOTheme
 import com.example.poco.core.util.iGa
 import com.example.poco.data.model.PetSeat
@@ -61,8 +62,8 @@ internal fun ColumnScope.ReadyLeft(uiState: BoardingUiState) {
             "${name.iGa} 잘 앉았는지\n한 번 더 확인해 주세요."
         }
     )
-    Spacer(Modifier.height(56.dp))
-    SectionLabel("지금까지 입력한 정보")
+    Spacer(Modifier.height(115.dp)) // Figma 470:54958: 구분선 y 577 · 라벨 y 657
+    SectionLabel("지금까지 입력한 정보", topGap = 80.dp)
     val seatText = if (pets.size == 1) {
         uiState.seats[pets.first().id]?.label() ?: "—"
     } else {
@@ -74,7 +75,7 @@ internal fun ColumnScope.ReadyLeft(uiState: BoardingUiState) {
         CheckItem.WINDOW in uiState.manualChecks -> "직접 확인"
         else -> "—"
     }
-    Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(23.dp)) { // 줄 간격 59
         SummaryRow("자리", seatText)
         SummaryRow("고정", "카시트 · 하네스")
         SummaryRow("창문 잠금", windowText)
@@ -88,13 +89,13 @@ private fun SummaryRow(label: String, value: String) {
     Row {
         Text(
             text = label,
-            style = POCOTheme.typography.body2,
+            style = Mg.medium(26, 36),
             color = colors.textSecondary,
             modifier = Modifier.weight(1f)
         )
         Text(
             text = value,
-            style = POCOTheme.typography.body2.copy(fontWeight = FontWeight.Bold),
+            style = Mg.bold(25, 36),
             color = colors.textPrimary
         )
     }
@@ -147,7 +148,7 @@ internal fun ReadyPanel(uiState: BoardingUiState) {
             Spacer(Modifier.width(28.dp))
             Text(
                 text = "“${readyMessage(uiState.selectedPets.map { it.name })}”",
-                style = POCOTheme.typography.title1,
+                style = Mg.semi(35, 46),
                 color = colors.textPrimary
             )
         }
@@ -188,14 +189,14 @@ internal fun DriveLayoutDialog(
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = "주행 화면을 어떻게 볼까요?",
-                        style = POCOTheme.typography.h3,
+                        style = Mg.bold(40, 52),
                         color = colors.textPrimary
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
                         text = "운전 중에는 네비게이션을 함께 보는 걸 추천해요",
-                        style = POCOTheme.typography.body2,
-                        color = colors.textTertiary
+                        style = Mg.regular(25, 34),
+                        color = colors.textSecondary
                     )
                 }
                 Box(
@@ -225,8 +226,8 @@ internal fun DriveLayoutDialog(
                 Spacer(Modifier.width(10.dp))
                 Text(
                     text = "고르지 않으면 3분할로 출발해요 (${secondsLeft}초)",
-                    style = POCOTheme.typography.body3,
-                    color = colors.textTertiary,
+                    style = Mg.regular(24, 32),
+                    color = Color(0xFF4E5968),
                     modifier = Modifier.weight(1f)
                 )
                 Row(
@@ -281,8 +282,8 @@ private fun RowScope.LayoutOption(layout: DriveLayout, selected: Boolean, onClic
                     Spacer(Modifier.height(8.dp))
                     Text(
                         "Navigation",
-                        style = POCOTheme.typography.body3,
-                        color = colors.statusCalm
+                        style = Mg.medium(19, 24),
+                        color = Color(0xFF08705D)
                     )
                 }
             }
@@ -293,14 +294,14 @@ private fun RowScope.LayoutOption(layout: DriveLayout, selected: Boolean, onClic
             ) {
                 MungoIconView(MungoIcon.PAW_FILLED, tint = colors.bgAccent, size = 32.dp)
                 Spacer(Modifier.height(8.dp))
-                Text("Mungo", style = POCOTheme.typography.body3, color = colors.textAccent)
+                Text("Mungo", style = Mg.medium(19, 24), color = colors.textAccent)
             }
         }
         Spacer(Modifier.height(28.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = if (layout == DriveLayout.THREE) "3분할" else "2분할",
-                style = POCOTheme.typography.h3,
+                style = Mg.bold(35, 46),
                 color = colors.textPrimary
             )
             if (layout == DriveLayout.THREE) {
@@ -314,7 +315,7 @@ private fun RowScope.LayoutOption(layout: DriveLayout, selected: Boolean, onClic
                 ) {
                     Text(
                         text = "추천",
-                        style = POCOTheme.typography.body3.copy(fontWeight = FontWeight.Bold),
+                        style = Mg.bold(24, 32),
                         color = colors.textAccent
                     )
                 }
@@ -336,7 +337,7 @@ private fun RowScope.LayoutOption(layout: DriveLayout, selected: Boolean, onClic
 @Composable
 private fun RowScope.PreviewPane(
     weight: Float,
-    background: androidx.compose.ui.graphics.Color,
+    background: Color,
     outlined: Boolean = false,
     content: @Composable ColumnScope.() -> Unit
 ) {

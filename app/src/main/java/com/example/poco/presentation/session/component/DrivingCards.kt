@@ -1,5 +1,7 @@
 package com.example.poco.presentation.session.component
 
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -268,18 +270,19 @@ fun ComfortCardFull(state: DrivingSessionState, modifier: Modifier) {
                 if (state.active) c.score / 100f else null, 300.dp, 30.dp,
                 description = "컴포트 점수 ${if (state.active) c.score else "없음"}"
             ) {
-                Text(if (state.active) "${c.score}" else "—", style = Mg.bold(108, 134), color = Mg.Ink)
+                Text(if (state.active) "${c.score}" else "—", style = Mg.bold(112, 138), color = Mg.Ink)
             }
             Spacer(Modifier.height(36.dp))
             Text(comfortLabel(state), style = Mg.Title, color = Mg.Ink)
             Spacer(Modifier.weight(1f))
             FlowRow(
-                horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally),
+                // Figma 464:45892: 칩 간격 4 → 카드(420) 안에 세 칩이 한 줄로 들어간다
+                horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.CenterHorizontally),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                Pill("급정거 ${c.brakingCount}", style = Mg.semi(20, 29))
-                Pill("급회전 ${c.turnCount + c.repeatedTurnCount}", style = Mg.semi(20, 29))
-                Pill("과속방지턱 ${c.bumpCount}", style = Mg.semi(20, 29))
+                Pill("급정거 ${c.brakingCount}", style = Mg.bold(24, 32))
+                Pill("급회전 ${c.turnCount + c.repeatedTurnCount}", style = Mg.bold(24, 32))
+                Pill("과속방지턱 ${c.bumpCount}", style = Mg.bold(24, 32))
             }
             Spacer(Modifier.weight(1f))
             PetAvatar(112.dp)
@@ -294,13 +297,13 @@ fun ComfortCardSplit(state: DrivingSessionState, modifier: Modifier) {
         Row(Modifier.fillMaxSize(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(30.dp)) {
             ScoreRing(if (state.active) c.score / 100f else null, 132.dp, 16.dp, description = "컴포트 점수 ${if (state.active) c.score else "없음"}") {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(if (state.active) "${c.score}" else "—", style = Mg.bold(46, 54), color = Mg.Ink)
+                    Text(if (state.active) "${c.score}" else "—", style = Mg.bold(50, 61), color = Mg.Ink)
                     Text("컴포트", style = Mg.Body, color = Mg.Muted)
                 }
             }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text("${petName(state)} 상태", style = Mg.Body, color = Mg.Muted)
-                Text(comfortLabel(state), style = Mg.bold(32, 43), color = Mg.Ink)
+                Text(comfortLabel(state), style = Mg.bold(36, 47), color = Mg.Ink)
                 Text(
                     "급정거 ${c.brakingCount} · 급회전 ${c.turnCount + c.repeatedTurnCount} · 과속방지턱 ${c.bumpCount}",
                     style = Mg.Body, color = Mg.Muted, maxLines = 1
@@ -345,23 +348,12 @@ fun GleoSlot(
         }
     }
     when {
-        proposalVisible -> ProposalCard(state, actions, compact, modifier)
+        proposalVisible && ai.phase == AssistantPhase.IDLE -> ProposalCard(state, actions, compact, modifier)
         !restMode && waypoint is WaypointUiState.Adding -> WaypointAddingCard(waypoint.name, compact, modifier)
         !restMode && added != null && (showAdded || added.cancelling || added.cancelError != null) &&
             (top == null || top.priority.rank > GuidancePriority.WAYPOINT_FIVE_MINUTES.rank) ->
             WaypointAddedCard(added, showAdded, actions, compact, modifier)
         else -> GleoCard(state, ai, actions, compact, restMode, modifier)
-    }
-}
-
-private fun gleoText(state: DrivingSessionState, restMode: Boolean): String {
-    state.guidance?.let { return it.displayText }
-    state.aiRestStatus?.let { return it }
-    state.gleoResponse?.takeIf { it.isNotBlank() }?.let { return it }
-    return when (val w = state.waypoint) {
-        is WaypointUiState.Failed -> w.message
-        is WaypointUiState.Cancelled -> "${w.name} 경유를 취소했어요."
-        else -> if (restMode) "물을 먼저 주고, 10분 정도 같이 걸어 주세요." else "${petName(state)}가 편안하게 가는지 지켜볼게요."
     }
 }
 
@@ -374,44 +366,49 @@ private fun GleoCard(
     restMode: Boolean,
     modifier: Modifier
 ) {
-    val text = gleoText(state, restMode)
-    val dark = @Composable { m: Modifier, withHint: Boolean ->
-        Column(
-            m.background(Mg.Ink, RoundedCornerShape(Mg.Radius)).padding(horizontal = if (compact) 28.dp else 42.dp, vertical = 26.dp),
-            verticalArrangement = Arrangement.Center
-        ) {
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(if (compact) 22.dp else 34.dp)) {
-                Box(Modifier.size(44.dp).background(Mg.Orange, CircleShape), contentAlignment = Alignment.Center) {
-                    MgIcon(MgIcons.Speaker, Color.White, 22.dp)
-                }
-                Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    if (!(restMode && compact)) {
-                        Text(if (compact) "글레오" else "Gleo", style = if (compact) Mg.Body else Mg.Caption, color = Mg.OnDarkMuted)
+    val recognizing = ai.phase == AssistantPhase.LISTENING || ai.phase == AssistantPhase.THINKING
+    val spokenText = if (state.ttsSpeaking) {
+        state.guidance?.displayText ?: state.gleoResponse
+    } else null
+    val text = if (recognizing) null else ai.answerText?.takeIf { it.isNotBlank() } ?: spokenText?.takeIf { it.isNotBlank() }
+    val showQuestion = recognizing || ai.question.isNotBlank() || ai.error != null || ai.restNeedsLocation
+    val hasWaypoint = state.waypoint is WaypointUiState.Added
+    if (text == null && !showQuestion && !hasWaypoint) {
+        // Keep the guidance slot allocated, but show no invented Gleo text or question hint.
+        Box(modifier)
+        return
+    }
+    Column(modifier) {
+        // The answer grows above the question, pushing the question down from the tile edge.
+        Column(Modifier.fillMaxWidth().animateContentSize(animationSpec = tween(250))) {
+        if (text != null) {
+            Column(
+                Modifier.fillMaxWidth()
+                    .height(if (compact || restMode) 160.dp else 236.dp)
+                    .background(Mg.Ink, RoundedCornerShape(Mg.Radius))
+                    .padding(horizontal = if (compact) 28.dp else 42.dp, vertical = 26.dp),
+                verticalArrangement = Arrangement.Center
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(if (compact) 22.dp else 34.dp)) {
+                    Box(Modifier.size(44.dp).background(Mg.Orange, CircleShape), contentAlignment = Alignment.Center) {
+                        MgIcon(MgIcons.Speaker, Color.White, 22.dp)
                     }
-                    Text(
-                        text, style = if (compact || restMode) Mg.semi(23, 31) else Mg.Quote, color = Color.White,
-                        maxLines = if (restMode && compact) 2 else 3, overflow = TextOverflow.Ellipsis
-                    )
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text("Gleo", style = Mg.Caption, color = Mg.OnDarkMuted)
+                        Text(text, style = if (compact || restMode) Mg.semi(23, 31) else Mg.Quote, color = Color.White,
+                            maxLines = if (restMode && compact) 2 else 3, overflow = TextOverflow.Ellipsis)
+                    }
                 }
-            }
-            if (withHint) {
-                Spacer(Modifier.weight(1f))
-                AskHint(state, ai, actions, dark = true, modifier = Modifier.height(60.dp))
             }
         }
-    }
-    when {
-        restMode -> dark(modifier, false)
-        compact -> dark(modifier, true)
-        else -> Column(modifier) {
-            Spacer(Modifier.weight(0.6f))
-            dark(Modifier.fillMaxWidth().height(236.dp), false)
-            Spacer(Modifier.weight(1f))
+        if (text != null && showQuestion) Spacer(Modifier.height(16.dp))
+        }
+        if (showQuestion || hasWaypoint) {
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                AskHint(state, ai, actions, dark = false, modifier = Modifier.weight(1f).height(72.dp))
-                CancelWaypointPill(state, actions, Modifier.height(72.dp))
+                if (showQuestion) AskHint(state, ai, actions, dark = false,
+                    modifier = Modifier.weight(1f).height(if (compact) 64.dp else 72.dp))
+                CancelWaypointPill(state, actions, Modifier.height(if (compact) 64.dp else 72.dp))
             }
-            Spacer(Modifier.height(18.dp))
         }
     }
 }
@@ -430,10 +427,12 @@ private fun CancelWaypointPill(state: DrivingSessionState, actions: SessionActio
 private fun AskHint(state: DrivingSessionState, ai: AssistantUiState, actions: SessionActions, dark: Boolean, modifier: Modifier) {
     val ready = ai.configured && ai.consented && (ai.connected || ai.anonymousAuth)
     val text = when {
+        ai.restNeedsLocation && ai.phase == AssistantPhase.IDLE -> "위치 권한 허용하고 휴식 장소 찾기"
         ai.error != null && ai.phase == AssistantPhase.IDLE -> ai.error
         ai.phase == AssistantPhase.CONNECTING -> "글레오에 연결하고 있어요"
         ai.phase == AssistantPhase.LISTENING -> if (ai.question.isBlank()) "듣고 있어요…" else "“${ai.question}”"
-        ai.phase == AssistantPhase.THINKING -> "답을 찾고 있어요 · “${ai.question}”"
+        ai.phase == AssistantPhase.THINKING -> "“${ai.question}”"
+        ai.question.isNotBlank() -> "“${ai.question}”"
         !ai.configured -> "AI 서버가 설정되지 않았어요"
         !ready -> "눌러서 글레오 AI 연결하기"
         else -> if (state.waypoint is WaypointUiState.Added) "“글레오, 휴게소 어디쯤이야?”" else "“글레오, ${petName(state)} 괜찮아?”"
@@ -441,6 +440,7 @@ private fun AskHint(state: DrivingSessionState, ai: AssistantUiState, actions: S
     val onClick = {
         when {
             ai.phase != AssistantPhase.IDLE -> actions.onCancelAi()
+            ai.restNeedsLocation -> actions.onAllowLocation()
             !ready -> actions.onSetupAi()
             else -> actions.onAsk()
         }
@@ -456,7 +456,7 @@ private fun AskHint(state: DrivingSessionState, ai: AssistantUiState, actions: S
             contentAlignment = Alignment.Center
         ) { MgIcon(MgIcons.Mic, if (dark) Mg.Ink else Color.White, if (dark) 16.dp else 20.dp) }
         Text(
-            text, Modifier.weight(1f, fill = !dark), style = Mg.semi(22, 29),
+            text, Modifier.weight(1f, fill = !dark), style = Mg.medium(24, 32),
             color = if (dark) Color.White else Mg.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis,
             textAlign = if (dark) TextAlign.Start else TextAlign.Center
         )
@@ -628,7 +628,7 @@ fun RestTimerSplit(state: DrivingSessionState, modifier: Modifier) {
             }
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(restPlaceName(state) ?: "휴식 중", style = Mg.Body, color = Mg.Muted, maxLines = 1)
-                Text("쉬어 가는 중", style = Mg.bold(32, 43), color = Mg.Ink)
+                Text("쉬어 가는 중", style = Mg.bold(36, 47), color = Mg.Ink)
                 Text("추천 ${RestIntervalPolicy.RECOMMENDED_REST_MINUTES}분 · ${recoveryText(state)}", style = Mg.Body, color = Mg.Muted, maxLines = 1)
             }
         }

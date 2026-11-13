@@ -18,8 +18,8 @@ import com.example.poco.R
 
 /*
  * 디자인 시스템 DS-01 Font · DS-02 Typography
- * - 본문 글꼴: Noto Sans KR, 굵기 3단계만 (Regular 400 · Medium 500 · Bold 700)
- *   가변 글꼴(variable font) 한 파일로 세 굵기를 모두 쓴다
+ * - Page 3 홈 · 온보딩 · 프로필 · 이동 기록: Pretendard (400 · 500 · 600 · 700)
+ * - 설정 · 주행 · 도착 요약: Noto Sans KR (가변 글꼴, DesignCanvas에서 선택)
  * - 로고 글꼴: Fredoka Bold (mungo 글자 로고 전용, 화면 글꼴로 쓰지 않음)
  * - Pleos 1920×1080 · 밀도 160 → 시안 px = sp 그대로
  */
@@ -30,10 +30,19 @@ private fun notoSansKr(weight: FontWeight) = Font(
     variationSettings = FontVariation.Settings(FontVariation.weight(weight.weight))
 )
 
-val pocoFontFamily = FontFamily(
+val pocoNotoFontFamily = FontFamily(
     notoSansKr(FontWeight.Normal),
     notoSansKr(FontWeight.Medium),
+    notoSansKr(FontWeight.SemiBold),
     notoSansKr(FontWeight.Bold)
+)
+
+/** Page 3 home, onboarding, profile and trip-report typeface. */
+val pocoFontFamily = FontFamily(
+    Font(R.font.pretendard_regular, FontWeight.Normal),
+    Font(R.font.pretendard_medium, FontWeight.Medium),
+    Font(R.font.pretendard_semibold, FontWeight.SemiBold),
+    Font(R.font.pretendard_bold, FontWeight.Bold)
 )
 
 /** 로고 전용 (Fredoka Bold) */
@@ -45,7 +54,7 @@ val pocoLogoFontFamily = FontFamily(
     )
 )
 
-// 예전 이름 (팀 코드 호환용) - 모두 Noto Sans KR
+// 예전 이름 (팀 코드 호환용) — 굵기는 TextStyle에서 지정한다
 val pocoFontBold = pocoFontFamily
 val pocoFontSemiBold = pocoFontFamily
 val pocoFontMedium = pocoFontFamily

@@ -1,7 +1,9 @@
 package com.example.poco
 
 import android.graphics.Bitmap
+import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -56,7 +58,10 @@ class RecordScreensGalleryTest {
     )
     private val start = now - 160 * m
     private fun e(min: Long, type: String, delta: Int? = null, after: Int? = null, detail: String? = null) =
-        TripEventEntity(tripId = "c", atEpoch = start + min * m, type = type, scoreDelta = delta, scoreAfter = after, detail = detail)
+        TripEventEntity(tripId = "c", atEpoch = start + min * m, type = type, scoreDelta = delta, scoreAfter = after, detail = detail,
+        scoreBefore = if (after != null && delta != null) after - delta else null,
+        latitude = 37.0, longitude = 127.0, locationAtEpoch = now,
+        temperatureC = 23f, windowPercent = 0.0, seat = "PASSENGER", guidanceText = "천천히 가요.")
 
     private val events = listOf(
         e(10, TripEventType.SCORE_PENALTY, -4, 96, "SHARP_TURN"),
@@ -114,6 +119,24 @@ class RecordScreensGalleryTest {
             compose.waitForIdle()
             assertTrue(name, compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty())
             capture("record-$name.png")
+        }
+    }
+
+    /** 주행 완료 화면을 Pleos 화면 분할 크기들로 그려 본다 (전체 · 2분할 · 3분할) */
+    @Test fun summarySplitSizes() {
+        val size = mutableStateOf(1682 to 1210)
+        val detail = TripDetailViewModel(history, settings)
+        compose.setContent {
+            POCOTheme {
+                androidx.compose.foundation.layout.Box(
+                    androidx.compose.ui.Modifier.size(size.value.first.dp, size.value.second.dp)
+                ) { TripSummaryRoute("c", {}, {}, detail) }
+            }
+        }
+        listOf(1682 to 1210, 1100 to 1210, 836 to 1210, 555 to 1210, 836 to 600).forEach { (w, h) ->
+            compose.runOnIdle { size.value = w to h }
+            compose.waitForIdle()
+            capture("summary-${w}x$h.png")
         }
     }
 

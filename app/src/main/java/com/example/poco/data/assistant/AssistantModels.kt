@@ -27,7 +27,12 @@ data class AssistContext(
     val temperatureStatus: String? = null,
     val windowPercent: Double? = null,
     val petSize: String? = null,
-    val petWeightKg: Double? = null
+    val petWeightKg: Double? = null,
+    /** 답변에서 "반려견" 대신 부를 이름 */
+    val petName: String? = null,
+    /** Pleos 내비 길 안내 중일 때만: 목적지 이름 · 남은 시간(분) */
+    val routeDestination: String? = null,
+    val routeRemainingMinutes: Long? = null
 )
 
 @Serializable

@@ -11,7 +11,7 @@ Firebase 프로젝트 `mungo-8be3c`의 `asia-northeast3`에 배포되어 있다(
 3. P단 정차 상태에서 **AI 연결** → "위 정보 전송에 동의합니다" 체크 → **연결**. 연결 코드는 필요 없다. 앱이 Firebase 익명 인증으로 자동 로그인한다.
 4. **음성으로 질문** → Pleos STT로 질문 → 서버가 Gemini로 차량 상태 기반 답변 생성 → 주행 화면 답변 카드 표시 → Pleos TTS 출력.
 
-APK 빌드(개발팀): `./gradlew :app:assembleDebug -PPOCO_ASSISTANT_URL=https://asia-northeast3-mungo-8be3c.cloudfunctions.net/assistantApi`. Firebase Web API 키는 `local.properties`의 `POCO_FIREBASE_API_KEY=` 또는 `-PPOCO_FIREBASE_API_KEY=`로 주입한다(Firebase 앱 `POCO Android`, `firebase apps:sdkconfig ANDROID 1:899311377531:android:ddce974a0ff8163d9216de`). 이 키는 공개 프로젝트 식별자이며 비밀이 아니다. Gemini 키는 APK에 들어가지 않는다.
+APK 빌드(개발팀): 함수 URL은 루트 `gradle.properties`의 `POCO_ASSISTANT_URL`에 들어 있어 `./gradlew :app:assembleDebug`(Android Studio 실행 포함)만으로 연결된다. 다른 서버로 붙을 때만 `-PPOCO_ASSISTANT_URL=...` 또는 `~/.gradle/gradle.properties`로 덮어쓴다. Firebase Web API 키는 `local.properties`의 `POCO_FIREBASE_API_KEY=` 또는 `-PPOCO_FIREBASE_API_KEY=`로 주입한다(Firebase 앱 `POCO Android`, `firebase apps:sdkconfig ANDROID 1:899311377531:android:ddce974a0ff8163d9216de`). 이 키는 공개 프로젝트 식별자이며 비밀이 아니다. Gemini 키는 APK에 들어가지 않는다.
 
 에뮬레이터 주의: 확인한 `Pleos_Connect_v2.1.0` 에뮬레이터 이미지에서는 Pleos 온디바이스 STT/TTS 엔진의 모델 로딩이 실패한다(STT `KenLMWrapper: unk is not defined`, TTS `Failed to load MetaSpace byte pair encoder` → `ON_DEVICE_ENGINE_ERROR`). SERVER 모드는 Pleos 클라이언트 자격 증명이 없는 앱에서 `Client credentials missing`으로 실패한다. 이 환경에서는 음성 질문을 시작할 수 없다. 앱 결함이 아닌 엔진/이미지 상태이며 실제 Pleos 기기 또는 정상 모델이 설치된 이미지에서 확인해야 한다.
 

@@ -39,13 +39,13 @@ import com.example.poco.presentation.session.component.koreanDuration
 
 /** Figma 465:48292 "이동기록_01". */
 @Composable
-fun TripHistoryRoute(onOpen: (String) -> Unit, onNavigate: (RailTab) -> Unit, viewModel: TripHistoryViewModel = hiltViewModel()) {
+fun TripHistoryRoute(onOpen: (String) -> Unit, onNavigate: (RailTab) -> Unit, viewModel: TripHistoryViewModel = hiltViewModel(), initialPeriod: Period = Period.MONTH) {
     val trips by viewModel.trips.collectAsStateWithLifecycle()
-    var period by rememberSaveable { mutableStateOf(Period.MONTH) }
+    var period by rememberSaveable(initialPeriod) { mutableStateOf(initialPeriod) }
     val now = System.currentTimeMillis()
     RailScaffold(RailTab.HISTORY, onNavigate) {
         Row(Modifier.fillMaxWidth().height(75.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("이동 기록", Modifier.weight(1f), style = Mg.bold(38, 51), color = Mg.Ink)
+            Text("이동 기록", Modifier.weight(1f), style = Mg.bold(43, 54), color = Mg.Ink)
             Row(Modifier.width(444.dp).fillMaxHeight().background(Mg.Segment, CircleShape).padding(6.dp)) {
                 Period.entries.forEach { p ->
                     val on = p == period
@@ -53,7 +53,7 @@ fun TripHistoryRoute(onOpen: (String) -> Unit, onNavigate: (RailTab) -> Unit, vi
                         Modifier.weight(1f).fillMaxHeight().clip(CircleShape).background(if (on) Color.White else Color.Transparent)
                             .clickable { period = p },
                         contentAlignment = Alignment.Center
-                    ) { Text(p.label, style = if (on) Mg.bold(23, 30) else Mg.medium(23, 30), color = if (on) Mg.Ink else Mg.Muted) }
+                    ) { Text(p.label, style = if (on) Mg.bold(25, 32) else Mg.regular(25, 32), color = if (on) Mg.Ink else Color(0xFF4E5968)) }
                 }
             }
         }
@@ -82,7 +82,7 @@ fun TripHistoryRoute(onOpen: (String) -> Unit, onNavigate: (RailTab) -> Unit, vi
         val newest = shown.first().id
         LazyColumn(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(16.dp)) {
             shown.groupBy { sectionOf(it, now) }.forEach { (section, rows) ->
-                item(key = "h-$section") { Text(section, Modifier.padding(start = 5.dp, top = 6.dp), style = Mg.semi(22, 29), color = Mg.Muted) }
+                item(key = "h-$section") { Text(section, Modifier.padding(start = 5.dp, top = 6.dp), style = Mg.bold(24, 31), color = Mg.Muted) }
                 items(rows, key = { it.id }) { trip -> TripRow(trip, trip.id == newest) { onOpen(trip.id) } }
             }
         }
@@ -97,14 +97,14 @@ private fun TripRow(trip: TripEntity, newest: Boolean, onClick: () -> Unit) {
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.width(70.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(dateText(trip.startedAtEpoch, "M월"), style = Mg.medium(19, 25), color = Mg.Muted)
-            Text(dateText(trip.startedAtEpoch, "d"), style = Mg.bold(38, 51), color = Mg.Ink)
+            Text(dateText(trip.startedAtEpoch, "M월"), style = Mg.regular(21, 27), color = Mg.Muted)
+            Text(dateText(trip.startedAtEpoch, "d"), style = Mg.bold(43, 54), color = Mg.Ink)
         }
         Spacer(Modifier.width(32.dp))
         Box(Modifier.width(2.dp).height(70.dp).background(Mg.BarGrey))
         Spacer(Modifier.width(40.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Text(tripTitle(trip), style = Mg.bold(27, 37), color = Mg.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(tripTitle(trip), style = Mg.bold(31, 40), color = Mg.Ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
             Text(
                 listOfNotNull(
                     koreanDuration(tripDurationMs(trip)),
@@ -116,8 +116,8 @@ private fun TripRow(trip: TripEntity, newest: Boolean, onClick: () -> Unit) {
             )
         }
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(trip.finalScore?.toString() ?: "—", style = Mg.bold(46, 57), color = Mg.Ink)
-            if (trip.finalScore != null) Text("점", Modifier.padding(start = 4.dp, bottom = 8.dp), style = Mg.medium(22, 30), color = Mg.Ink)
+            Text(trip.finalScore?.toString() ?: "—", style = Mg.bold(48, 60), color = Mg.Ink)
+            if (trip.finalScore != null) Text("점", Modifier.padding(start = 4.dp, bottom = 8.dp), style = Mg.regular(25, 32), color = Mg.Ink)
         }
         Spacer(Modifier.width(36.dp))
         MgIcon(MgIcons.ChevronRight, Mg.Faint, 22.dp)

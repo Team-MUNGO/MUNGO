@@ -4,11 +4,11 @@ import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import timber.log.Timber
 
 object TripEventType {
@@ -78,15 +78,39 @@ interface TripHistoryRepository {
     suspend fun setMotionSickness(id: String, record: MotionRecord)
 }
 
-@OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
 class TripRecorder @Inject constructor(private val dao: TripDao) : TripRecordSink, TripHistoryRepository {
     // One writer, FIFO: events are persisted in order and completion runs after queued events.
     private val writer = Dispatchers.IO.limitedParallelism(1)
     private val scope = CoroutineScope(SupervisorJob() + writer)
+    // limitedParallelism alone does not serialize suspending Room calls. One consumer must
+    // await each database operation before taking the next command, including completion.
+    private val commands = Channel<suspend () -> Unit>(Channel.UNLIMITED)
+
+    init {
+        scope.launch {
+            for (command in commands) {
+                runCatching { command() }.onFailure { Timber.w(it, "trip write") }
+            }
+        }
+    }
+
+    private fun enqueue(command: suspend () -> Unit) {
+        check(commands.trySend(command).isSuccess)
+    }
+
+    private suspend fun <T> writeAndWait(operation: suspend () -> T): T {
+        val result = CompletableDeferred<T>()
+        enqueue {
+            runCatching { operation() }
+                .onSuccess { result.complete(it) }
+                .onFailure { result.completeExceptionally(it) }
+        }
+        return result.await()
+    }
 
     override fun begin(trip: TripEntity) {
-        scope.launch {
+        enqueue {
             // A trip left IN_PROGRESS by a killed process is labeled, not silently completed.
             dao.markInterrupted(trip.id)
             dao.insertTrip(trip)
@@ -94,7 +118,7 @@ class TripRecorder @Inject constructor(private val dao: TripDao) : TripRecordSin
     }
 
     override fun event(event: TripEventEntity) {
-        scope.launch { runCatching { dao.insertEvent(event) }.onFailure { Timber.w(it, "trip event") } }
+        enqueue { dao.insertEvent(event) }
     }
 
     override suspend fun complete(
@@ -104,7 +128,7 @@ class TripRecorder @Inject constructor(private val dao: TripDao) : TripRecordSin
         drivingMs: Long,
         restMs: Long,
         restCount: Int
-    ): Boolean = withContext(writer) {
+    ): Boolean = writeAndWait {
         val counts = countEvents(dao.events(tripId))
         dao.complete(
             tripId, endedAt, finalScore, minOf(counts.minScore, finalScore), drivingMs, restMs, restCount,
@@ -117,5 +141,5 @@ class TripRecorder @Inject constructor(private val dao: TripDao) : TripRecordSin
     override fun trip(id: String) = dao.observeTrip(id)
     override fun events(id: String) = dao.observeEvents(id)
     override suspend fun setMotionSickness(id: String, record: MotionRecord) =
-        withContext(writer) { dao.setMotionSickness(id, record.encode()) }
+        writeAndWait { dao.setMotionSickness(id, record.encode()) }
 }

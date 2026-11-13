@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -51,14 +50,17 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.intl.LocaleList
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -67,6 +69,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.poco.core.designsystem.MungoIcon
+import com.example.poco.core.designsystem.clearFocusOnTap
 import com.example.poco.core.designsystem.MungoIconView
 import com.example.poco.core.designsystem.PetPhoto
 import com.example.poco.core.designsystem.component.PocoButton
@@ -76,6 +79,7 @@ import com.example.poco.core.designsystem.component.PocoToggle
 import com.example.poco.core.theme.MungoLayout
 import com.example.poco.core.theme.MungoRadius
 import com.example.poco.core.theme.MungoSize
+import com.example.poco.presentation.design.Mg
 import com.example.poco.core.theme.POCOTheme
 import com.example.poco.core.theme.PocoSpacing
 import com.example.poco.core.util.eunNeun
@@ -195,6 +199,7 @@ private fun ProfileSetupScreen(
         modifier = modifier
             .fillMaxSize()
             .background(colors.bgCanvas)
+            .clearFocusOnTap()
             .safeDrawingPadding()
             .padding(MungoLayout.screenPadding)
     ) {
@@ -291,11 +296,11 @@ private fun StepPanel(
         Spacer(Modifier.height(72.dp))
         Text(
             text = title,
-            style = POCOTheme.typography.h2.copy(lineHeight = 72.sp),
+            style = Mg.bold(60, 72),
             color = colors.textPrimary
         )
         Spacer(Modifier.height(PocoSpacing.space32))
-        Text(text = description, style = POCOTheme.typography.body2, color = colors.textSecondary)
+        Text(text = description, style = Mg.regular(26, 36), color = colors.textSecondary)
         Spacer(Modifier.weight(1f))
         HorizontalDivider(thickness = 2.dp, color = colors.borderDefault)
         Spacer(Modifier.height(PocoSpacing.space40))
@@ -350,13 +355,13 @@ private fun SummaryRow(label: String, value: String) {
     ) {
         Text(
             text = label,
-            style = POCOTheme.typography.body2,
+            style = Mg.medium(26, 34),
             color = POCOTheme.colors.textSecondary,
             modifier = Modifier.weight(1f)
         )
         Text(
             text = value.ifEmpty { "-" },
-            style = POCOTheme.typography.title3.copy(fontWeight = FontWeight.Bold),
+            style = Mg.bold(26, 34),
             color = with(POCOTheme.colors) { if (value.isEmpty()) textDisabled else textPrimary }
         )
     }
@@ -429,7 +434,7 @@ private fun LabeledField(
     Column(modifier = modifier) {
         Text(
             text = label,
-            style = POCOTheme.typography.body3.copy(fontWeight = FontWeight.Bold),
+            style = Mg.bold(24, 32),
             color = POCOTheme.colors.textSecondary
         )
         Spacer(Modifier.height(PocoSpacing.space12))
@@ -448,10 +453,11 @@ internal fun SetupTextField(
     trailingIcon: MungoIcon? = null
 ) {
     val colors = POCOTheme.colors
+    val focusManager = LocalFocusManager.current
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
     val shape = RoundedCornerShape(MungoRadius.md)
-    val textStyle = POCOTheme.typography.title2.copy(fontWeight = FontWeight.Bold)
+    val textStyle = Mg.bold(30, 40)
     BasicTextField(
         value = value,
         onValueChange = onValueChange,
@@ -460,6 +466,7 @@ internal fun SetupTextField(
         textStyle = textStyle.copy(color = colors.textPrimary),
         cursorBrush = SolidColor(colors.bgAccent),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done, hintLocales = KoreanLocales),
+        keyboardActions = KeyboardActions(onDone = { focusManager.clearFocus() }),
         decorationBox = { inner ->
             Row(
                 modifier = Modifier
@@ -562,7 +569,10 @@ private fun StepperCard(
 ) {
     val colors = POCOTheme.colors
     val focusManager = LocalFocusManager.current
-    val numberStyle = POCOTheme.typography.display1.copy(fontSize = 112.sp, lineHeight = 112.sp)
+    val numberStyle = POCOTheme.typography.display1.copy(fontSize = 120.sp, lineHeight = 132.sp)
+    // 숫자 칸 너비는 지금 글자(비었으면 "-") 폭으로 직접 잰다.
+    // width(IntrinsicSize.Min)은 +/-로 값이 바뀌어도 너비가 갱신되지 않아 숫자가 안 보였다
+    val numberWidth = rememberNumberWidth(text.ifEmpty { "-" }, numberStyle)
     Column(
         modifier = modifier
             .background(colors.bgSurface, RoundedCornerShape(MungoRadius.lg))
@@ -597,14 +607,13 @@ private fun StepperCard(
                 },
                 modifier = Modifier
                     .alignByBaseline()
-                    .width(IntrinsicSize.Min)
-                    .widthIn(min = 64.dp)
+                    .width(numberWidth)
                     .semantics { contentDescription = "$label 입력" }
             )
             Spacer(Modifier.width(PocoSpacing.space4))
             Text(
                 text = unit,
-                style = POCOTheme.typography.title1,
+                style = Mg.bold(40, 50),
                 color = colors.textPrimary,
                 modifier = Modifier.alignByBaseline()
             )
@@ -616,6 +625,19 @@ private fun StepperCard(
         }
     }
 }
+
+/** 숫자 입력칸 너비 = 글자 폭 + 커서 자리. 화면 축소(FitWideWindow) 밀도도 그대로 따른다 */
+@Composable
+internal fun rememberNumberWidth(text: String, style: TextStyle): Dp {
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    return remember(text, style, density) {
+        val px = measurer.measure(text, style, maxLines = 1, softWrap = false, density = density).size.width
+        with(density) { px.toDp() } + NUMBER_CURSOR_ROOM
+    }
+}
+
+private val NUMBER_CURSOR_ROOM = 6.dp
 
 /** 한 번 누르면 1번, 길게 누르면 0.4초 뒤부터 계속 */
 @Composable
@@ -768,7 +790,7 @@ private fun TraitCard(
             Spacer(Modifier.height(PocoSpacing.space24))
             Text(
                 text = trait.title(),
-                style = POCOTheme.typography.title1,
+                style = Mg.bold(27, 35),
                 color = colors.textPrimary
             )
             Spacer(Modifier.height(PocoSpacing.space8))
@@ -900,12 +922,12 @@ private fun AlertRow(
         Spacer(Modifier.width(PocoSpacing.space24))
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(text = title, style = POCOTheme.typography.title1, color = colors.textPrimary)
+                Text(text = title, style = Mg.bold(27, 35), color = colors.textPrimary)
                 if (recommended) {
                     Spacer(Modifier.width(PocoSpacing.space12))
                     Text(
                         text = "추천",
-                        style = POCOTheme.typography.body3.copy(fontWeight = FontWeight.Bold),
+                        style = Mg.bold(24, 32),
                         color = colors.textAccent,
                         modifier = Modifier
                             .background(colors.bgAccentSubtle, CircleShape)
@@ -919,7 +941,7 @@ private fun AlertRow(
             Spacer(Modifier.height(PocoSpacing.space4))
             Text(
                 text = description,
-                style = POCOTheme.typography.body2,
+                style = Mg.regular(21, 29),
                 color = colors.textSecondary
             )
         }
@@ -956,7 +978,7 @@ private fun CompleteContent(
         Spacer(Modifier.height(PocoSpacing.space40))
         Text(
             text = "${name}의 프로필을 완성했어요",
-            style = POCOTheme.typography.h2,
+            style = Mg.bold(56, 70),
             color = colors.textPrimary
         )
         Spacer(Modifier.height(PocoSpacing.space16))
@@ -983,7 +1005,7 @@ private fun CompleteContent(
             Spacer(Modifier.width(PocoSpacing.space48))
             Text(
                 text = name,
-                style = POCOTheme.typography.h3,
+                style = Mg.bold(44, 55),
                 color = colors.textPrimary,
                 modifier = Modifier.weight(1f)
             )
@@ -1100,7 +1122,7 @@ private val previewForm = PetForm(
 
 @Preview(widthDp = 1700, heightDp = 1184)
 @Composable
-private fun BasicPreview() {
+internal fun BasicPreview() {
     POCOTheme(darkTheme = false) {
         ProfileSetupScreen(ProfileSetupUiState(form = previewForm), ProfileSetupActions.Preview)
     }
@@ -1108,7 +1130,7 @@ private fun BasicPreview() {
 
 @Preview(widthDp = 1700, heightDp = 1184)
 @Composable
-private fun TraitsPreview() {
+internal fun TraitsPreview() {
     POCOTheme(darkTheme = false) {
         ProfileSetupScreen(
             ProfileSetupUiState(step = ProfileStep.TRAITS, form = previewForm),
@@ -1119,7 +1141,7 @@ private fun TraitsPreview() {
 
 @Preview(widthDp = 1700, heightDp = 1184)
 @Composable
-private fun AlertsPreview() {
+internal fun AlertsPreview() {
     POCOTheme(darkTheme = false) {
         ProfileSetupScreen(
             ProfileSetupUiState(step = ProfileStep.ALERTS, form = previewForm),
@@ -1130,7 +1152,7 @@ private fun AlertsPreview() {
 
 @Preview(widthDp = 1700, heightDp = 1184)
 @Composable
-private fun CompletePreview() {
+internal fun CompletePreview() {
     POCOTheme(darkTheme = false) {
         ProfileSetupScreen(
             ProfileSetupUiState(step = ProfileStep.COMPLETE, form = previewForm),

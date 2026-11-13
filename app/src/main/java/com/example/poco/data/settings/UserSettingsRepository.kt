@@ -12,6 +12,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 
 interface UserSettingsRepository {
@@ -20,6 +21,10 @@ interface UserSettingsRepository {
     val voiceGuidanceEnabled: Flow<Boolean>
     suspend fun setRestIntervalMinutes(minutes: Int)
     suspend fun setVoiceGuidanceEnabled(enabled: Boolean)
+
+    /** 설정 > 알림 '도착 요약': 주행을 마치면 요약 화면을 보여 줄지 */
+    val arrivalSummaryEnabled: Flow<Boolean> get() = flowOf(true)
+    suspend fun setArrivalSummaryEnabled(enabled: Boolean) {}
 }
 
 private val Context.userSettings: DataStore<Preferences> by preferencesDataStore("poco_user_settings")
@@ -36,6 +41,12 @@ class DataStoreUserSettingsRepository @Inject constructor(
         it[intervalKey]?.let(RestIntervalPolicy::clamp) ?: RestIntervalPolicy.DEFAULT_MINUTES
     }
     override val voiceGuidanceEnabled = context.userSettings.data.map { it[voiceKey] ?: true }
+    private val arrivalKey = booleanPreferencesKey("arrival_summary_enabled")
+    override val arrivalSummaryEnabled = context.userSettings.data.map { it[arrivalKey] ?: true }
+
+    override suspend fun setArrivalSummaryEnabled(enabled: Boolean) {
+        context.userSettings.edit { it[arrivalKey] = enabled }
+    }
 
     override suspend fun setRestIntervalMinutes(minutes: Int) {
         context.userSettings.edit { it[intervalKey] = RestIntervalPolicy.clamp(minutes) }

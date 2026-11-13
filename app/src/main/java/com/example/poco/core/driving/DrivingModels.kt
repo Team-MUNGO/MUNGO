@@ -27,7 +27,11 @@ data class DrivingSettings(
     val minTemperatureC: Float,
     val maxTemperatureC: Float,
     /** Body weight in 0.1 kg units; null when the user has not entered it (size then unknown). */
-    val weightTenths: Int? = null
+    val weightTenths: Int? = null,
+    /** 설정 > 알림 '창문 안전 알림'. 끄면 창문이 열려도 경고·음성 안내를 하지 않는다 */
+    val windowAlerts: Boolean = true,
+    /** 설정 > 알림 '휴식 쉼터 제안'. 끄면 휴식 20분 전 쉼터 제안을 받지 않는다 */
+    val restSuggestions: Boolean = true
 ) {
     val petSize: PetSize? get() = weightTenths?.let(::petSizeFor)
 
@@ -78,6 +82,15 @@ data class ComfortScoreConfig(
     val sharpTurnMin: Double = 60.0,
     val sharpTurnMax: Double = 120.0,
     val turnWindowMs: Long = 2_000,
+    // Steering-wheel sharp turn: lateral ≈ v² · tan(wheel angle) / wheelbase (bicycle model), the same
+    // estimate and PocoStandard lateral thresholds (EVENT 2.0 / MILD 1.5 m/s²) as ComfortTracker.
+    val steeringRatio: Double = 14.0,
+    val wheelbaseM: Double = 3.0,
+    val sharpTurnLateralMps2: Double = 2.0,
+    val turnRearmLateralMps2: Double = 1.5,
+    val steeringHoldMs: Long = 300,
+    /** One turn seen by both steering and GPS heading is counted once. */
+    val sharpTurnDedupMs: Long = 4_000,
     val sharpTurnPenalty: Int = 4,
     // Provisional POCO tuning: a turn ends after 1s without >=3°/s movement.
     val curveMinAngle: Double = 15.0,

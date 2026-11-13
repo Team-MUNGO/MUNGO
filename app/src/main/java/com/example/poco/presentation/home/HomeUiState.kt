@@ -23,7 +23,9 @@ data class HomeUiState(
     val isVoiceGuideEnabled: Boolean = true,
     val isRearTempWatchEnabled: Boolean = true,
     /** 기어 P → D 전환 감지 → 주행 화면으로 자동 이동 */
-    val shouldStartDriving: Boolean = false
+    val shouldStartDriving: Boolean = false,
+    /** 설정 > 차량 연동 관리에서 해지하면 false: 차량 값은 비우고 '다시 연결하기'를 보여 준다 */
+    val isVehicleLinked: Boolean = true
 ) {
     val mealStatus: CheckStatus
         get() = when {

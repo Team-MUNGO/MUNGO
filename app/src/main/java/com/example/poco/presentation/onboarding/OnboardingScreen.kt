@@ -34,6 +34,7 @@ import com.example.poco.core.designsystem.component.PocoButton
 import com.example.poco.core.designsystem.component.PocoButtonSize
 import com.example.poco.core.theme.MungoLayout
 import com.example.poco.core.theme.MungoRadius
+import com.example.poco.presentation.design.Mg
 import com.example.poco.core.theme.POCOTheme
 import com.example.poco.core.theme.PocoSpacing
 
@@ -134,13 +135,13 @@ private fun IntroPanel(onStart: () -> Unit, modifier: Modifier = Modifier) {
         Spacer(Modifier.height(80.dp))
         Text(
             text = "반려동물과\n드라이브, 이제 더\n편안하게 떠나요",
-            style = POCOTheme.typography.h2.copy(lineHeight = 72.sp),
+            style = Mg.bold(60, 72),
             color = colors.textPrimary
         )
         Spacer(Modifier.height(PocoSpacing.space32))
         Text(
             text = "운전 습관과 차내 환경을 살펴\n우리 아이 컨디션을 지켜 드려요.",
-            style = POCOTheme.typography.body2,
+            style = Mg.regular(26, 36),
             color = colors.textSecondary
         )
         Spacer(Modifier.weight(1f))
@@ -186,7 +187,7 @@ private fun FeatureCard(number: Int, feature: OnboardingFeature, modifier: Modif
             Spacer(Modifier.height(PocoSpacing.space8))
             Text(
                 text = feature.description,
-                style = POCOTheme.typography.body2,
+                style = Mg.regular(26, 36),
                 color = colors.textSecondary
             )
         }

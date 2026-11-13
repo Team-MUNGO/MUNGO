@@ -29,6 +29,8 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
+import com.example.poco.data.model.NaviEvent
+import com.example.poco.data.repository.NaviRepository
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -113,6 +115,8 @@ class AssistantViewModelTest {
         override fun cancelWaypoint() = Unit
     }
 
+    private val navi = kotlinx.coroutines.flow.MutableSharedFlow<NaviEvent>()
+
     @Before fun setup() {
         Dispatchers.setMain(dispatcher)
         vm = AssistantViewModel(
@@ -131,7 +135,16 @@ class AssistantViewModelTest {
                     return AssistantLocation(37.0, 127.0, 0)
                 }
             },
-            session
+            session,
+            object : NaviRepository {
+                override fun observeEvents() = navi
+                override suspend fun openNavigation(keyword: String?) = Result.success(Unit)
+                override fun observeBumps() = kotlinx.coroutines.flow.emptyFlow<com.example.poco.core.driving.Reading<List<com.example.poco.data.pleos.datasource.BumpApproach>>>()
+                override fun observeRoute() = kotlinx.coroutines.flow.emptyFlow<com.example.poco.data.pleos.datasource.NaviRouteUpdate>()
+            },
+            com.example.poco.data.assistant.RestRecommendationCoordinator(session, remote, object : AssistantLocationSource {
+                override suspend fun current() = AssistantLocation(37.0, 127.0, 0)
+            })
         )
         scheduler.runCurrent()
     }

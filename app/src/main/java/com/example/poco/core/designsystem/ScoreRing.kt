@@ -44,7 +44,8 @@ fun ScoreRing(
     val density = LocalDensity.current
     BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
         // 글자는 링 안쪽 원에 맞춘다: 숫자는 안쪽 지름의 34%, 라벨은 9%까지 (큰 글자 스타일이어도 링과 겹치지 않게)
-        val inner = minOf(maxWidth, maxHeight) - strokeWidth * 2
+        // 화면 분할로 칸이 아주 좁아지면 링 두께보다 작아질 수 있다: 음수 글자 크기로 앱이 죽지 않게 0 이상으로
+        val inner = (minOf(maxWidth, maxHeight) - strokeWidth * 2).coerceAtLeast(1.dp)
         val scoreSize =
             with(density) { minOf(scoreStyle.fontSize.toPx(), (inner * 0.34f).toPx()).toSp() }
         val labelStyle = POCOTheme.typography.caption

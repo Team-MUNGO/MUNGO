@@ -62,7 +62,7 @@ import com.example.poco.core.theme.PocoStroke
 // region Toggle (96×56 · 터치 영역은 줄 전체 88 이상)
 
 /**
- * 켜짐: 망고 트랙 + 진한 망고 테두리 + 노브 안 체크 / 꺼짐: 진회색 트랙 (다크: 밝은 회색).
+ * 켜짐: 망고 트랙 + 노브 안 체크 (테두리 없음 · Figma 온보딩 3/3) / 꺼짐: 진회색 트랙 (다크: 밝은 회색).
  * 색만으로 구분하지 않도록 켜짐에 체크를 넣는다. 애니메이션 없음
  */
 @Composable
@@ -79,19 +79,12 @@ fun PocoToggle(
         !enabled && checked -> MungoPalette.mango200
         !enabled -> colors.borderStrong
         checked -> colors.bgAccent
-        else -> colors.bgNeutralStrong
+        else -> colors.borderStrong
     }
     Box(
         modifier = modifier
             .size(PocoSize.toggleWidth, PocoSize.toggleHeight)
             .background(track, CircleShape)
-            .then(
-                if (checked && enabled) {
-                    Modifier.border(PocoStroke.control, colors.borderAccent, CircleShape)
-                } else {
-                    Modifier
-                }
-            )
             .clickable(enabled = enabled) { onCheckedChange(!checked) },
         contentAlignment = Alignment.CenterStart
     ) {
@@ -99,17 +92,8 @@ fun PocoToggle(
             modifier = Modifier
                 .offset(x = if (checked) PocoSize.toggleWidth - knob - inset else inset)
                 .size(knob)
-                .background(colors.bgSurface, CircleShape),
-            contentAlignment = Alignment.Center
-        ) {
-            if (checked) {
-                MungoIconView(
-                    MungoIcon.CHECK,
-                    tint = if (enabled) colors.textPrimary else colors.textDisabled,
-                    size = 26.dp
-                )
-            }
-        }
+                .background(colors.bgSurface, CircleShape)
+        )
     }
 }
 

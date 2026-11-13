@@ -9,6 +9,8 @@ import androidx.room.OnConflictStrategy
 import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 /**
@@ -63,7 +65,16 @@ data class TripEventEntity(
     val scoreAfter: Int? = null,
     val detail: String? = null,
     /** Optional idempotency key (e.g. AI rest request per cycle). Unique per trip. */
-    val dedupeKey: String? = null
+    val dedupeKey: String? = null,
+    /** Snapshot captured when the event occurred; never backfilled with the current location. */
+    val scoreBefore: Int? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val locationAtEpoch: Long? = null,
+    val temperatureC: Float? = null,
+    val windowPercent: Double? = null,
+    val seat: String? = null,
+    val guidanceText: String? = null
 )
 
 @Dao
@@ -121,7 +132,21 @@ interface TripDao {
     suspend fun setMotionSickness(id: String, signs: String?)
 }
 
-@Database(entities = [TripEntity::class, TripEventEntity::class], version = 1, exportSchema = true)
+@Database(entities = [TripEntity::class, TripEventEntity::class], version = 2, exportSchema = true)
 abstract class TripDatabase : RoomDatabase() {
     abstract fun trips(): TripDao
+}
+
+/** Preserve existing trip/event rows; older events deliberately have no reconstructed snapshots. */
+val TRIP_MIGRATION_1_2 = object : Migration(1, 2) {
+    override fun migrate(db: SupportSQLiteDatabase) {
+        db.execSQL("ALTER TABLE trip_events ADD COLUMN scoreBefore INTEGER")
+        db.execSQL("ALTER TABLE trip_events ADD COLUMN latitude REAL")
+        db.execSQL("ALTER TABLE trip_events ADD COLUMN longitude REAL")
+        db.execSQL("ALTER TABLE trip_events ADD COLUMN locationAtEpoch INTEGER")
+        db.execSQL("ALTER TABLE trip_events ADD COLUMN temperatureC REAL")
+        db.execSQL("ALTER TABLE trip_events ADD COLUMN windowPercent REAL")
+        db.execSQL("ALTER TABLE trip_events ADD COLUMN seat TEXT")
+        db.execSQL("ALTER TABLE trip_events ADD COLUMN guidanceText TEXT")
+    }
 }

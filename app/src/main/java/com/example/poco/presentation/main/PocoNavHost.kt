@@ -1,5 +1,7 @@
 package com.example.poco.presentation.main
 
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -16,11 +18,12 @@ import androidx.navigation.toRoute
 import com.example.poco.presentation.boarding.BoardingRoute
 import com.example.poco.presentation.common.LocalRailActions
 import com.example.poco.presentation.common.RailActions
-import com.example.poco.presentation.driving.DrivingRoute
 import com.example.poco.presentation.home.HomeRoute
 import com.example.poco.presentation.mypet.MyPetRoute
 import com.example.poco.presentation.onboarding.OnboardingRoute
 import com.example.poco.presentation.onboarding.ProfileSetupRoute
+import com.example.poco.core.designsystem.FitWideWindow
+import com.example.poco.presentation.permission.PermissionGroup
 import com.example.poco.presentation.permission.PermissionRoute
 import com.example.poco.presentation.petmode.PetModeRoute
 import com.example.poco.presentation.record.AppliedInterval
@@ -61,7 +64,7 @@ sealed interface PocoDestination {
     @Serializable data object PetMode : PocoDestination
 
     /** 이동 기록 목록 (레일 '이동 기록') — Figma 465:48292 */
-    @Serializable data object Records : PocoDestination
+    @Serializable data class Records(val period: String = "MONTH") : PocoDestination
 
     @Serializable data class TripSummary(val tripId: String) : PocoDestination
 
@@ -76,16 +79,14 @@ sealed interface PocoDestination {
 
     /** 설정 (레일 '설정') */
     @Serializable data object Settings : PocoDestination
-
-    /** AI 어시스턴트 · 휴식 플래너 · 이동 기록 저장을 하는 주행 세션 (아직 홈 흐름과 연결 전) */
-    @Serializable data object Session : PocoDestination
 }
 
+private const val REQUEST_PERMISSIONS = "request_permissions"
 private const val APPLIED_FROM = "applied_interval_from"
 private const val APPLIED_TO = "applied_interval_to"
 
 /**
- * 첫 실행: 스플래시 → 온보딩 소개 → 프로필 만들기(1/3 ~ 완성) → 권한 → 홈
+ * 첫 실행: 스플래시 → 온보딩 소개 → 프로필 만들기(1/3 ~ 완성) → 홈 (차량 권한은 홈에서 시스템 창으로)
  *         (소개에서 건너뛰기: → 권한 → 펫 프로필 → 홈)
  * 다음부터: 스플래시 → 홈 (펫 프로필은 홈의 펫 프로필 설정 버튼 · 펫 추가하기 · 자리 바꾸기에서 진입)
  */
@@ -96,7 +97,7 @@ fun PocoNavHost(
 ) {
     val railActions = remember(navController) {
         RailActions(
-            onRecords = { navController.navigateToRailTab(PocoDestination.Records) },
+            onRecords = { navController.navigateToRailTab(PocoDestination.Records()) },
             onSettings = { navController.navigateToRailTab(PocoDestination.Settings) }
         )
     }
@@ -110,7 +111,7 @@ private fun PocoNavGraph(navController: NavHostController, modifier: Modifier) {
     val recordRail: (RecordRailTab) -> Unit = { tab ->
         when (tab) {
             RecordRailTab.HOME -> navController.navigateToRailTab(PocoDestination.Home)
-            RecordRailTab.HISTORY -> navController.navigateToRailTab(PocoDestination.Records)
+            RecordRailTab.HISTORY -> navController.navigateToRailTab(PocoDestination.Records())
             RecordRailTab.PET -> navController.navigate(PocoDestination.PetProfile)
             RecordRailTab.SETTINGS -> navController.navigateToRailTab(PocoDestination.Settings)
         }
@@ -120,7 +121,7 @@ private fun PocoNavGraph(navController: NavHostController, modifier: Modifier) {
         startDestination = PocoDestination.Splash,
         modifier = modifier
     ) {
-        composable<PocoDestination.Splash> {
+        composable<PocoDestination.Splash> { FitWideWindow {
             SplashRoute(
                 navigateToOnboarding = {
                     navController.navigate(PocoDestination.Onboarding) {
@@ -133,8 +134,8 @@ private fun PocoNavGraph(navController: NavHostController, modifier: Modifier) {
                     }
                 }
             )
-        }
-        composable<PocoDestination.Onboarding> {
+        } }
+        composable<PocoDestination.Onboarding> { FitWideWindow {
             OnboardingRoute(
                 navigateToProfileSetup = { navController.navigate(PocoDestination.ProfileSetup) },
                 navigateToPermission = {
@@ -143,18 +144,20 @@ private fun PocoNavGraph(navController: NavHostController, modifier: Modifier) {
                     }
                 }
             )
-        }
-        composable<PocoDestination.ProfileSetup> {
+        } }
+        composable<PocoDestination.ProfileSetup> { FitWideWindow {
             ProfileSetupRoute(
                 navigateBack = { navController.popBackStack() },
+                // 프로필 완성 '시작하기' → 바로 홈 (Figma 온보딩_page_05 → Home)
                 navigateNext = {
-                    navController.navigate(PocoDestination.Permission(afterProfileSetup = true)) {
+                    navController.navigate(PocoDestination.Home) {
                         popUpTo(PocoDestination.Onboarding) { inclusive = true }
                     }
+                    navController.currentBackStackEntry?.savedStateHandle?.set(REQUEST_PERMISSIONS, true)
                 }
             )
-        }
-        composable<PocoDestination.Permission> { entry ->
+        } }
+        composable<PocoDestination.Permission> { entry -> FitWideWindow {
             val afterProfileSetup = entry.toRoute<PocoDestination.Permission>().afterProfileSetup
             PermissionRoute(
                 navigateNext = {
@@ -165,8 +168,8 @@ private fun PocoNavGraph(navController: NavHostController, modifier: Modifier) {
                     }
                 }
             )
-        }
-        composable<PocoDestination.PetProfile> {
+        } }
+        composable<PocoDestination.PetProfile> { FitWideWindow {
             MyPetRoute(
                 navigateHome = {
                     // 홈 · 탑승 준비에서 들어왔으면 되돌아가고, 첫 실행이면 홈을 새로 연다
@@ -179,19 +182,29 @@ private fun PocoNavGraph(navController: NavHostController, modifier: Modifier) {
                     }
                 }
             )
-        }
-        composable<PocoDestination.Home> {
+        } }
+        composable<PocoDestination.Home> { entry -> FitWideWindow {
+            // 온보딩에서 바로 왔으면 차량 정보 권한을 시스템 창으로 한 번 요청한다 (거부해도 홈은 그대로)
+            val askPermissions = remember { entry.savedStateHandle.remove<Boolean>(REQUEST_PERMISSIONS) == true }
+            val permissionLauncher =
+                rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {}
+            LaunchedEffect(askPermissions) {
+                if (askPermissions) {
+                    permissionLauncher.launch(PermissionGroup.entries.flatMap { it.permissions }.distinct().toTypedArray())
+                }
+            }
             HomeRoute(
                 navigateToPetProfile = { navController.navigate(PocoDestination.PetProfile) },
                 navigateToBoarding = { navController.navigate(PocoDestination.Boarding) },
                 navigateToDriving = { navController.navigate(PocoDestination.Driving) },
-                navigateToPetMode = { navController.navigate(PocoDestination.PetMode) }
+                navigateToPetMode = { navController.navigate(PocoDestination.PetMode) },
+                navigateToWeeklyRecords = { navController.navigateToRailTab(PocoDestination.Records("WEEK")) }
             )
-        }
-        composable<PocoDestination.PetMode> {
+        } }
+        composable<PocoDestination.PetMode> { FitWideWindow {
             PetModeRoute(navigateBack = { navController.popBackStack() })
-        }
-        composable<PocoDestination.Boarding> {
+        } }
+        composable<PocoDestination.Boarding> { FitWideWindow {
             BoardingRoute(
                 navigateBack = { navController.popBackStack() },
                 navigateToPetProfile = { navController.navigate(PocoDestination.PetProfile) },
@@ -201,14 +214,41 @@ private fun PocoNavGraph(navController: NavHostController, modifier: Modifier) {
                     }
                 }
             )
-        }
+        } }
+        // 주행 화면: 홈 · 탑승 준비(주행 시작) · 기어 D 자동 시작 모두 여기로 온다.
+        // 컴포트 점수 · 휴식 · AI 어시스턴트 · 이동 기록 저장을 하는 주행 세션 (Figma Page 3)
         composable<PocoDestination.Driving> {
-            DrivingRoute(navigateBack = { navController.popBackStack() })
+            val session: SessionViewModel = hiltViewModel()
+            val state by session.uiState.collectAsStateWithLifecycle()
+            val ended = state.session.lastEndedTripId
+            val startedWith = remember { ended }
+            LaunchedEffect(ended) {
+                // Only a session that ends here opens its summary (not an older one).
+                if (ended != null && ended != startedWith) {
+                    // 설정 > 알림 '도착 요약'을 끄면 요약 없이 홈으로
+                    val next: PocoDestination =
+                        if (session.arrivalSummary.value) PocoDestination.TripSummary(ended) else PocoDestination.Home
+                    navController.navigate(next) {
+                        popUpTo<PocoDestination.Driving> { inclusive = true }
+                        launchSingleTop = true
+                    }
+                }
+            }
+            SessionRoute(
+                onOpenHistory = { navController.navigate(PocoDestination.Records()) },
+                onOpenSettings = { navController.navigate(PocoDestination.Settings) },
+                autoStart = true,
+                onOpenPetProfile = { navController.navigate(PocoDestination.PetProfile) },
+                viewModel = session
+            )
         }
-            composable<PocoDestination.Records> {
+        composable<PocoDestination.Records> { entry ->
+            val initialPeriod = entry.toRoute<PocoDestination.Records>().period
             TripHistoryRoute(
                 onOpen = { navController.navigate(PocoDestination.TripDetail(it)) },
-                onNavigate = recordRail
+                onNavigate = recordRail,
+                initialPeriod = com.example.poco.presentation.record.Period.entries.firstOrNull { it.name == initialPeriod }
+                    ?: com.example.poco.presentation.record.Period.MONTH
             )
         }
         composable<PocoDestination.Settings> {
@@ -271,25 +311,6 @@ private fun PocoNavGraph(navController: NavHostController, modifier: Modifier) {
                     }
                     navController.popBackStack()
                 }
-            )
-        }
-        composable<PocoDestination.Session> {
-            val session: SessionViewModel = hiltViewModel()
-            val state by session.uiState.collectAsStateWithLifecycle()
-            val ended = state.session.lastEndedTripId
-            val startedWith = remember { ended }
-            LaunchedEffect(ended) {
-                // Only a session that ends here opens its summary (not an older one).
-                if (ended != null && ended != startedWith) {
-                    navController.navigate(PocoDestination.TripSummary(ended)) {
-                        popUpTo<PocoDestination.Session> { inclusive = true }
-                    }
-                }
-            }
-            SessionRoute(
-                onOpenHistory = { navController.navigate(PocoDestination.Records) },
-                onOpenSettings = { navController.navigate(PocoDestination.Settings) },
-                viewModel = session
             )
         }
     }

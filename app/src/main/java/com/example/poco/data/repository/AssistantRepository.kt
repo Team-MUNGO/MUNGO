@@ -10,7 +10,7 @@ interface AssistantRepository {
     suspend fun connect(invitation: String)
     suspend fun assist(request: AssistRequest): AssistResponse
 
-    /** Data-transfer consent; process memory only (asked again after restart). */
+    /** 정보 전송 동의. 개발 단계에선 기본 true (구현 참고). 연결 해제 시 이번 실행 동안만 false */
     var consented: Boolean
     fun disconnect()
 }

@@ -14,6 +14,9 @@ import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
 /**
@@ -30,19 +33,44 @@ class RestRecommendationCoordinator @Inject constructor(
     private val scope by lazy { CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate) }
     private var started = false
 
+    /** 위치 권한이 꺼져 있어 보류한 이번 휴식 제안. 권한을 허용하면 [retryWithLocation]으로 이어서 찾는다 */
+    private var pendingDue: RestRecommendationDue? = null
+    private val mutableNeedsLocation = MutableStateFlow(false)
+    val needsLocationPermission: StateFlow<Boolean> = mutableNeedsLocation.asStateFlow()
+
     fun start() {
         if (started) return
         started = true
         scope.launch { session.restRecommendations.collect { due -> launch { handle(due) } } }
+        // 주행이 끝나면 보류한 제안도 버린다 (다음 주행에 '위치 권한 허용'이 남지 않게)
+        scope.launch {
+            session.state.collect { s ->
+                if (!s.active && pendingDue != null) {
+                    pendingDue = null
+                    mutableNeedsLocation.value = false
+                }
+            }
+        }
     }
 
     internal suspend fun handle(due: RestRecommendationDue) {
         val snapshot = session.state.value
         if (!snapshot.active || snapshot.tripId != due.tripId) return
+        // 설정 > 알림 '휴식 쉼터 제안'을 끈 펫이면 제안하지 않는다
+        if (snapshot.settings?.restSuggestions == false) return
         if (!assistant.configured || !assistant.consented) {
             session.setAiRestStatus("휴식 20분 전이에요. AI 맞춤 제안은 정보 전송 동의 후 사용할 수 있어요.")
             return
         }
+        if (!location.hasPermission()) {
+            // 첫 실행에서 위치 권한을 거부한 경우: 제안을 보류하고 '위치 권한 허용' 흐름을 보여 준다
+            pendingDue = due
+            mutableNeedsLocation.value = true
+            session.setAiRestStatus("위치 권한이 꺼져 있어 주변 휴식 장소를 찾지 못했어요. 위치 권한을 허용해 주세요.")
+            return
+        }
+        pendingDue = null
+        mutableNeedsLocation.value = false
         session.setAiRestStatus("주변 휴식 장소를 찾고 있어요.")
         try {
             val here = location.current()
@@ -67,6 +95,15 @@ class RestRecommendationCoordinator @Inject constructor(
         }
     }
 
+    /** 위치 권한을 허용했으면 보류한 이번 휴식 제안을 이어서 찾는다. 아직 꺼져 있으면 아무것도 안 한다 */
+    fun retryWithLocation() {
+        val due = pendingDue ?: return
+        if (!location.hasPermission()) return
+        pendingDue = null
+        mutableNeedsLocation.value = false
+        scope.launch { handle(due) }
+    }
+
     companion object {
         /** Minimal data for a rest recommendation: pet size, rest timing, score, temperature status. */
         fun restContext(s: DrivingSessionState, due: RestRecommendationDue) = AssistContext(
@@ -74,7 +111,8 @@ class RestRecommendationCoordinator @Inject constructor(
             minutesToRest = due.remainingMs / 60_000,
             restIntervalMinutes = s.rest.intervalMinutes,
             temperatureStatus = s.settings?.let { temperatureStatus(s.temperature.valueOrNull(), it).name },
-            petSize = s.settings?.petSize?.name
+            petSize = s.settings?.petSize?.name,
+            petName = s.settings?.petName?.trim()?.takeIf { it.isNotEmpty() }?.take(20)
         )
     }
 }

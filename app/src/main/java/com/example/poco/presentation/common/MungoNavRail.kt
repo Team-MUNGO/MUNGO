@@ -23,6 +23,7 @@ import com.example.poco.core.designsystem.MungoIcon
 import com.example.poco.core.designsystem.MungoIconView
 import com.example.poco.core.designsystem.MungoPaw
 import com.example.poco.core.designsystem.component.pressable
+import com.example.poco.presentation.design.Mg
 import com.example.poco.core.theme.MungoRadius
 import com.example.poco.core.theme.POCOTheme
 
@@ -58,7 +59,7 @@ fun MungoNavRail(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         MungoPaw(modifier = Modifier.size(64.dp))
-        Spacer(Modifier.height(32.dp))
+        Spacer(Modifier.height(28.dp))
         RailItem(
             icon = MungoIcon.HOUSE,
             label = "홈",
@@ -108,7 +109,7 @@ private fun RailItem(
     val content = if (selected) colors.textOnNeutralStrong else colors.textSecondary
     Column(
         modifier = Modifier
-            .padding(vertical = 6.dp)
+            .padding(vertical = 10.dp) // Figma 470:55153 메뉴 간격 132
             .size(width = 104.dp, height = 112.dp)
             .background(if (selected) colors.bgNeutralStrong else Color.Transparent, shape)
             .pressable(shape = shape, onClick = onClick),
@@ -117,7 +118,7 @@ private fun RailItem(
     ) {
         MungoIconView(icon, tint = content, size = 36.dp)
         Spacer(Modifier.height(8.dp))
-        Text(text = label, style = POCOTheme.typography.body3, color = content, maxLines = 1)
+        Text(text = label, style = if (selected) Mg.semi(23, 30) else Mg.regular(23, 30), color = content, maxLines = 1)
     }
 }
 

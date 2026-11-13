@@ -25,6 +25,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.example.poco.presentation.design.Mg
 import com.example.poco.core.designsystem.MungoIcon
 import com.example.poco.core.designsystem.MungoIconView
 import com.example.poco.core.designsystem.component.pressable
@@ -40,34 +41,34 @@ import kotlin.math.roundToInt
 internal fun ColumnScope.ChecklistLeft(uiState: BoardingUiState, actions: BoardingActions) {
     val colors = POCOTheme.colors
     StepTitle(title = "출발 전에\n함께 확인해요", description = "항목을 눌러서 체크해주세요.")
-    Spacer(Modifier.height(48.dp))
+    Spacer(Modifier.height(92.dp)) // Figma 470:54652: 음성 안내 y 583
     VoiceRow(
         isListening = uiState.isListening,
         heardText = uiState.heardText,
         example = "Gleo, 다 확인했어",
         onMic = actions.onMic
     )
-    Spacer(Modifier.height(32.dp))
+    Spacer(Modifier.height(45.dp))
     HorizontalDivider(color = colors.borderDefault)
-    Spacer(Modifier.height(32.dp))
+    Spacer(Modifier.height(50.dp))
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .background(colors.bgSurfaceSunken, RoundedCornerShape(MungoRadius.lg))
             .padding(28.dp)
     ) {
-        Text(text = "확인한 항목", style = POCOTheme.typography.body2, color = colors.textTertiary)
+        Text(text = "확인한 항목", style = Mg.medium(24, 32), color = Color(0xFF9CA7B4))
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.Bottom) {
             Text(
                 text = uiState.checkedCount.toString(),
-                style = POCOTheme.typography.h1,
+                style = Mg.bold(64, 77),
                 color = colors.textPrimary
             )
             Text(
                 text = " / ${CheckItem.entries.size}",
-                style = POCOTheme.typography.title1,
-                color = colors.textTertiary,
+                style = Mg.medium(40, 52),
+                color = colors.textSecondary,
                 modifier = Modifier.padding(bottom = 8.dp)
             )
         }
@@ -82,7 +83,7 @@ internal fun ColumnScope.ChecklistLeft(uiState: BoardingUiState, actions: Boardi
             Spacer(Modifier.width(8.dp))
             Text(
                 text = if (left > 0) "필수 체크 항목 ${left}개가 남았어요" else "필수 항목을 모두 확인했어요",
-                style = POCOTheme.typography.body3.copy(fontWeight = FontWeight.Bold),
+                style = Mg.semi(24, 32),
                 color = if (left > 0) colors.textAccent else colors.textSecondary
             )
         }
@@ -117,8 +118,8 @@ internal fun Checklist(uiState: BoardingUiState, actions: BoardingActions) {
             Spacer(Modifier.width(10.dp))
             Text(
                 text = "‘자동’은 차량 데이터로 멍고가 먼저 확인한 항목이에요",
-                style = POCOTheme.typography.body3,
-                color = colors.textTertiary
+                style = Mg.regular(24, 32),
+                color = colors.textSecondary
             )
         }
     }
@@ -145,14 +146,14 @@ private fun CheckRow(item: CheckItem, uiState: BoardingUiState, onClick: () -> U
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = title,
-                style = POCOTheme.typography.title3.copy(fontWeight = FontWeight.Bold),
+                style = Mg.bold(26, 34),
                 color = colors.textPrimary
             )
             Spacer(Modifier.height(6.dp))
             Text(
                 text = description,
                 style = POCOTheme.typography.caption1,
-                color = colors.textTertiary
+                color = colors.textSecondary
             )
         }
         Spacer(Modifier.width(20.dp))
@@ -203,7 +204,7 @@ private fun Badge(text: String, background: Color, content: Color, withCheck: Bo
         }
         Text(
             text = text,
-            style = POCOTheme.typography.body3.copy(fontWeight = FontWeight.Bold),
+            style = Mg.bold(24, 32),
             color = content
         )
     }

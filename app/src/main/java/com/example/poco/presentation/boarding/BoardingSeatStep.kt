@@ -53,7 +53,7 @@ internal fun ColumnScope.SeatLeft(uiState: BoardingUiState, actions: BoardingAct
         title = "${name.eunNeun}\n어디에 앉나요?",
         description = "${name.iGa} 앉은 좌석을 눌러 주세요.\n고른 좌석의 창문 열림과 온도를 지켜봐요."
     )
-    Spacer(Modifier.height(48.dp))
+    Spacer(Modifier.height(108.dp)) // Figma 470:54563: '선택한 자리'가 1단계 '함께 타는 친구'와 같은 높이(678)
     SectionLabel("선택한 자리")
     val isMulti = uiState.selectedPets.size > 1
     Column(

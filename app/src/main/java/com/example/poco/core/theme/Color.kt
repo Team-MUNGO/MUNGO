@@ -8,8 +8,7 @@ import androidx.compose.ui.graphics.Color
  * mungo 디자인 시스템 · Foundations / Color
  * - 포인트 컬러는 망고 1가지 (블랙 5 : 그레이 4 : 망고 1)
  * - 민트 · 앰버 · 빨강 · 파랑은 상태 칩과 경고에만 쓴다
- * - 망고 위 글자는 진한 회색(#111111)만. 흰 글자 금지 (2.5:1)
- * - 모든 글자색은 4.5:1 이상 (WCAG AA)
+ * - Page 3 라이트 화면: #FF8200 포인트, #191F28 본문, #6B7684 보조, 주요 버튼 흰 글자
  */
 
 /** 원색 팔레트 (피그마 Color Palette) */
@@ -177,25 +176,25 @@ data class POCOColors(
 )
 
 val defaultPOCOColors = POCOColors(
-    bgCanvas = MungoPalette.neutral100,
+    bgCanvas = Color(0xFFF4F5F7),
     bgSurface = MungoPalette.white,
     bgSurfaceRaised = MungoPalette.white,
-    bgSurfaceSunken = MungoPalette.neutral150,
-    bgAccent = MungoPalette.mango500,
-    bgAccentSubtle = MungoPalette.mango50,
-    bgNeutralStrong = MungoPalette.dark750,
+    bgSurfaceSunken = Color(0xFFF2F4F6),
+    bgAccent = Color(0xFFFF8200),
+    bgAccentSubtle = Color(0xFFFFF7EE),
+    bgNeutralStrong = Color(0xFF191F28),
     bgNeutral = MungoPalette.neutral150,
     bgScrim = Color(0x80000000),
-    textPrimary = MungoPalette.neutral900,
-    textSecondary = MungoPalette.neutral800,
-    textTertiary = MungoPalette.neutral700,
+    textPrimary = Color(0xFF191F28),
+    textSecondary = Color(0xFF6B7684),
+    textTertiary = Color(0xFF8B95A1),
     textDisabled = MungoPalette.neutral400,
-    textAccent = MungoPalette.mango700,
-    textOnAccent = MungoPalette.neutral900,
+    textAccent = Color(0xFFB35400),
+    textOnAccent = Color.White,
     textOnNeutralStrong = MungoPalette.white,
-    borderDefault = MungoPalette.neutral200,
+    borderDefault = Color(0xFFE5E8EB),
     borderStrong = MungoPalette.neutral400,
-    borderAccent = MungoPalette.mango700,
+    borderAccent = Color(0xFFFF8200),
     statusCalm = MungoPalette.mint700,
     statusCalmSubtle = MungoPalette.mint50,
     statusRest = MungoPalette.amber700,

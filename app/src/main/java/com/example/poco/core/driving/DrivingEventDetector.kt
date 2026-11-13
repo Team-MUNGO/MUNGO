@@ -2,6 +2,7 @@ package com.example.poco.core.driving
 
 import kotlin.math.abs
 import kotlin.math.sign
+import kotlin.math.tan
 
 /** Measurement timestamps, not callback arrival spacing, define the detection windows. */
 class DrivingEventDetector(
@@ -19,6 +20,10 @@ class DrivingEventDetector(
     private var lastCurveMotion: Long? = null
     private var curveSharp = false
     private val curves = ArrayDeque<Long>()
+    private var lastSharpTurn: Long? = null
+    private var steeringDeg: Double? = null
+    private var steeringOverSince: Long? = null
+    private var steeringArmed = true
 
     fun resetSpeed() {
         speeds.clear()
@@ -96,7 +101,55 @@ class DrivingEventDetector(
         if (lastCurveMotion != null && now - lastCurveMotion!! >= config.curveEndQuietMs) {
             finishCurve(now)?.let(events::add)
         }
+        // Steering may be reported only on change, so a held angle is re-evaluated against fresh speed.
+        evaluateSteering(now)?.let(events::add)
         return events
+    }
+
+    /**
+     * Steering-wheel angle (degrees, either sign) from the vehicle API. Sharp turn when the estimated
+     * lateral acceleration stays at or above the POCO threshold for [ComfortScoreConfig.steeringHoldMs]
+     * at [ComfortScoreConfig.turnMinSpeed] or faster; re-armed once it falls below the mild level.
+     */
+    fun onSteering(at: Long, degrees: Double): List<DrivingEvent> {
+        if (!degrees.isFinite() || abs(degrees) > 1_080) return emptyList()
+        steeringDeg = degrees
+        return listOfNotNull(evaluateSteering(at))
+    }
+
+    /** Estimated lateral acceleration (m/s²) for [degrees] of steering at [speedKmh]. */
+    fun lateralMps2(degrees: Double, speedKmh: Double): Double {
+        val v = abs(speedKmh) / 3.6
+        val wheel = Math.toRadians(abs(degrees) / config.steeringRatio).coerceAtMost(Math.toRadians(45.0))
+        return v * v * tan(wheel) / config.wheelbaseM
+    }
+
+    private fun evaluateSteering(now: Long): DrivingEvent? {
+        val degrees = steeringDeg ?: return null
+        val speed = speeds.lastOrNull()
+        if (speed == null || abs(speed.kmh) < config.turnMinSpeed) {
+            steeringOverSince = null
+            return null
+        }
+        val lateral = lateralMps2(degrees, speed.kmh)
+        if (lateral < config.turnRearmLateralMps2) steeringArmed = true
+        if (lateral < config.sharpTurnLateralMps2 || !steeringArmed) {
+            steeringOverSince = null
+            return null
+        }
+        val since = steeringOverSince ?: now.also { steeringOverSince = it }
+        if (now - since < config.steeringHoldMs) return null
+        steeringArmed = false
+        steeringOverSince = null
+        return sharpTurn(now)
+    }
+
+    /** Shared by steering and heading detection so one physical turn is never counted twice. */
+    private fun sharpTurn(now: Long): DrivingEvent? {
+        val last = lastSharpTurn
+        if (last != null && now - last < config.sharpTurnDedupMs) return null
+        lastSharpTurn = now
+        return DrivingEvent.SharpTurn
     }
 
     /** Only feed validated travel bearings in degrees; production Navi heading is unverified. */
@@ -134,7 +187,7 @@ class DrivingEventDetector(
         val angle = abs(headingDeltas.sumOf { it.second })
         if (!curveSharp && angle in config.sharpTurnMin..config.sharpTurnMax) {
             curveSharp = true
-            events += DrivingEvent.SharpTurn
+            sharpTurn(at)?.let(events::add)
         }
         return events
     }

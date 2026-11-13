@@ -9,8 +9,8 @@ import com.example.poco.data.record.TripEntity
 import com.example.poco.data.record.TripEventEntity
 import com.example.poco.data.record.TripHistoryRepository
 import com.example.poco.data.repository.DrivingSessionRepository
-import com.example.poco.data.repositoryimpl.DrivingSettingsRepository
 import com.example.poco.data.settings.UserSettingsRepository
+import com.example.poco.domain.motion.MotionAnalysis
 import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.stateIn
@@ -46,6 +47,14 @@ class TripDetailViewModel @Inject constructor(
     val interval: StateFlow<Int> = settings.restIntervalMinutes
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), RestIntervalPolicy.DEFAULT_MINUTES)
 
+    /**
+     * Rule-based motion-sign analysis (insight + rest recommendation from one result). Recomputed
+     * whenever the trip, any stored record or the rest interval changes, so edited entries apply at once.
+     */
+    val motionAnalysis: StateFlow<MotionAnalysis?> = combine(trip, allTrips, interval) { t, all, minutes ->
+        t?.let { motionAnalysis(all.ifEmpty { listOf(it) }, it, minutes) }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
     fun load(tripId: String) {
         id.value = tripId
     }
@@ -69,15 +78,4 @@ class RestSettingsViewModel @Inject constructor(
     /** Persisted; a running session applies it immediately while keeping its rest base time. */
     fun setInterval(minutes: Int) = session.setRestInterval(minutes)
     fun setVoice(enabled: Boolean) = session.setVoiceGuidance(enabled)
-}
-
-@HiltViewModel
-class PetProfileViewModel @Inject constructor(private val settings: DrivingSettingsRepository) : ViewModel() {
-    private val saved = MutableStateFlow(settings.load())
-    val profile: StateFlow<DrivingSettings?> = saved.asStateFlow()
-
-    fun save(value: DrivingSettings) {
-        settings.save(value)
-        saved.value = value
-    }
 }

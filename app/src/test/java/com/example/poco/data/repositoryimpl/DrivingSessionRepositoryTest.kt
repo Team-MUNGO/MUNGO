@@ -63,6 +63,7 @@ class DrivingSessionRepositoryTest {
     private var hangTts = false
     private val interval = MutableStateFlow(120)
     private val voice = MutableStateFlow(true)
+    private val locationFixes = MutableSharedFlow<LocationFix>(extraBufferCapacity = 8)
     private val route = MutableSharedFlow<NaviRouteUpdate>(extraBufferCapacity = 8)
     private var waypointCalls = 0
     private var waypointFailure: String? = null
@@ -71,6 +72,7 @@ class DrivingSessionRepositoryTest {
     private val recorder = FakeRecorder()
     private val settings = DrivingSettings("현댕이", PetSeat.REAR_RIGHT, 20f, 25f)
     private lateinit var session: DrivingSessionRepositoryImpl
+    private val steering = kotlinx.coroutines.flow.MutableSharedFlow<Float>(extraBufferCapacity = 8)
 
     @Before fun setup() {
         Dispatchers.setMain(dispatcher)
@@ -149,9 +151,15 @@ class DrivingSessionRepositoryTest {
                 }
             },
             object : LocationStream {
-                override fun observe() = emptyFlow<LocationFix>()
+                override fun observe() = locationFixes
             },
-            DataOrigin { true }
+            DataOrigin { true },
+            object : com.example.poco.data.repository.VehicleMotionRepository {
+                override fun observeSpeedKmh() = kotlinx.coroutines.flow.emptyFlow<Float>()
+                override fun observeSteeringAngle() = steering
+                override fun observeBrakePedalPressed() = kotlinx.coroutines.flow.emptyFlow<Boolean>()
+                override fun observeLocation() = kotlinx.coroutines.flow.emptyFlow<com.example.poco.data.model.VehicleLocation>()
+            }
         )
     }
 
@@ -312,6 +320,21 @@ class DrivingSessionRepositoryTest {
         updates.tryEmit(VehicleUpdate.Speed(Reading.Value(SpeedSample(11.0, 1000))))
         scheduler.runCurrent()
         assertEquals(97, session.state.value.comfort.score)
+    }
+
+    /** Vehicle API steering at 40 km/h: 120° held 0.3s (~4.4 m/s² lateral) is one sharp turn. */
+    @Test fun steeringAngleFeedsSharpTurn() {
+        session.start(settings)
+        scheduler.runCurrent()
+        speed(40.0)
+        steering.tryEmit(120f)
+        scheduler.runCurrent()
+        advance(300)
+        speed(40.0)
+        advance(300)
+        speed(40.0)
+        assertEquals(1, session.state.value.comfort.turnCount)
+        assertEquals(96, session.state.value.comfort.score)
     }
 
     // ---------------- rest / AI trigger / guidance / waypoint / record (mock SDKs) ----------------
@@ -582,6 +605,28 @@ class DrivingSessionRepositoryTest {
         assertEquals(id, session.state.value.lastEndedTripId)
         assertEquals(1, recorder.events.count { it.type == "WINDOW_WARNING" })
         assertTrue(recorder.trips.single().simulated)
+    }
+
+    @Test fun eventCapturesFreshLocationWithoutHeadingAndDropsStaleFixes() {
+        session.start(settings)
+        scheduler.runCurrent()
+        val epoch = recorder.trips.single().startedAtEpoch
+        locationFixes.tryEmit(LocationFix(37.0, 127.0, null, epoch))
+        scheduler.runCurrent()
+        positions.value = 100
+        scheduler.runCurrent()
+        val event = recorder.events.last { it.type == "WINDOW_WARNING" }
+        assertEquals(37.0, event.latitude!!, 0.0)
+        assertEquals(127.0, event.longitude!!, 0.0)
+        assertEquals(epoch, event.locationAtEpoch)
+        assertEquals("REAR_RIGHT", event.seat)
+        assertEquals(50.0, event.windowPercent!!, 0.0)
+        positions.value = 0
+        scheduler.runCurrent()
+        advance(31_000)
+        positions.value = 100
+        scheduler.runCurrent()
+        assertNull(recorder.events.last { it.type == "WINDOW_WARNING" }.latitude)
     }
 
     class FakeRecorder : com.example.poco.data.record.TripRecordSink {

@@ -27,6 +27,8 @@ import com.example.poco.data.assistant.AssistSources
 import com.example.poco.data.model.PlaceProposal
 import com.example.poco.data.model.RestUiState
 import com.example.poco.data.model.DrivingSessionState
+import com.example.poco.presentation.session.AssistantUiState
+import com.example.poco.presentation.session.AssistantPhase
 import com.example.poco.presentation.session.SessionScreen
 import com.example.poco.presentation.session.SessionUiState
 import java.io.File
@@ -49,17 +51,40 @@ class SessionScreenTest {
                 )
             )
         )
-        compose.setContent { POCOTheme { SessionScreen(state.value, {}, {}, {}, {}) } }
+        val ai = mutableStateOf(AssistantUiState(configured = true, consented = true, anonymousAuth = true))
+        compose.setContent { POCOTheme { SessionScreen(state.value, {}, {}, {}, {}, assistantState = ai.value) } }
         val before = compose.onNodeWithText("실내 온도").fetchSemanticsNode().boundsInRoot
-        compose.onNodeWithText("현댕이가 편안하게 가는지 지켜볼게요.").assertExists()
+        compose.onNodeWithText("현댕이가 편안하게 가는지 지켜볼게요.").assertDoesNotExist()
+        compose.onNodeWithText("Gleo").assertDoesNotExist()
+        compose.onNodeWithText("“글레오, 현댕이 괜찮아?”").assertDoesNotExist()
         capture("driving-empty.png")
+        compose.runOnIdle { ai.value = ai.value.copy(phase = AssistantPhase.LISTENING, question = "글레오, 현댕이 괜찮아?") }
+        compose.onNodeWithText("“글레오, 현댕이 괜찮아?”").assertExists()
+        compose.onNodeWithText("Gleo").assertDoesNotExist()
+        val questionBeforeAnswer = compose.onNodeWithText("“글레오, 현댕이 괜찮아?”").fetchSemanticsNode().boundsInRoot
+        capture("driving-listening.png")
+        compose.runOnIdle { ai.value = ai.value.copy(phase = AssistantPhase.THINKING) }
+        compose.onNodeWithText("“글레오, 현댕이 괜찮아?”").assertExists()
         compose.runOnIdle {
-            state.value =
-                SessionUiState(state.value.session.copy(gleoResponse = "새로운 글레오 응답입니다."))
+            ai.value = ai.value.copy(phase = AssistantPhase.IDLE, answerText = "새로운 글레오 응답입니다.")
+            state.value = SessionUiState(state.value.session.copy(gleoResponse = "새로운 글레오 응답입니다."))
         }
         compose.onNodeWithText("새로운 글레오 응답입니다.").assertExists()
+        val answer = compose.onNodeWithText("새로운 글레오 응답입니다.").fetchSemanticsNode().boundsInRoot
+        val question = compose.onNodeWithText("“글레오, 현댕이 괜찮아?”").fetchSemanticsNode().boundsInRoot
+        assertTrue(answer.bottom < question.top)
+        assertTrue(question.top > questionBeforeAnswer.top)
+        capture("driving-question-answer.png")
         val after = compose.onNodeWithText("실내 온도").fetchSemanticsNode().boundsInRoot
         assertEquals(before, after)
+    }
+
+    @Test fun actualTtsShowsGuidanceAndIdleDoesNotShowStaleResponse() {
+        val session = mutableStateOf(DrivingSessionState(active = true, gleoResponse = "실제 음성 안내", ttsSpeaking = true))
+        compose.setContent { POCOTheme { SessionScreen(SessionUiState(session.value), {}, {}, {}, {}) } }
+        compose.onNodeWithText("실제 음성 안내").assertExists()
+        compose.runOnIdle { session.value = session.value.copy(ttsSpeaking = false) }
+        compose.onNodeWithText("실제 음성 안내").assertDoesNotExist()
     }
 
     @Test fun proposalPreservesTileGeometryAndUnverifiedPlaceIsDisabled() {

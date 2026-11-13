@@ -1,5 +1,13 @@
 package com.example.poco.presentation.session
 
+import com.example.poco.data.assistant.FUSED_LOCATION_PERMISSION
+import androidx.compose.ui.platform.LocalContext
+import android.provider.Settings
+import android.net.Uri
+import android.content.Intent
+import android.content.ContextWrapper
+import android.content.Context
+import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -19,9 +27,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -43,9 +49,9 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.poco.core.theme.pocoNotoFontFamily
 import com.example.poco.R
 import com.example.poco.core.driving.DrivingGear
-import com.example.poco.core.driving.DrivingSettings
 import com.example.poco.core.driving.RestPhase
 import com.example.poco.core.driving.WindowCloseStatus
 import com.example.poco.core.driving.valueOrNull
@@ -78,6 +84,10 @@ import com.example.poco.presentation.session.component.windowWarningBusy
 fun SessionRoute(
     onOpenHistory: () -> Unit = {},
     onOpenSettings: () -> Unit = {},
+    /** 탑승 준비에서 '주행 시작'을 눌렀거나 기어 D로 들어왔으면 바로 세션을 시작한다 */
+    autoStart: Boolean = false,
+    /** 반려견 프로필이 없으면 마이펫(팀 화면)에서 등록한다 */
+    onOpenPetProfile: () -> Unit = {},
     viewModel: SessionViewModel = hiltViewModel(),
     assistant: AssistantViewModel = hiltViewModel()
 ) {
@@ -86,6 +96,8 @@ fun SessionRoute(
     DisposableEffect(owner, assistant) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP) assistant.cancel()
+            // 앱 설정에서 위치 권한을 켜고 돌아오면 보류한 휴식 제안을 이어서 찾는다
+            if (event == Lifecycle.Event.ON_RESUME) assistant.onResumed()
         }
         owner.lifecycle.addObserver(observer)
         onDispose {
@@ -94,22 +106,46 @@ fun SessionRoute(
         }
     }
     var showAiSetup by remember { mutableStateOf(false) }
+    val activity = LocalContext.current.findActivity()
     val locationPermission =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission(), assistant::locationPermission)
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            assistant.locationPermission(granted)
+            // 첫 실행에서 거부한 뒤 '다시 묻지 않음' 상태면 시스템 창이 뜨지 않는다 → 앱 설정의 권한 화면으로 보낸다
+            if (!granted && activity != null &&
+                !activity.shouldShowRequestPermissionRationale(FUSED_LOCATION_PERMISSION)
+            ) {
+                runCatching {
+                    activity.startActivity(
+                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", activity.packageName, null))
+                    )
+                }
+            }
+        }
     LaunchedEffect(ai.needsLocationPermission) {
-        if (ai.needsLocationPermission) locationPermission.launch("pleos.car.permission.FUSED_LOCATION")
+        if (ai.needsLocationPermission) locationPermission.launch(FUSED_LOCATION_PERMISSION)
     }
     val state by viewModel.uiState.collectAsStateWithLifecycle()
-    var showSetup by rememberSaveable { mutableStateOf(false) }
-    var pending by remember { mutableStateOf<DrivingSettings?>(null) }
+    val profile by viewModel.profile.collectAsStateWithLifecycle()
+    // Denial still permits the session; speed then explicitly reports unavailable.
     val permission =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-            pending?.let(viewModel::start)
-            pending = null
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { viewModel.startWithProfile() }
+    val start = {
+        when (profile) {
+            is SessionProfile.Ready -> permission.launch(arrayOf("android.car.permission.CAR_SPEED", "pleos.car.permission.FUSED_LOCATION"))
+            SessionProfile.Missing -> onOpenPetProfile()
+            SessionProfile.Loading -> Unit
         }
+    }
+    var autoStarted by rememberSaveable { mutableStateOf(false) }
+    LaunchedEffect(autoStart, profile, state.session.active) {
+        if (autoStart && !autoStarted && !state.session.active && profile is SessionProfile.Ready) {
+            autoStarted = true
+            start()
+        }
+    }
     SessionScreen(
         state,
-        onStart = { showSetup = true },
+        onStart = start,
         onEnd = viewModel::end,
         onDismissWarning = viewModel::dismissWarning,
         onCloseWindow = viewModel::closeWindow,
@@ -123,7 +159,8 @@ fun SessionRoute(
         onStartRest = viewModel::startRest,
         onReadyToDepart = viewModel::readyToDepart,
         onOpenHistory = onOpenHistory,
-        onOpenSettings = onOpenSettings
+        onOpenSettings = onOpenSettings,
+        onAllowLocation = assistant::requestRestLocation
     )
     if (showAiSetup) {
         AssistantConnectionDialog(
@@ -134,14 +171,6 @@ fun SessionRoute(
             assistant::connect,
             assistant::disconnect
         )
-    }
-    if (showSetup) {
-        DrivingSetupDialog(viewModel.savedSettings, onDismiss = { showSetup = false }) {
-            showSetup = false
-            pending = it
-            // Denial still permits the session; speed then explicitly reports unavailable.
-            permission.launch("android.car.permission.CAR_SPEED")
-        }
     }
 }
 
@@ -160,7 +189,9 @@ data class SessionActions(
     val onOpenHistory: () -> Unit,
     val onOpenSettings: () -> Unit,
     val onDismissWarning: () -> Unit,
-    val onCloseWindow: () -> Unit
+    val onCloseWindow: () -> Unit,
+    /** 휴식 제안이 위치 권한 때문에 보류됐을 때 '위치 권한 허용' */
+    val onAllowLocation: () -> Unit = {}
 )
 
 /** Window width below which the app is in the split (navigation + mungo panel) layout. */
@@ -189,18 +220,20 @@ fun SessionScreen(
     onStartRest: () -> Unit = {},
     onReadyToDepart: () -> Unit = {},
     onOpenHistory: () -> Unit = {},
-    onOpenSettings: () -> Unit = {}
+    onOpenSettings: () -> Unit = {},
+    onAllowLocation: () -> Unit = {}
 ) {
     val state = uiState.session
     var confirmEnd by rememberSaveable { mutableStateOf(false) }
     val actions = SessionActions(
         onStart, { confirmEnd = true }, onAsk, onCancelAi, onSetupAi, onDismissProposal, onAddWaypoint,
-        onCancelWaypoint, onStartRest, onReadyToDepart, onOpenHistory, onOpenSettings, onDismissWarning, onCloseWindow
+        onCancelWaypoint, onStartRest, onReadyToDepart, onOpenHistory, onOpenSettings, onDismissWarning, onCloseWindow,
+        onAllowLocation
     )
     BoxWithConstraints(modifier.fillMaxSize().background(Mg.Bg)) {
         val split = maxWidth < SplitLayoutMaxWidth
         // Each layout has its own reference size; the split panel is not a scaled-down full screen.
-        DesignCanvas(if (split) SplitRefWidth else FullRefWidth, RefHeight) {
+        DesignCanvas(if (split) SplitRefWidth else FullRefWidth, RefHeight, fontFamily = pocoNotoFontFamily) {
             Column(Modifier.fillMaxSize().padding(horizontal = if (split) 20.dp else 24.dp, vertical = 24.dp)) {
                 DrivingHeader(state, assistantState, actions)
                 Spacer(Modifier.height(22.dp))
@@ -213,17 +246,12 @@ fun SessionScreen(
             }
         }
         if (confirmEnd) {
-            AlertDialog(
-                onDismissRequest = { confirmEnd = false },
-                title = { Text("주행을 종료할까요?") },
-                text = { Text("이번 주행 기록을 저장하고 요약을 보여 드려요.") },
-                confirmButton = {
-                    TextButton(onClick = {
-                        confirmEnd = false
-                        onEnd()
-                    }) { Text("주행 종료") }
-                },
-                dismissButton = { TextButton(onClick = { confirmEnd = false }) { Text("계속 주행") } }
+            EndConfirmDialog(
+                onDismiss = { confirmEnd = false },
+                onEnd = {
+                    confirmEnd = false
+                    onEnd()
+                }
             )
         }
     }
@@ -237,7 +265,7 @@ private fun DrivingHeader(state: DrivingSessionState, ai: AssistantUiState, acti
     Row(Modifier.fillMaxWidth().height(60.dp), verticalAlignment = Alignment.CenterVertically) {
         DrawableIcon(R.drawable.driving_paw, size = 20.dp)
         Spacer(Modifier.width(9.dp))
-        Text("mungo", style = Mg.bold(27, 34), color = Mg.Ink)
+        Text("mungo", style = Mg.bold(28, 35), color = Mg.Ink)
         Spacer(Modifier.width(16.dp))
         when {
             !state.active -> Pill("주행 준비", background = Mg.Chip, color = Mg.Muted, height = 40.dp)
@@ -399,22 +427,23 @@ private fun WindowWarningDialog(state: DrivingSessionState, onDismiss: () -> Uni
     }
 }
 
+/** 주행 종료 확인: 피그마에 없는 화면이라 창문 경고 팝업과 같은 멍고 카드 · 버튼 스타일로 맞춘다. */
 @Composable
-private fun DrivingSetupDialog(
-    saved: DrivingSettings?,
-    onDismiss: () -> Unit,
-    onStart: (DrivingSettings) -> Unit
-) {
-    var draft by remember { mutableStateOf(saved) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("주행 준비") },
-        text = { PetSettingsForm(saved) { draft = it } },
-        confirmButton = {
-            TextButton(onClick = { draft?.let(onStart) }, enabled = draft != null) { Text("주행 시작") }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("취소") } }
-    )
+private fun EndConfirmDialog(onDismiss: () -> Unit, onEnd: () -> Unit) {
+    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+        Column(
+            Modifier.width(620.dp).background(Color.White, RoundedCornerShape(Mg.Radius)).padding(40.dp)
+        ) {
+            Text("주행을 종료할까요?", style = Mg.bold(33, 44), color = Mg.Ink)
+            Spacer(Modifier.height(12.dp))
+            Text("이번 주행 기록을 저장하고 요약을 보여 드려요.", style = Mg.regular(25, 34), color = Mg.Muted)
+            Spacer(Modifier.height(36.dp))
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+                SecondaryButton("계속 주행", onDismiss, Modifier.weight(1f).height(84.dp), style = Mg.bold(27, 36))
+                PrimaryButton("주행 종료", onEnd, Modifier.weight(1f).height(84.dp), style = Mg.bold(27, 36))
+            }
+        }
+    }
 }
 
 /** Idle driving slot: start a trip, or open history/settings (no session values are invented). */
@@ -433,4 +462,10 @@ internal fun IdleStartCard(actions: SessionActions, compact: Boolean, modifier: 
             SecondaryButton("설정", actions.onOpenSettings, Modifier.weight(1f).height(72.dp))
         }
     }
+}
+
+private tailrec fun Context.findActivity(): Activity? = when (this) {
+    is Activity -> this
+    is ContextWrapper -> baseContext.findActivity()
+    else -> null
 }

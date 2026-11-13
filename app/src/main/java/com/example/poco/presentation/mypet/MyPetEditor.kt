@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -19,7 +18,6 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -56,6 +54,7 @@ import com.example.poco.core.theme.POCOTheme
 import com.example.poco.data.model.PetSize
 import com.example.poco.presentation.onboarding.SetupTextField
 import com.example.poco.presentation.onboarding.SpeciesDropdown
+import com.example.poco.presentation.onboarding.rememberNumberWidth
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -290,6 +289,8 @@ private fun NumberStepper(
     val colors = POCOTheme.colors
     val focusManager = LocalFocusManager.current
     val numberStyle = POCOTheme.typography.h1
+    // IntrinsicSize.Min은 +/-로 값이 바뀌어도 너비가 갱신되지 않아 숫자가 안 보인다 → 글자 폭을 직접 잰다
+    val numberWidth = rememberNumberWidth(text.ifEmpty { "-" }, numberStyle)
     Column(
         modifier = modifier
             .background(colors.bgSurface, RoundedCornerShape(MungoRadius.xl))
@@ -322,8 +323,7 @@ private fun NumberStepper(
                         }
                     },
                     modifier = Modifier
-                        .width(IntrinsicSize.Min)
-                        .widthIn(min = 48.dp)
+                        .width(numberWidth)
                         .semantics { contentDescription = "$label 입력" }
                 )
                 Spacer(Modifier.width(8.dp))
