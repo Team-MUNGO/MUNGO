@@ -18,6 +18,7 @@ import com.example.poco.core.driving.RestIntervalPolicy
 import com.example.poco.core.driving.RestPhase
 import com.example.poco.core.driving.RestPlanner
 import com.example.poco.core.driving.RestStartSource
+import com.example.poco.core.driving.ShakeSampler
 import com.example.poco.core.driving.VerifiedPlace
 import com.example.poco.core.driving.WaypointSignal
 import com.example.poco.core.driving.WaypointTracker
@@ -48,6 +49,7 @@ import com.example.poco.data.repository.VehicleMotionRepository
 import com.example.poco.data.repository.VehicleRepository
 import com.example.poco.data.repository.WindowRepository
 import com.example.poco.data.settings.UserSettingsRepository
+import java.util.Locale
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -116,6 +118,7 @@ class DrivingSessionRepositoryImpl @Inject constructor(
     private var warningDetector = WindowDangerDetector(config.windowWarningPercent)
     private lateinit var detector: DrivingEventDetector
     private lateinit var calculator: ComfortScoreCalculator
+    private var shakeSampler: ShakeSampler? = null
     private var planner: RestPlanner? = null
     private var ledger = GuidanceLedger()
     private var bumpTracker = BumpPassageTracker()
@@ -169,10 +172,14 @@ class DrivingSessionRepositoryImpl @Inject constructor(
         latestLocation = null
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         sessionScope = scope
-        detector = DrivingEventDetector(config) { reason ->
-            Timber.w(reason)
-            record(TripEventType.SENSOR_ANOMALY, detail = reason.take(120))
-        }
+        detector = DrivingEventDetector(
+            config,
+            anomaly = { reason ->
+                Timber.w(reason)
+                record(TripEventType.SENSOR_ANOMALY, detail = reason.take(120))
+            },
+            motion = { _, mps2 -> onMotion(mps2) }
+        )
         calculator = ComfortScoreCalculator(clock, config)
         warningDetector = WindowDangerDetector(config.windowWarningPercent)
         ledger = GuidanceLedger()
@@ -185,6 +192,7 @@ class DrivingSessionRepositoryImpl @Inject constructor(
         lastTemperatureSample = Long.MIN_VALUE
         started = clock.now()
         startedEpoch = System.currentTimeMillis()
+        shakeSampler = ShakeSampler(started)
         val tripId = UUID.randomUUID().toString()
         val simulated = origin.simulated()
         // The persisted interval is applied as soon as DataStore emits; default until then.
@@ -304,6 +312,7 @@ class DrivingSessionRepositoryImpl @Inject constructor(
                 if (!current()) break
                 applyEvents(detector.flush(clock.now()))
                 tickScore()
+                shakeSampler?.flush(clock.now())?.forEach(::recordShake)
                 if (clock.now() - started > 8_000) {
                     mutableState.update {
                         it.copy(
@@ -384,6 +393,20 @@ class DrivingSessionRepositoryImpl @Inject constructor(
     }
 
     private fun parked() = state.value.gear.valueOrNull() == DrivingGear.PARK
+
+    /** 휴식 중(P단 정차)에는 흔들림을 모으지 않는다: 타임라인에서 휴식 칸으로 보인다 */
+    private fun onMotion(mps2: Double) {
+        val resting = planner?.snapshot?.let { it.phase != RestPhase.DRIVING } == true && parked()
+        if (!resting) shakeSampler?.add(clock.now(), mps2)
+    }
+
+    private fun recordShake(sample: ShakeSampler.Sample) {
+        record(
+            TripEventType.SHAKE_SAMPLE,
+            detail = String.format(Locale.US, "%.2f", sample.peakMps2),
+            at = sample.at
+        )
+    }
 
     private fun tickScore() {
         val rest = planner?.snapshot
@@ -906,6 +929,7 @@ class DrivingSessionRepositoryImpl @Inject constructor(
             val elapsed = (now - started).coerceAtLeast(0)
             val final = calculator.state.score
             drainScore()
+            shakeSampler?.finish(now)?.forEach(::recordShake)
             finishScope.launch {
                 runCatching {
                     recorder.complete(
@@ -929,6 +953,7 @@ class DrivingSessionRepositoryImpl @Inject constructor(
         waypointTracker = null
         windowRange = null
         planner = null
+        shakeSampler = null
         mutableState.value = DrivingSessionState(
             voiceGuidance = snapshot.voiceGuidance,
             lastEndedTripId = tripId ?: snapshot.lastEndedTripId

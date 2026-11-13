@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -212,9 +213,9 @@ private fun FullSummary(
                     style = Mg.regular(24, 29),
                     color = Mg.Ink
                 )
-                if (trip.simulated || trip.status == "INTERRUPTED") {
+                if (trip.status == "INTERRUPTED") {
                     Text(
-                        if (trip.simulated) "에뮬레이터 데이터로 기록됐어요" else "비정상 종료된 기록이에요",
+                        "비정상 종료된 기록이에요",
                         style = Mg.Caption,
                         color = Mg.OrangeText
                     )
@@ -628,7 +629,10 @@ private fun SelectChip(text: String, selected: Boolean, compact: Boolean, onClic
     )
 }
 
-/** Penalty bars over trip time with rest bands; heights follow the stored score deltas only. */
+/**
+ * 흔들림 타임라인: 10초마다 남긴 흔들림(회색 막대) 위에 감점된 순간(망고 막대)과 휴식 칸을 그린다.
+ * 회색 막대 높이 = 그 10초 동안 가장 컸던 가속도, 망고 막대 높이 = 감점 크기.
+ */
 @Composable
 fun ShakeTimeline(trip: TripEntity, events: List<TripEventEntity>, modifier: Modifier) {
     val measurer = rememberTextMeasurer()
@@ -638,89 +642,189 @@ fun ShakeTimeline(trip: TripEntity, events: List<TripEventEntity>, modifier: Mod
         it.type == TripEventType.SCORE_PENALTY &&
             (it.scoreDelta ?: 0) < 0
     }
-    val rests = restBands(events)
+    val rests = restBands(events, tripEnd = end)
+    val shakes = shakeSamples(events, rests, penalties.map { it.atEpoch })
     val labelled = penalties.sortedBy { it.scoreDelta }.take(3).map { it.id }.toSet()
     // Figma 464:46831: 막대 이름 B24 망고 · 시간 R24
     val labelStyle = Mg.bold(24, 32).copy(color = Mg.OrangeText)
     val axisStyle = Mg.regular(24, 32).copy(color = Mg.Muted)
+    val restStyle = Mg.bold(22, 28).copy(color = Mg.OrangeText)
     Canvas(modifier) {
         val axisH = 36.dp.toPx()
         val chartH = size.height - axisH
-        val span = (end - start).coerceAtLeast(60_000L).toFloat()
+        // 1분 안에 끝난 주행도 실제 길이로 펼친다 (60초로 고정하면 막대가 왼쪽에 몰리고 도착 라벨과 어긋난다)
+        val span = (end - start).coerceAtLeast(1_000L).toFloat()
         fun x(t: Long) = ((t - start) / span).coerceIn(0f, 1f) * size.width
+        // 휴식 구간: 연한 망고 면 위에 망고색 '휴식' (막대보다 뒤에 깔린다)
+        val restText = measurer.measure("휴식", restStyle)
         rests.forEach { (a, b) ->
-            val left = x(a)
-            val w = (x(b) - left).coerceAtLeast(40.dp.toPx())
+            val minimumWidth = restText.size.width + 16.dp.toPx()
+            val w = (x(b) - x(a)).coerceAtLeast(minimumWidth).coerceAtMost(size.width)
+            // 짧은 주행에서 최소 폭으로 넓힌 휴식 칸이 오른쪽 끝을 넘지 않게
+            val left = x(a).coerceAtMost(size.width - w)
+            val top = chartH * 0.2f
             drawRoundRect(
-                Mg.Track,
-                Offset(left, chartH * 0.25f),
-                Size(w, chartH * 0.72f),
+                Mg.AlertBg,
+                Offset(left, top),
+                Size(w, chartH - top),
                 CornerRadius(8.dp.toPx())
             )
-            val text = measurer.measure("휴식", axisStyle.copy(color = Mg.Ink))
-            drawText(text, topLeft = Offset(left + (w - text.size.width) / 2, chartH * 0.55f))
+            drawText(
+                restText,
+                topLeft = Offset(left + (w - restText.size.width) / 2, top + (chartH - top) * 0.3f)
+            )
         }
         drawLine(Mg.Line, Offset(0f, chartH), Offset(size.width, chartH), 2.dp.toPx())
+        // 10초 흔들림: 그 칸의 가운데에 얇은 회색 막대 (칸이 좁으면 막대도 좁게)
+        val slotW = SHAKE_SAMPLE_MS / span * size.width
+        val shakeW = (slotW * 0.5f).coerceIn(2.dp.toPx(), 6.dp.toPx())
+        shakes.forEach { (at, peak) ->
+            val h = (peak / SHAKE_FULL_MPS2).coerceIn(0.06f, 0.6f) * chartH * 0.62f
+            val cx = x(at - SHAKE_SAMPLE_MS / 2).coerceIn(shakeW / 2, size.width - shakeW / 2)
+            drawRoundRect(
+                ShakeGrey,
+                Offset(cx - shakeW / 2, chartH - h),
+                Size(shakeW, h),
+                CornerRadius(shakeW / 2)
+            )
+        }
         val barW = 8.dp.toPx()
-        var labelEnd = Float.NEGATIVE_INFINITY
-        penalties.sortedBy { it.atEpoch }.forEach { e ->
+        val ordered = penalties.sortedWith(compareBy({ it.atEpoch }, { it.id }))
+        // 거의 같은 순간의 이벤트(예: 급제동 + 급회전)도 막대가 포개지지 않게 최소 간격만큼 벌린다
+        val centers = spreadBars(
+            raw = ordered.map { x(it.atEpoch) },
+            minGap = barW + 4.dp.toPx(),
+            minX = barW / 2,
+            maxX = size.width - barW / 2
+        )
+        val bars = ordered.mapIndexed { i, e ->
             val h = (kotlin.math.abs(e.scoreDelta ?: 0) / 8f).coerceIn(0.15f, 1f) * chartH * 0.62f
-            val cx = x(e.atEpoch)
+            Triple(e, centers[i], h)
+        }
+        bars.forEach { (_, cx, h) ->
             drawRoundRect(
                 Mg.Orange,
                 Offset(cx - barW / 2, chartH - h),
                 Size(barW, h),
                 CornerRadius(3.dp.toPx())
             )
-            if (e.id in labelled) {
+        }
+        // 라벨은 감점이 큰 순서로 자리를 잡고, 이미 놓인 라벨과 겹치면 막대만 남긴다
+        val gap = 8.dp.toPx()
+        val placed = mutableListOf<Rect>()
+        bars.filter { it.first.id in labelled }
+            .sortedBy { it.first.scoreDelta ?: 0 }
+            .forEach { (e, cx, h) ->
                 val text = measurer.measure(penaltyTitle(e.detail), labelStyle)
                 val lx = (cx - text.size.width / 2).coerceIn(0f, size.width - text.size.width)
-                // Neighbouring events (e.g. two bumps a minute apart) keep their bars but share one label.
-                if (lx >= labelEnd + 8.dp.toPx()) {
-                    drawText(
-                        text,
-                        topLeft = Offset(lx, chartH - h - text.size.height - 6.dp.toPx())
-                    )
-                    labelEnd = lx + text.size.width
+                val top = (chartH - h - text.size.height - 6.dp.toPx()).coerceAtLeast(0f)
+                val rect = Rect(lx, top, lx + text.size.width, top + text.size.height)
+                if (placed.none { it.inflate(gap).overlaps(rect) }) {
+                    drawText(text, topLeft = Offset(lx, top))
+                    placed += rect
                 }
             }
-        }
-        listOf(start, (start + end) / 2, end).forEachIndexed { i, t ->
-            val text = measurer.measure(clockLabel(t), axisStyle)
+        val axis = axisLabels(start, end)
+        axis.forEachIndexed { i, label ->
+            val text = measurer.measure(label, axisStyle)
             val lx = when (i) {
                 0 -> 0f
-                2 -> size.width - text.size.width
-                else -> x(t) - text.size.width / 2
+                axis.lastIndex -> size.width - text.size.width
+                else -> (size.width - text.size.width) / 2
             }
             drawText(text, topLeft = Offset(lx, chartH + 8.dp.toPx()))
-        }
-        if (penalties.isEmpty()) {
-            val text = measurer.measure("기록된 흔들림이 없어요", axisStyle)
-            drawText(text, topLeft = Offset((size.width - text.size.width) / 2, chartH / 2))
         }
     }
 }
 
 fun clockLabel(epoch: Long): String = dateText(epoch, "H:mm")
 
-/** Rest intervals from recorded starts/ends; a completed duration can recover a missing start. */
-fun restBands(events: List<TripEventEntity>): List<Pair<Long, Long>> {
+private const val SHAKE_SAMPLE_MS = 10_000L
+
+/** 이 가속도(위험 단계 4 m/s²)면 회색 막대가 가장 높다 */
+private const val SHAKE_FULL_MPS2 = 4f
+private val ShakeGrey = Color(0xFFD1D6DB)
+
+/**
+ * 10초 흔들림 기록 (끝난 시각, 최대 m/s²). 휴식 칸 안이거나,
+ * 같은 10초 안에 감점이 있어 망고 막대가 대신 보여 주는 칸은 뺀다.
+ */
+fun shakeSamples(
+    events: List<TripEventEntity>,
+    rests: List<Pair<Long, Long>>,
+    penaltyTimes: List<Long>
+): List<Pair<Long, Float>> = events
+    .filter { it.type == TripEventType.SHAKE_SAMPLE }
+    .mapNotNull { e ->
+        val peak = e.detail?.toFloatOrNull()?.takeIf { it.isFinite() }
+        peak?.let { e.atEpoch to it }
+    }
+    .filter { (at, _) ->
+        val from = at - SHAKE_SAMPLE_MS
+        rests.none { (a, b) -> at > a && from < b } &&
+            penaltyTimes.none { it in from..at }
+    }
+    .sortedBy { it.first }
+
+/**
+ * 시간 순 막대 위치를 [minGap] 이상 떨어뜨린다. 오른쪽 끝을 넘으면 뒤에서부터 다시 당긴다.
+ * 칸이 모자랄 만큼 많으면 균등하게 나눠 놓는다.
+ */
+fun spreadBars(raw: List<Float>, minGap: Float, minX: Float, maxX: Float): List<Float> {
+    if (raw.isEmpty()) return raw
+    if (raw.size > 1 && (raw.size - 1) * minGap > maxX - minX) {
+        val step = (maxX - minX) / (raw.size - 1)
+        return raw.indices.map { minX + it * step }
+    }
+    val out = raw.map { it.coerceIn(minX, maxX) }.toMutableList()
+    for (i in 1 until out.size) out[i] = maxOf(out[i], out[i - 1] + minGap)
+    out[out.lastIndex] = minOf(out.last(), maxX)
+    for (i in out.lastIndex - 1 downTo 0) out[i] = minOf(out[i], out[i + 1] - minGap)
+    return out
+}
+
+/**
+ * 타임라인 아래 축 라벨 (출발 · 중간 · 도착).
+ * 1분 안에 끝난 주행은 시각이 모두 같아지므로 경과 초로 보여 주고 (0초 · 15초 · 30초),
+ * 같은 글자가 겹치는 중간 라벨은 뺀다 (예: 2분 주행 14:03 · 14:03 · 14:05).
+ */
+fun axisLabels(start: Long, end: Long): List<String> {
+    val duration = (end - start).coerceAtLeast(0L)
+    val labels = if (duration < 60_000L) {
+        val seconds = (duration / 1_000L).toInt()
+        listOf("0초", "${seconds / 2}초", "${seconds}초")
+    } else {
+        listOf(clockLabel(start), clockLabel(start + duration / 2), clockLabel(end))
+    }
+    return when {
+        labels[0] == labels[2] -> listOf(labels[0])
+        labels[1] == labels[0] || labels[1] == labels[2] -> listOf(labels[0], labels[2])
+        else -> labels
+    }
+}
+
+/**
+ * 타임라인에 그릴 휴식 구간. '휴식 N회'와 같은 기준으로 완료된 휴식만 그리고,
+ * 너무 짧아 취소된 휴식은 뺀다. 주행이 휴식 중에 끝났으면 [tripEnd]까지 이어 그린다.
+ * 완료 기록에 남은 휴식 시간으로 빠진 시작 시각을 되살린다.
+ */
+fun restBands(events: List<TripEventEntity>, tripEnd: Long? = null): List<Pair<Long, Long>> {
     val out = mutableListOf<Pair<Long, Long>>()
     var open: Long? = null
     events.sortedBy { it.atEpoch }.forEach { event ->
         when (event.type) {
             TripEventType.REST_STARTED -> if (open == null) open = event.atEpoch
-            TripEventType.REST_COMPLETED, TripEventType.REST_CANCELLED -> {
-                val recordedDuration = if (event.type == TripEventType.REST_COMPLETED) {
+            TripEventType.REST_COMPLETED -> {
+                val recordedDuration =
                     event.detail?.toLongOrNull()?.takeIf { it > 0 && it <= event.atEpoch }
-                } else {
-                    null
-                }
                 val start = open ?: recordedDuration?.let { event.atEpoch - it }
                 if (start != null && start < event.atEpoch) out += start to event.atEpoch
                 open = null
             }
+            TripEventType.REST_CANCELLED -> open = null
         }
     }
+    val unfinished = open
+    if (unfinished != null && tripEnd != null && unfinished < tripEnd) out += unfinished to tripEnd
     return out
 }

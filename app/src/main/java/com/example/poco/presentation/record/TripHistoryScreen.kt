@@ -185,8 +185,7 @@ private fun TripRow(trip: TripEntity, newest: Boolean, onClick: () -> Unit) {
                 listOfNotNull(
                     koreanDuration(tripDurationMs(trip)),
                     (trip.restCount ?: 0).takeIf { it > 0 }?.let { "휴식 ${it}회" },
-                    "비정상 종료".takeIf { trip.status == "INTERRUPTED" },
-                    "에뮬레이터 데이터".takeIf { trip.simulated }
+                    "비정상 종료".takeIf { trip.status == "INTERRUPTED" }
                 ).joinToString("  "),
                 style = Mg.Body,
                 color = Mg.Muted

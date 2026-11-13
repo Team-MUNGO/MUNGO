@@ -155,8 +155,7 @@ fun TripDetailRoute(
                 )
                 InfoRow("이동 시간", koreanDuration(tripDurationMs(t)))
                 InfoRow("휴식", "${t.restCount ?: 0}회")
-                InfoRow("탑승 위치", seatLabel(t), last = !t.simulated)
-                if (t.simulated) InfoRow("데이터", "에뮬레이터", last = true)
+                InfoRow("탑승 위치", seatLabel(t), last = true)
             }
             Column(Modifier.weight(1f).fillMaxHeight()) {
                 MgCard(
@@ -295,7 +294,7 @@ private fun ScoreChart(trip: TripEntity, events: List<TripEventEntity>, modifier
         }
         trip.finalScore?.let { add(end to it) }
     }
-    val bands = restBands(events).mapNotNull { (a, b) ->
+    val bands = restBands(events, tripEnd = end).mapNotNull { (a, b) ->
         val from = maxOf(a, start)
         val to = minOf(b, end)
         if (from < to) from to to else null

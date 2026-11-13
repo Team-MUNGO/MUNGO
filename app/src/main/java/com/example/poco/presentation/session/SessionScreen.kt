@@ -318,16 +318,6 @@ private fun DrivingHeader(
                 else -> Pill("주행 중", background = Mg.Peach, color = Mg.OrangeText, height = 40.dp)
             }
         }
-        if (state.simulatedSource) {
-            Spacer(Modifier.width(10.dp))
-            Pill(
-                "에뮬레이터 데이터",
-                background = Color(0xFFFFF4E8),
-                color = Mg.OrangeText,
-                height = 40.dp,
-                style = Mg.Caption
-            )
-        }
         Spacer(Modifier.weight(1f))
         if (!state.active) {
             HeaderLink("이동 기록", actions.onOpenHistory)

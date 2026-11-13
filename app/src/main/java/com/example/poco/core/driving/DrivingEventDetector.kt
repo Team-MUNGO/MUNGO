@@ -7,7 +7,9 @@ import kotlin.math.tan
 /** Measurement timestamps, not callback arrival spacing, define the detection windows. */
 class DrivingEventDetector(
     private val config: ComfortScoreConfig = ComfortScoreConfig(),
-    private val anomaly: (String) -> Unit = {}
+    private val anomaly: (String) -> Unit = {},
+    /** 계산한 앞뒤 · 좌우 가속도 (시각, m/s²). 10초 흔들림 기록([ShakeSampler])에 쓴다 */
+    private val motion: (Long, Double) -> Unit = { _, _ -> }
 ) {
     private val speeds = ArrayDeque<SpeedSample>()
     private var lastAcceleration: Long? = null
@@ -63,6 +65,7 @@ class DrivingEventDetector(
             speeds.addLast(sample)
             return events
         }
+        motion(sample.at, rate / KMH_PER_MPS)
         if (rate >= config.accelerationMin) {
             if (lastAcceleration == null ||
                 sample.at - lastAcceleration!! > config.accelerationMergeMs
@@ -134,6 +137,7 @@ class DrivingEventDetector(
             return null
         }
         val lateral = lateralMps2(degrees, speed.kmh)
+        motion(now, lateral)
         if (lateral < config.turnRearmLateralMps2) steeringArmed = true
         if (lateral < config.sharpTurnLateralMps2 || !steeringArmed) {
             steeringOverSince = null
@@ -173,6 +177,8 @@ class DrivingEventDetector(
         }
         val events = mutableListOf<DrivingEvent>()
         val delta = ((degrees - previous.second + 540) % 360) - 180
+        // 좌우 가속도 ≈ 속도 × 회전 속도 (조향각이 없을 때도 흔들림을 남기도록)
+        motion(at, abs(speedKmh) / KMH_PER_MPS * Math.toRadians(abs(delta)) * 1000 / dt)
         if (abs(delta) * 1000 / dt < config.curveMinRate) return flush(at)
         if (curveDirection != 0.0 && delta.sign != curveDirection) {
             finishCurve(at)?.let(events::add)
@@ -227,3 +233,5 @@ class DrivingEventDetector(
         }
     }
 }
+
+private const val KMH_PER_MPS = 3.6

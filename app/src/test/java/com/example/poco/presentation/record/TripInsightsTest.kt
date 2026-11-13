@@ -156,6 +156,23 @@ class TripInsightsTest {
         assertTrue(restBands(listOf(e(56 * m, TripEventType.REST_CANCELLED))).isEmpty())
     }
 
+    @Test fun restBandsSkipCancelledRestAndExtendUnfinishedRestToTripEnd() {
+        // 너무 짧아 취소된 휴식은 '휴식 N회'에 없으니 그리지 않는다
+        assertTrue(
+            restBands(
+                listOf(
+                    e(10 * m, TripEventType.REST_STARTED),
+                    e(11 * m, TripEventType.REST_CANCELLED)
+                )
+            ).isEmpty()
+        )
+        // 휴식 중에 주행을 끝내면 끝날 때까지 휴식으로 보여 준다
+        assertEquals(
+            listOf(20 * m to 30 * m),
+            restBands(listOf(e(20 * m, TripEventType.REST_STARTED)), tripEnd = 30 * m)
+        )
+    }
+
     @Test fun eventDetailUsesEventSnapshotAndPreservesGroupedBeforeScore() {
         val first = e(10 * m, TripEventType.SCORE_PENALTY, -2, 98, "SPEED_BUMP").copy(
             scoreBefore = 100,

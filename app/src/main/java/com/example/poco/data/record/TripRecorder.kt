@@ -22,6 +22,7 @@ object TripEventType {
     const val WINDOW_WARNING = "WINDOW_WARNING" // detail = percent
     const val TEMPERATURE_OUT_OF_RANGE = "TEMPERATURE_OUT_OF_RANGE" // detail = "HOT:27.5"
     const val TEMPERATURE_SAMPLE = "TEMPERATURE_SAMPLE" // detail = measured cabin °C
+    const val SHAKE_SAMPLE = "SHAKE_SAMPLE" // detail = 10초 칸의 최대 가속도 m/s² ("1.85")
     const val AI_REST_REQUEST = "AI_REST_REQUEST" // dedupeKey = rest-cycle-N
     const val WAYPOINT_ADDED = "WAYPOINT_ADDED" // detail = Google place ID
     const val WAYPOINT_FAILED = "WAYPOINT_FAILED"
