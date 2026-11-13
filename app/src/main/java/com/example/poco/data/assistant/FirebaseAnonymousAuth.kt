@@ -28,7 +28,7 @@ import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
 
-/** Short-lived Firebase ID token used as the Bearer credential for the POCO server. */
+/** Short-lived Firebase ID token used as the Bearer credential for the mungo server. */
 data class AuthToken(val idToken: String, val expiresAt: Long)
 
 /**

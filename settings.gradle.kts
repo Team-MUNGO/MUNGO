@@ -25,5 +25,5 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "POCO"
+rootProject.name = "Mungo"
 include(":app")

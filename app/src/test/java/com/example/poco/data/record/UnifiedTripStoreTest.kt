@@ -30,7 +30,7 @@ class UnifiedTripStoreTest {
         motionSensitivity = MotionSensitivity.NORMAL
     )
 
-    /** The driving session watches the 마이펫 pet: name, seat, weight and the POCO comfort range. */
+    /** The driving session watches the 마이펫 pet: name, seat, weight and the mungo comfort range. */
     @Test fun petProfileBecomesSessionSettings() {
         val s = pet.toDrivingSettings()!!
         assertEquals("현댕이", s.petName)

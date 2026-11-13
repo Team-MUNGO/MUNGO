@@ -10,7 +10,7 @@ import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onRoot
 import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
-import com.example.poco.core.theme.POCOTheme
+import com.example.poco.core.theme.MungoTheme
 import com.example.poco.data.assistant.AssistRequest
 import com.example.poco.data.assistant.AssistResponse
 import com.example.poco.data.assistant.TripSummaryRequest
@@ -147,7 +147,7 @@ class RecordScreensGalleryTest {
         val detail = TripDetailViewModel(history, settings, assistant)
         val list = TripHistoryViewModel(history)
         compose.setContent {
-            POCOTheme {
+            MungoTheme {
                 when (screen.value) {
                     "history" -> TripHistoryRoute({}, {}, list)
                     "summary" -> TripSummaryRoute("c", {}, {}, detail)
@@ -186,7 +186,7 @@ class RecordScreensGalleryTest {
         val size = mutableStateOf(1682 to 1210)
         val detail = TripDetailViewModel(history, settings, assistant)
         compose.setContent {
-            POCOTheme {
+            MungoTheme {
                 androidx.compose.foundation.layout.Box(
                     androidx.compose.ui.Modifier.size(size.value.first.dp, size.value.second.dp)
                 ) { TripSummaryRoute("c", {}, {}, detail) }

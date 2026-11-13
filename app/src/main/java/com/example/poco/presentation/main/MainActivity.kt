@@ -20,9 +20,9 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import com.example.poco.core.common.ToastMessage
 import com.example.poco.core.common.ToastMessenger
-import com.example.poco.core.designsystem.component.PocoToast
-import com.example.poco.core.theme.POCOTheme
-import com.example.poco.core.theme.PocoSpacing
+import com.example.poco.core.designsystem.component.MungoToast
+import com.example.poco.core.theme.MungoSpacing
+import com.example.poco.core.theme.MungoTheme
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 import kotlinx.coroutines.delay
@@ -35,16 +35,16 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
-            POCOTheme {
+            MungoTheme {
                 Box(modifier = Modifier.fillMaxSize()) {
-                    PocoNavHost()
+                    MungoNavHost()
                     ToastHost(
                         toastMessenger = toastMessenger,
                         // 시스템 바(하단 내비 등) 위로 올린다
                         modifier = Modifier
                             .align(Alignment.BottomCenter)
                             .windowInsetsPadding(WindowInsets.safeDrawing)
-                            .padding(bottom = PocoSpacing.space48)
+                            .padding(bottom = MungoSpacing.space48)
                     )
                 }
             }
@@ -65,7 +65,7 @@ private fun ToastHost(toastMessenger: ToastMessenger, modifier: Modifier = Modif
             message = null
         }
     }
-    message?.let { PocoToast(text = it.text, detail = it.detail, modifier = modifier) }
+    message?.let { MungoToast(text = it.text, detail = it.detail, modifier = modifier) }
 }
 
 private const val TOAST_DURATION_MS = 2_500L

@@ -8,11 +8,11 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class PocoStandardTest {
+class MungoStandardTest {
     @Test
     fun `중대형 보통 털은 기본 유형 - 26도 이상 더움, 17도 이하 추움`() {
-        val types = PocoStandard.petTypes("비글", weightKg = 12f, ageYears = 3)
-        val standard = PocoStandard.temperature(types)
+        val types = MungoStandard.petTypes("비글", weightKg = 12f, ageYears = 3)
+        val standard = MungoStandard.temperature(types)
 
         assertEquals(setOf(PetType.BASIC), types)
         assertEquals(26f, standard.hotAt)
@@ -23,14 +23,14 @@ class PocoStandardTest {
     fun `10kg 미만이면 소형 단모`() {
         assertEquals(
             setOf(PetType.SMALL_SHORT_COAT),
-            PocoStandard.petTypes("몰티즈", weightKg = 4f, ageYears = 3)
+            MungoStandard.petTypes("몰티즈", weightKg = 4f, ageYears = 3)
         )
     }
 
     @Test
     fun `단두종 + 노견은 더 엄격한 값 - 더움 24도, 추움 19도`() {
-        val types = PocoStandard.petTypes("퍼그", weightKg = 12f, ageYears = 9)
-        val standard = PocoStandard.temperature(types)
+        val types = MungoStandard.petTypes("퍼그", weightKg = 12f, ageYears = 9)
+        val standard = MungoStandard.temperature(types)
 
         assertEquals(setOf(PetType.BRACHYCEPHALIC, PetType.SENIOR_PUPPY), types)
         assertEquals(24f, standard.hotAt)
@@ -41,7 +41,7 @@ class PocoStandardTest {
     @Test
     fun `포메라니안은 이중모 + 소형 - 더위는 이중모, 추위는 소형 기준`() {
         val standard =
-            PocoStandard.temperature(PocoStandard.petTypes("포메라니안", 3f, ageYears = 2))
+            MungoStandard.temperature(MungoStandard.petTypes("포메라니안", 3f, ageYears = 2))
 
         assertEquals(24f, standard.hotAt)
         assertEquals(18f, standard.coldAt)
@@ -49,22 +49,22 @@ class PocoStandardTest {
 
     @Test
     fun `1살 미만은 퍼피`() {
-        assertTrue(PetType.SENIOR_PUPPY in PocoStandard.petTypes("진돗개", 15f, ageYears = 0))
+        assertTrue(PetType.SENIOR_PUPPY in MungoStandard.petTypes("진돗개", 15f, ageYears = 0))
     }
 
     @Test
     fun `29_5도 이상은 모든 유형 위험`() {
-        val standard = PocoStandard.temperature(setOf(PetType.DOUBLE_COAT))
+        val standard = MungoStandard.temperature(setOf(PetType.DOUBLE_COAT))
         assertTrue(standard.isDanger(29.5f))
     }
 
     @Test
     fun `흔들림 단계 - 앞뒤 1_5 · 2_5 · 4_0, 좌우 1_5 · 2_0 · 4_0`() {
-        assertEquals(ShakeGrade.CALM, PocoStandard.longitudinalGrade(1.4f))
-        assertEquals(ShakeGrade.MILD, PocoStandard.longitudinalGrade(-2.0f))
-        assertEquals(ShakeGrade.EVENT, PocoStandard.longitudinalGrade(3.0f))
-        assertEquals(ShakeGrade.DANGER, PocoStandard.longitudinalGrade(-4.0f))
-        assertEquals(ShakeGrade.EVENT, PocoStandard.lateralGrade(2.1f))
+        assertEquals(ShakeGrade.CALM, MungoStandard.longitudinalGrade(1.4f))
+        assertEquals(ShakeGrade.MILD, MungoStandard.longitudinalGrade(-2.0f))
+        assertEquals(ShakeGrade.EVENT, MungoStandard.longitudinalGrade(3.0f))
+        assertEquals(ShakeGrade.DANGER, MungoStandard.longitudinalGrade(-4.0f))
+        assertEquals(ShakeGrade.EVENT, MungoStandard.lateralGrade(2.1f))
     }
 
     @Test

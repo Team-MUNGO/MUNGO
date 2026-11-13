@@ -16,7 +16,7 @@ import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
-import com.example.poco.core.theme.POCOTheme
+import com.example.poco.core.theme.MungoTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -59,12 +59,12 @@ fun PetPhoto(photoPath: String?, modifier: Modifier = Modifier, breed: String? =
             // 사진도 품종 아바타도 없으면 mungo 발바닥
             else ->
                 Box(
-                    modifier = circle.background(POCOTheme.colors.bgAccentSubtle),
+                    modifier = circle.background(MungoTheme.colors.bgAccentSubtle),
                     contentAlignment = Alignment.Center
                 ) {
                     MungoIconView(
                         MungoIcon.PAW_FILLED,
-                        tint = POCOTheme.colors.textAccent,
+                        tint = MungoTheme.colors.textAccent,
                         modifier = Modifier.fillMaxSize(0.45f)
                     )
                 }

@@ -18,9 +18,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
-import com.example.poco.core.designsystem.PocoWordmark
-import com.example.poco.core.theme.POCOTheme
-import com.example.poco.core.theme.PocoLayout
+import com.example.poco.core.designsystem.MungoWordmark
+import com.example.poco.core.theme.MungoBaseLayout
+import com.example.poco.core.theme.MungoTheme
 import com.example.poco.core.util.toClock
 import kotlinx.coroutines.delay
 
@@ -29,7 +29,7 @@ import kotlinx.coroutines.delay
  * (LTE·배터리는 차량 시스템 UI가 보여주므로 앱에서는 그리지 않음)
  */
 @Composable
-fun PocoStatusBar(
+fun MungoStatusBar(
     gearLabel: String?,
     modifier: Modifier = Modifier,
     trailing: @Composable () -> Unit = {}
@@ -41,12 +41,12 @@ fun PocoStatusBar(
             now = System.currentTimeMillis()
         }
     }
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Column(modifier = modifier.fillMaxWidth()) {
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(PocoLayout.statusBarHeight)
+                .height(MungoBaseLayout.statusBarHeight)
         ) {
             Row(
                 modifier = Modifier.align(Alignment.CenterStart),
@@ -54,19 +54,19 @@ fun PocoStatusBar(
             ) {
                 Text(
                     text = now.toClock(),
-                    style = POCOTheme.typography.titleM,
+                    style = MungoTheme.typography.titleM,
                     color = colors.textPrimary
                 )
                 gearLabel?.let {
                     Spacer(Modifier.width(12.dp))
                     Text(
                         text = it,
-                        style = POCOTheme.typography.bodyM,
+                        style = MungoTheme.typography.bodyM,
                         color = colors.textSecondary
                     )
                 }
             }
-            PocoWordmark(modifier = Modifier.align(Alignment.Center), height = 36.dp)
+            MungoWordmark(modifier = Modifier.align(Alignment.Center), height = 36.dp)
             Box(modifier = Modifier.align(Alignment.CenterEnd)) { trailing() }
         }
         HorizontalDivider(color = colors.borderDefault)

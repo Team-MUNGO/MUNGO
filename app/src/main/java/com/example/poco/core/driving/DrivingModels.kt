@@ -64,7 +64,7 @@ sealed interface DrivingEvent {
     data class SpeedBump(val penalty: Int) : DrivingEvent
 }
 
-/** POCO policy, not a certified safety assessment. */
+/** mungo policy, not a certified safety assessment. */
 data class ComfortScoreConfig(
     val accelerationMin: Double = 11.0,
     val accelerationMax: Double = 25.0,
@@ -83,7 +83,7 @@ data class ComfortScoreConfig(
     val sharpTurnMax: Double = 120.0,
     val turnWindowMs: Long = 2_000,
     // Steering-wheel sharp turn: lateral ≈ v² · tan(wheel angle) / wheelbase (bicycle model), the same
-    // estimate and PocoStandard lateral thresholds (EVENT 2.0 / MILD 1.5 m/s²) as ComfortTracker.
+    // estimate and MungoStandard lateral thresholds (EVENT 2.0 / MILD 1.5 m/s²) as ComfortTracker.
     val steeringRatio: Double = 14.0,
     val wheelbaseM: Double = 3.0,
     val sharpTurnLateralMps2: Double = 2.0,
@@ -92,7 +92,7 @@ data class ComfortScoreConfig(
     /** One turn seen by both steering and GPS heading is counted once. */
     val sharpTurnDedupMs: Long = 4_000,
     val sharpTurnPenalty: Int = 4,
-    // Provisional POCO tuning: a turn ends after 1s without >=3°/s movement.
+    // Provisional mungo tuning: a turn ends after 1s without >=3°/s movement.
     val curveMinAngle: Double = 15.0,
     val curveMinRate: Double = 3.0,
     val curveEndQuietMs: Long = 1_000,

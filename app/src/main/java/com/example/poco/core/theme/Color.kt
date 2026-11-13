@@ -83,7 +83,7 @@ object MungoPalette {
  * - 뒤쪽(예전 이름): 기존 화면 호환용. 값은 mungo 팔레트로 옮겨 두었다
  */
 @Immutable
-data class POCOColors(
+data class MungoColors(
     // region bg
     /** 화면 바탕 */
     val bgCanvas: Color,
@@ -175,7 +175,7 @@ data class POCOColors(
     // endregion
 )
 
-val defaultPOCOColors = POCOColors(
+val defaultMungoColors = MungoColors(
     bgCanvas = Color(0xFFF4F5F7),
     bgSurface = MungoPalette.white,
     bgSurfaceRaised = MungoPalette.white,
@@ -208,7 +208,7 @@ val defaultPOCOColors = POCOColors(
     isDark = false
 )
 
-val darkPOCOColors = POCOColors(
+val darkMungoColors = MungoColors(
     bgCanvas = MungoPalette.dark950,
     bgSurface = MungoPalette.dark900,
     bgSurfaceRaised = MungoPalette.dark850,
@@ -241,4 +241,4 @@ val darkPOCOColors = POCOColors(
     isDark = true
 )
 
-val LocalPOCOColorsProvider = staticCompositionLocalOf { defaultPOCOColors }
+val LocalMungoColorsProvider = staticCompositionLocalOf { defaultMungoColors }

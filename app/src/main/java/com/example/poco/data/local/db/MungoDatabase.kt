@@ -22,7 +22,7 @@ import androidx.room.RoomDatabase
         AutoMigration(from = 6, to = 7)
     ]
 )
-abstract class PocoDatabase : RoomDatabase() {
+abstract class MungoDatabase : RoomDatabase() {
     abstract fun petDao(): PetDao
 
     abstract fun tripDao(): TripDao

@@ -24,7 +24,7 @@ import com.example.poco.core.designsystem.MungoIconView
 import com.example.poco.core.designsystem.MungoPaw
 import com.example.poco.core.designsystem.component.pressable
 import com.example.poco.core.theme.MungoRadius
-import com.example.poco.core.theme.POCOTheme
+import com.example.poco.core.theme.MungoTheme
 import com.example.poco.presentation.design.Mg
 
 /** 왼쪽 메뉴 레일 탭 */
@@ -49,7 +49,7 @@ fun MungoNavRail(
     onMyPet: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Column(
         modifier = modifier
             .width(RAIL_WIDTH)
@@ -104,7 +104,7 @@ private fun RailItem(
     selected: Boolean = false,
     onClick: (() -> Unit)? = null
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val shape = RoundedCornerShape(MungoRadius.lg)
     val content = if (selected) colors.textOnNeutralStrong else colors.textSecondary
     Column(

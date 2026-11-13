@@ -30,17 +30,17 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.example.poco.core.designsystem.CarSeatMap
-import com.example.poco.core.designsystem.PocoIcon
-import com.example.poco.core.designsystem.PocoIconView
-import com.example.poco.core.designsystem.component.PocoButton
-import com.example.poco.core.designsystem.component.PocoButtonStyle
-import com.example.poco.core.designsystem.component.PocoTag
-import com.example.poco.core.designsystem.component.PocoTagStyle
-import com.example.poco.core.theme.POCOTheme
-import com.example.poco.core.theme.PocoRadius
-import com.example.poco.core.theme.PocoSize
-import com.example.poco.core.theme.PocoSpacing
-import com.example.poco.core.theme.PocoStroke
+import com.example.poco.core.designsystem.MungoBaseIcon
+import com.example.poco.core.designsystem.MungoBaseIconView
+import com.example.poco.core.designsystem.component.MungoButton
+import com.example.poco.core.designsystem.component.MungoButtonStyle
+import com.example.poco.core.designsystem.component.MungoTag
+import com.example.poco.core.designsystem.component.MungoTagStyle
+import com.example.poco.core.theme.MungoBaseRadius
+import com.example.poco.core.theme.MungoBaseSize
+import com.example.poco.core.theme.MungoSpacing
+import com.example.poco.core.theme.MungoStroke
+import com.example.poco.core.theme.MungoTheme
 import com.example.poco.data.model.Pet
 import com.example.poco.data.model.PetSeat
 import com.example.poco.presentation.petprofile.label
@@ -61,53 +61,53 @@ fun SeatChangeDialog(pet: Pet, onDismiss: () -> Unit, onConfirm: (PetSeat) -> Un
 
 @Composable
 private fun SeatChangeContent(pet: Pet, onDismiss: () -> Unit, onConfirm: (PetSeat) -> Unit) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     var selected by rememberSaveable { mutableStateOf(pet.seat) }
     Column(
         modifier = Modifier
             .widthIn(max = 1120.dp)
-            .background(colors.backgroundCard, RoundedCornerShape(PocoRadius.r36))
-            .padding(PocoSpacing.space40),
-        verticalArrangement = Arrangement.spacedBy(PocoSpacing.space24)
+            .background(colors.backgroundCard, RoundedCornerShape(MungoBaseRadius.r36))
+            .padding(MungoSpacing.space40),
+        verticalArrangement = Arrangement.spacedBy(MungoSpacing.space24)
     ) {
         // 제목 · 닫기
         Row(verticalAlignment = Alignment.Top) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "${pet.name} 자리 바꾸기",
-                    style = POCOTheme.typography.headingL,
+                    style = MungoTheme.typography.headingL,
                     color = colors.textPrimary
                 )
                 Text(
                     text = "창문 알림이 새 자리 옆 창문을 기준으로 바뀌어요",
-                    style = POCOTheme.typography.bodyM,
+                    style = MungoTheme.typography.bodyM,
                     color = colors.textSecondary
                 )
             }
             Box(
                 modifier = Modifier
-                    .size(PocoSize.touchMin)
+                    .size(MungoBaseSize.touchMin)
                     .background(colors.fieldBackground, CircleShape)
                     .clickable(onClick = onDismiss),
                 contentAlignment = Alignment.Center
             ) {
                 // 닫기(×) = 더하기 아이콘을 45° 회전
-                PocoIconView(
-                    PocoIcon.PLUS,
+                MungoBaseIconView(
+                    MungoBaseIcon.PLUS,
                     tint = colors.textPrimary,
                     modifier = Modifier
-                        .size(PocoSize.icon28)
+                        .size(MungoBaseSize.icon28)
                         .rotate(45f)
                 )
             }
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(PocoSpacing.space24)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(MungoSpacing.space24)) {
             // 위에서 본 차
             Column(
                 modifier = Modifier
-                    .background(colors.fieldBackground, RoundedCornerShape(PocoRadius.r24))
-                    .padding(PocoSpacing.space24),
+                    .background(colors.fieldBackground, RoundedCornerShape(MungoBaseRadius.r24))
+                    .padding(MungoSpacing.space24),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 CarSeatMap(
@@ -118,10 +118,10 @@ private fun SeatChangeContent(pet: Pet, onDismiss: () -> Unit, onConfirm: (PetSe
                     breed = pet.breed,
                     width = 240.dp
                 )
-                Spacer(Modifier.height(PocoSpacing.space12))
+                Spacer(Modifier.height(MungoSpacing.space12))
                 Text(
                     text = "▲ 앞쪽 · 초록 막대 = 알림 기준 창문",
-                    style = POCOTheme.typography.micro,
+                    style = MungoTheme.typography.micro,
                     color = colors.textSecondary
                 )
             }
@@ -129,7 +129,7 @@ private fun SeatChangeContent(pet: Pet, onDismiss: () -> Unit, onConfirm: (PetSe
             // 자리 고르기
             Column(
                 modifier = Modifier.weight(1f),
-                verticalArrangement = Arrangement.spacedBy(PocoSpacing.space12)
+                verticalArrangement = Arrangement.spacedBy(MungoSpacing.space12)
             ) {
                 PetSeat.entries.forEach { seat ->
                     SeatOption(
@@ -139,17 +139,17 @@ private fun SeatChangeContent(pet: Pet, onDismiss: () -> Unit, onConfirm: (PetSe
                         onClick = { selected = seat }
                     )
                 }
-                Spacer(Modifier.height(PocoSpacing.space4))
+                Spacer(Modifier.height(MungoSpacing.space4))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    PocoIconView(
-                        PocoIcon.WARNING,
+                    MungoBaseIconView(
+                        MungoBaseIcon.WARNING,
                         tint = colors.textSecondary,
-                        modifier = Modifier.size(PocoSize.icon24)
+                        modifier = Modifier.size(MungoBaseSize.icon24)
                     )
-                    Spacer(Modifier.width(PocoSpacing.space8))
+                    Spacer(Modifier.width(MungoSpacing.space8))
                     Text(
                         text = "안고 타기는 도로교통법 위반이라 고를 수 없어요",
-                        style = POCOTheme.typography.caption,
+                        style = MungoTheme.typography.caption,
                         color = colors.textSecondary
                     )
                 }
@@ -160,13 +160,13 @@ private fun SeatChangeContent(pet: Pet, onDismiss: () -> Unit, onConfirm: (PetSe
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = "펫 프로필의 탑승 자리도 같이 바뀌어요",
-                style = POCOTheme.typography.caption,
+                style = MungoTheme.typography.caption,
                 color = colors.textSecondary,
                 modifier = Modifier.weight(1f)
             )
-            PocoButton(text = "취소", onClick = onDismiss, style = PocoButtonStyle.SECONDARY)
-            Spacer(Modifier.width(PocoSpacing.space16))
-            PocoButton(
+            MungoButton(text = "취소", onClick = onDismiss, style = MungoButtonStyle.SECONDARY)
+            Spacer(Modifier.width(MungoSpacing.space16))
+            MungoButton(
                 text = "이 자리로 바꾸기",
                 onClick = { onConfirm(selected) },
                 enabled = selected != pet.seat
@@ -177,40 +177,46 @@ private fun SeatChangeContent(pet: Pet, onDismiss: () -> Unit, onConfirm: (PetSe
 
 @Composable
 private fun SeatOption(seat: PetSeat, isCurrent: Boolean, selected: Boolean, onClick: () -> Unit) {
-    val colors = POCOTheme.colors
-    val shape = RoundedCornerShape(PocoRadius.r24)
+    val colors = MungoTheme.colors
+    val shape = RoundedCornerShape(MungoBaseRadius.r24)
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .background(if (selected) colors.limeSoft else colors.backgroundCard, shape)
             .border(
-                width = PocoStroke.control,
+                width = MungoStroke.control,
                 color = if (selected) colors.accentFill else colors.borderDefault,
                 shape = shape
             )
             .clickable(onClick = onClick)
-            .padding(horizontal = PocoSpacing.space24, vertical = PocoSpacing.space16),
+            .padding(horizontal = MungoSpacing.space24, vertical = MungoSpacing.space16),
         verticalAlignment = Alignment.CenterVertically
     ) {
         RadioMark(selected)
-        Spacer(Modifier.width(PocoSpacing.space20))
+        Spacer(Modifier.width(MungoSpacing.space20))
         Column(modifier = Modifier.weight(1f)) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = seat.label(),
-                    style = POCOTheme.typography.titleM,
+                    style = MungoTheme.typography.titleM,
                     color = colors.textPrimary
                 )
-                Spacer(Modifier.width(PocoSpacing.space12))
+                Spacer(Modifier.width(MungoSpacing.space12))
                 when {
-                    isCurrent -> PocoTag(text = "지금 자리", style = PocoTagStyle.NEW)
-                    seat == PetSeat.REAR_RIGHT -> PocoTag(text = "추천", style = PocoTagStyle.SUCCESS)
-                    seat == PetSeat.PASSENGER -> PocoTag(text = "에어백 주의", style = PocoTagStyle.WARN)
+                    isCurrent -> MungoTag(text = "지금 자리", style = MungoTagStyle.NEW)
+                    seat == PetSeat.REAR_RIGHT -> MungoTag(
+                        text = "추천",
+                        style = MungoTagStyle.SUCCESS
+                    )
+                    seat == PetSeat.PASSENGER -> MungoTag(
+                        text = "에어백 주의",
+                        style = MungoTagStyle.WARN
+                    )
                 }
             }
             Text(
                 text = seat.guide(),
-                style = POCOTheme.typography.caption,
+                style = MungoTheme.typography.caption,
                 color = colors.textSecondary
             )
         }
@@ -220,7 +226,7 @@ private fun SeatOption(seat: PetSeat, isCurrent: Boolean, selected: Boolean, onC
 /** 선택: 네이비 원 + 라임 점 / 비선택: 회색 테두리 */
 @Composable
 private fun RadioMark(selected: Boolean) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Box(
         modifier = Modifier
             .size(32.dp)
@@ -228,7 +234,7 @@ private fun RadioMark(selected: Boolean) {
                 if (selected) {
                     Modifier.background(colors.logoBackground, CircleShape)
                 } else {
-                    Modifier.border(PocoStroke.control, colors.borderStrong, CircleShape)
+                    Modifier.border(MungoStroke.control, colors.borderStrong, CircleShape)
                 }
             ),
         contentAlignment = Alignment.Center
@@ -257,7 +263,7 @@ fun seatChangedMessage(petName: String, seat: PetSeat): String =
 @Preview(widthDp = 1280, heightDp = 760)
 @Composable
 private fun SeatChangePreview() {
-    POCOTheme(darkTheme = false) {
+    MungoTheme(darkTheme = false) {
         SeatChangeContent(
             pet = Pet(
                 id = 1,

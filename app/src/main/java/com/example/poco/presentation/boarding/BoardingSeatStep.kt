@@ -37,7 +37,7 @@ import com.example.poco.core.designsystem.MungoIcon
 import com.example.poco.core.designsystem.MungoIconView
 import com.example.poco.core.designsystem.component.pressable
 import com.example.poco.core.theme.MungoRadius
-import com.example.poco.core.theme.POCOTheme
+import com.example.poco.core.theme.MungoTheme
 import com.example.poco.core.util.eunNeun
 import com.example.poco.core.util.iGa
 import com.example.poco.data.model.Pet
@@ -77,7 +77,7 @@ internal fun ColumnScope.SeatLeft(uiState: BoardingUiState, actions: BoardingAct
 
 @Composable
 private fun SelectedSeatRow(pet: Pet, seat: PetSeat?, isActive: Boolean, onClick: (() -> Unit)?) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val shape = RoundedCornerShape(MungoRadius.lg)
     Row(
         modifier = Modifier
@@ -100,13 +100,13 @@ private fun SelectedSeatRow(pet: Pet, seat: PetSeat?, isActive: Boolean, onClick
         Spacer(Modifier.width(20.dp))
         Text(
             text = seat?.label() ?: "자리를 골라 주세요",
-            style = POCOTheme.typography.title3,
+            style = MungoTheme.typography.title3,
             color = if (seat != null) colors.textPrimary else colors.textTertiary,
             modifier = Modifier.weight(1f)
         )
         Text(
             text = pet.name,
-            style = POCOTheme.typography.title3,
+            style = MungoTheme.typography.title3,
             color = colors.textAccent,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis
@@ -117,7 +117,7 @@ private fun SelectedSeatRow(pet: Pet, seat: PetSeat?, isActive: Boolean, onClick
 /** 위에서 본 차: 앞(▲) · 운전석 | 조수석 · 뒷좌석 왼쪽 | 오른쪽 */
 @Composable
 internal fun SeatMap(uiState: BoardingUiState, actions: BoardingActions) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -205,7 +205,7 @@ internal fun SeatMap(uiState: BoardingUiState, actions: BoardingActions) {
             Spacer(Modifier.width(10.dp))
             Text(
                 text = "안전벨트는 꼭 채워주세요.",
-                style = POCOTheme.typography.body2,
+                style = MungoTheme.typography.body2,
                 color = colors.textTertiary
             )
         }
@@ -214,7 +214,7 @@ internal fun SeatMap(uiState: BoardingUiState, actions: BoardingActions) {
 
 @Composable
 private fun DriverSeat(width: Dp, height: Dp) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Column(
         modifier = Modifier
             .size(width, height)
@@ -224,7 +224,7 @@ private fun DriverSeat(width: Dp, height: Dp) {
     ) {
         MungoIconView(MungoIcon.STEERING_WHEEL, tint = colors.textTertiary, size = 72.dp)
         Spacer(Modifier.height(20.dp))
-        Text(text = "운전석", style = POCOTheme.typography.body2, color = colors.textSecondary)
+        Text(text = "운전석", style = MungoTheme.typography.body2, color = colors.textSecondary)
     }
 }
 
@@ -236,7 +236,7 @@ private fun SeatCard(
     width: Dp,
     height: Dp
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val shape = RoundedCornerShape(MungoRadius.xl)
     val ownerId = uiState.seats.entries.firstOrNull { it.value == seat }?.key
     val owner = uiState.selectedPets.firstOrNull { it.id == ownerId }
@@ -273,11 +273,11 @@ private fun SeatCard(
             }
             Text(
                 text = if (owner != null) seat.label() else title,
-                style = POCOTheme.typography.title3,
+                style = MungoTheme.typography.title3,
                 color = colors.textPrimary
             )
             if (owner == null && sub != null) {
-                Text(text = sub, style = POCOTheme.typography.body3, color = colors.textTertiary)
+                Text(text = sub, style = MungoTheme.typography.body3, color = colors.textTertiary)
             }
         }
         if (isActiveOwner) {

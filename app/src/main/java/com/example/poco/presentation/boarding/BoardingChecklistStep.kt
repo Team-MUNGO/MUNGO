@@ -28,7 +28,7 @@ import com.example.poco.core.designsystem.MungoIcon
 import com.example.poco.core.designsystem.MungoIconView
 import com.example.poco.core.designsystem.component.pressable
 import com.example.poco.core.theme.MungoRadius
-import com.example.poco.core.theme.POCOTheme
+import com.example.poco.core.theme.MungoTheme
 import com.example.poco.core.util.ege
 import com.example.poco.presentation.design.Mg
 import com.example.poco.presentation.petprofile.label
@@ -38,7 +38,7 @@ import kotlin.math.roundToInt
 
 @Composable
 internal fun ColumnScope.ChecklistLeft(uiState: BoardingUiState, actions: BoardingActions) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     StepTitle(title = "출발 전에\n함께 확인해요", description = "항목을 눌러서 체크해주세요.")
     Spacer(Modifier.height(92.dp)) // Figma 470:54652: 음성 안내 y 583
     VoiceRow(
@@ -91,7 +91,7 @@ internal fun ColumnScope.ChecklistLeft(uiState: BoardingUiState, actions: Boardi
 
 @Composable
 internal fun Checklist(uiState: BoardingUiState, actions: BoardingActions) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -127,7 +127,7 @@ internal fun Checklist(uiState: BoardingUiState, actions: BoardingActions) {
 
 @Composable
 private fun CheckRow(item: CheckItem, uiState: BoardingUiState, onClick: () -> Unit) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val shape = RoundedCornerShape(MungoRadius.lg)
     val checked = uiState.isChecked(item)
     val auto = uiState.autoResult(item)
@@ -152,7 +152,7 @@ private fun CheckRow(item: CheckItem, uiState: BoardingUiState, onClick: () -> U
             Spacer(Modifier.height(6.dp))
             Text(
                 text = description,
-                style = POCOTheme.typography.caption1,
+                style = MungoTheme.typography.caption1,
                 color = colors.textSecondary
             )
         }
@@ -171,7 +171,7 @@ private fun CheckRow(item: CheckItem, uiState: BoardingUiState, onClick: () -> U
 
 @Composable
 private fun CheckBox(checked: Boolean) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val shape = RoundedCornerShape(MungoRadius.sm)
     Box(
         modifier = Modifier

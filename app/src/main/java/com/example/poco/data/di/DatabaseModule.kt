@@ -2,8 +2,8 @@ package com.example.poco.data.di
 
 import android.content.Context
 import androidx.room.Room
+import com.example.poco.data.local.db.MungoDatabase
 import com.example.poco.data.local.db.PetDao
-import com.example.poco.data.local.db.PocoDatabase
 import com.example.poco.data.local.db.TripDao
 import dagger.Module
 import dagger.Provides
@@ -17,12 +17,12 @@ import javax.inject.Singleton
 object DatabaseModule {
     @Provides
     @Singleton
-    fun providePocoDatabase(@ApplicationContext context: Context): PocoDatabase =
-        Room.databaseBuilder(context, PocoDatabase::class.java, "poco.db").build()
+    fun provideMungoDatabase(@ApplicationContext context: Context): MungoDatabase =
+        Room.databaseBuilder(context, MungoDatabase::class.java, "poco.db").build()
 
     @Provides
-    fun providePetDao(database: PocoDatabase): PetDao = database.petDao()
+    fun providePetDao(database: MungoDatabase): PetDao = database.petDao()
 
     @Provides
-    fun provideTripDao(database: PocoDatabase): TripDao = database.tripDao()
+    fun provideTripDao(database: MungoDatabase): TripDao = database.tripDao()
 }

@@ -95,7 +95,7 @@ class WaypointTracker(val place: VerifiedPlace, private val matchMeters: Double 
         return null
     }
 
-    /** NaviHelper onWayPointArrived for the first waypoint (the only one POCO ever adds). */
+    /** NaviHelper onWayPointArrived for the first waypoint (the only one mungo ever adds). */
     fun onArrived(parked: Boolean): WaypointSignal? {
         if (finished) return null
         arrived = true

@@ -28,22 +28,22 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.poco.core.designsystem.MungoBaseIcon
+import com.example.poco.core.designsystem.MungoBaseIconView
 import com.example.poco.core.designsystem.PetPhoto
-import com.example.poco.core.designsystem.PocoIcon
-import com.example.poco.core.designsystem.PocoIconView
 import com.example.poco.core.designsystem.ScoreRing
 import com.example.poco.core.designsystem.component.AlertCard
-import com.example.poco.core.designsystem.component.PocoButton
-import com.example.poco.core.designsystem.component.PocoButtonStyle
+import com.example.poco.core.designsystem.component.MungoButton
+import com.example.poco.core.designsystem.component.MungoButtonStyle
 import com.example.poco.core.designsystem.component.StatTile
 import com.example.poco.core.designsystem.component.StatusTone
 import com.example.poco.core.designsystem.component.VoiceCard
-import com.example.poco.core.theme.POCOTheme
-import com.example.poco.core.theme.PocoLayout
-import com.example.poco.core.theme.PocoRadius
-import com.example.poco.core.theme.PocoSize
-import com.example.poco.core.theme.PocoSpacing
-import com.example.poco.core.theme.PocoStroke
+import com.example.poco.core.theme.MungoBaseLayout
+import com.example.poco.core.theme.MungoBaseRadius
+import com.example.poco.core.theme.MungoBaseSize
+import com.example.poco.core.theme.MungoSpacing
+import com.example.poco.core.theme.MungoStroke
+import com.example.poco.core.theme.MungoTheme
 import com.example.poco.data.model.CarWindow
 import com.example.poco.domain.driving.PetMood
 import kotlin.math.roundToInt
@@ -85,22 +85,22 @@ private fun DrivingScreen(
     Column(
         modifier = modifier
             .fillMaxSize()
-            .background(POCOTheme.colors.backgroundDefault)
+            .background(MungoTheme.colors.backgroundDefault)
             .safeDrawingPadding()
             .padding(
-                start = PocoSpacing.space48,
-                end = PocoSpacing.space48,
-                top = PocoLayout.screenTop,
-                bottom = PocoLayout.screenBottom
+                start = MungoSpacing.space48,
+                end = MungoSpacing.space48,
+                top = MungoBaseLayout.screenTop,
+                bottom = MungoBaseLayout.screenBottom
             )
     ) {
         Header(uiState = uiState, onFinish = onFinish, onOpenNavigation = onOpenNavigation)
-        Spacer(Modifier.height(PocoLayout.drivingColumnGap))
+        Spacer(Modifier.height(MungoBaseLayout.drivingColumnGap))
         Row(
             modifier = Modifier
                 .fillMaxWidth()
                 .weight(1f),
-            horizontalArrangement = Arrangement.spacedBy(PocoLayout.drivingColumnGap)
+            horizontalArrangement = Arrangement.spacedBy(MungoBaseLayout.drivingColumnGap)
         ) {
             ScoreCard(
                 uiState = uiState,
@@ -112,7 +112,7 @@ private fun DrivingScreen(
                 modifier = Modifier
                     .weight(1.25f)
                     .fillMaxHeight(),
-                verticalArrangement = Arrangement.spacedBy(PocoLayout.drivingCardGap)
+                verticalArrangement = Arrangement.spacedBy(MungoBaseLayout.drivingCardGap)
             ) {
                 AlertArea(
                     uiState = uiState,
@@ -138,24 +138,24 @@ private fun DrivingScreen(
 
 @Composable
 private fun Header(uiState: DrivingUiState, onFinish: () -> Unit, onOpenNavigation: () -> Unit) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = PocoLayout.drivingHeaderHeight),
+            .heightIn(min = MungoBaseLayout.drivingHeaderHeight),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = "주행 중 · ${uiState.elapsedMinutes}분째",
-                style = POCOTheme.typography.caption,
+                style = MungoTheme.typography.caption,
                 color = colors.textSecondary
             )
             val destination = uiState.destinationName
             if (destination != null) {
                 Text(
                     text = destination,
-                    style = POCOTheme.typography.headingM,
+                    style = MungoTheme.typography.headingM,
                     color = colors.textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -163,33 +163,33 @@ private fun Header(uiState: DrivingUiState, onFinish: () -> Unit, onOpenNavigati
                 remainLine(uiState.remainDistanceM, uiState.remainTimeSec)?.let {
                     Text(
                         text = it,
-                        style = POCOTheme.typography.bodyM,
+                        style = MungoTheme.typography.bodyM,
                         color = colors.textSecondary
                     )
                 }
             } else {
                 Text(
                     text = "${uiState.petName} · 함께 이동 중",
-                    style = POCOTheme.typography.headingM,
+                    style = MungoTheme.typography.headingM,
                     color = colors.textPrimary
                 )
                 Text(
                     text = "목적지를 정하면 도착할 때 자동으로 기록을 정리해요",
-                    style = POCOTheme.typography.bodyM,
+                    style = MungoTheme.typography.bodyM,
                     color = colors.textSecondary
                 )
             }
         }
         if (uiState.destinationName == null) {
-            PocoButton(
+            MungoButton(
                 text = "목적지 설정",
                 onClick = onOpenNavigation,
-                icon = PocoIcon.TURN_RIGHT,
-                style = PocoButtonStyle.SECONDARY
+                icon = MungoBaseIcon.TURN_RIGHT,
+                style = MungoButtonStyle.SECONDARY
             )
-            Spacer(Modifier.width(PocoSpacing.space16))
+            Spacer(Modifier.width(MungoSpacing.space16))
         }
-        PocoButton(text = "주행 종료", onClick = onFinish)
+        MungoButton(text = "주행 종료", onClick = onFinish)
     }
 }
 
@@ -210,43 +210,43 @@ private fun remainLine(distanceM: Int?, timeSec: Int?): String? {
 
 @Composable
 private fun ScoreCard(uiState: DrivingUiState, modifier: Modifier = Modifier) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Column(
         modifier = modifier
-            .background(colors.backgroundCard, RoundedCornerShape(PocoRadius.r28))
-            .padding(PocoSpacing.space32),
+            .background(colors.backgroundCard, RoundedCornerShape(MungoBaseRadius.r28))
+            .padding(MungoSpacing.space32),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
         ScoreRing(
             score = uiState.score,
             label = "컴포트 점수",
-            strokeWidth = PocoSpacing.space24,
-            scoreStyle = POCOTheme.typography.displayL,
+            strokeWidth = MungoSpacing.space24,
+            scoreStyle = MungoTheme.typography.displayL,
             progressColor = when {
                 uiState.score >= 90 -> colors.toggleThumb
                 uiState.score >= 70 -> colors.tangerine
                 else -> colors.statusError
             },
-            modifier = Modifier.size(PocoSize.scoreRingLarge)
+            modifier = Modifier.size(MungoBaseSize.scoreRingLarge)
         )
-        Spacer(Modifier.height(PocoSpacing.space32))
+        Spacer(Modifier.height(MungoSpacing.space32))
         Row(verticalAlignment = Alignment.CenterVertically) {
             PetPhoto(
                 photoPath = uiState.petPhotoPath,
                 breed = uiState.petBreed,
-                modifier = Modifier.size(PocoSize.iconTileLarge + PocoSpacing.space16)
+                modifier = Modifier.size(MungoBaseSize.iconTileLarge + MungoSpacing.space16)
             )
-            Spacer(Modifier.width(PocoSpacing.space20))
+            Spacer(Modifier.width(MungoSpacing.space20))
             Column {
                 Text(
                     text = uiState.petName,
-                    style = POCOTheme.typography.titleM,
+                    style = MungoTheme.typography.titleM,
                     color = colors.textPrimary
                 )
                 Text(
                     text = uiState.mood.description(),
-                    style = POCOTheme.typography.bodyL,
+                    style = MungoTheme.typography.bodyL,
                     color = colors.textSecondary
                 )
             }
@@ -275,7 +275,7 @@ private fun AlertArea(
 ) {
     when (val alert = uiState.alert) {
         is DrivingAlert.Window -> AlertCard(
-            icon = PocoIcon.WINDOW,
+            icon = MungoBaseIcon.WINDOW,
             eyebrow = "안전 알림 · ${alert.speedKmh}km/h",
             title = "${alert.window.label()} 창문이 ${alert.openPercent}% 열려 있어요",
             description = "“창문 닫아” 또는 “괜찮아”라고 말해도 돼요",
@@ -287,7 +287,7 @@ private fun AlertArea(
         )
 
         is DrivingAlert.Temperature -> AlertCard(
-            icon = PocoIcon.THERMOMETER,
+            icon = MungoBaseIcon.THERMOMETER,
             eyebrow = (if (alert.isDanger) "위험 · " else "온도 알림 · ") + "${alert.typeLabel} 쾌적 " +
                 "${alert.comfortRange.start.roundToInt()}~${alert.comfortRange.endInclusive.roundToInt()}°C",
             title = "${uiState.petName} 자리 ${alert.celsius.roundToInt()}°C" +
@@ -308,37 +308,37 @@ private fun AlertArea(
 @Composable
 private fun ListeningBar(isListening: Boolean, heardText: String?) {
     if (!isListening && heardText.isNullOrBlank()) return
-    val colors = POCOTheme.colors
-    val shape = RoundedCornerShape(PocoRadius.r24)
+    val colors = MungoTheme.colors
+    val shape = RoundedCornerShape(MungoBaseRadius.r24)
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .heightIn(min = PocoSize.touchMin)
+            .heightIn(min = MungoBaseSize.touchMin)
             .background(if (isListening) colors.limeSoft else colors.backgroundCard, shape)
-            .border(PocoStroke.card, colors.borderDefault, shape)
-            .padding(horizontal = PocoSpacing.space24, vertical = PocoSpacing.space12),
+            .border(MungoStroke.card, colors.borderDefault, shape)
+            .padding(horizontal = MungoSpacing.space24, vertical = MungoSpacing.space12),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(PocoSize.iconTile)
+                .size(MungoBaseSize.iconTile)
                 .background(colors.accentFill, CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            PocoIconView(
-                PocoIcon.SPEAKER,
+            MungoBaseIconView(
+                MungoBaseIcon.SPEAKER,
                 tint = colors.onAccentFill,
-                modifier = Modifier.size(PocoSize.icon28)
+                modifier = Modifier.size(MungoBaseSize.icon28)
             )
         }
-        Spacer(Modifier.width(PocoSpacing.space16))
+        Spacer(Modifier.width(MungoSpacing.space16))
         Text(
             text = if (isListening) {
                 "듣고 있어요 · “괜찮아” “창문 닫아”처럼 말해 보세요"
             } else {
                 "“$heardText” 라고 들었어요"
             },
-            style = POCOTheme.typography.titleM,
+            style = MungoTheme.typography.titleM,
             color = colors.textPrimary,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis
@@ -348,8 +348,8 @@ private fun ListeningBar(isListening: Boolean, heardText: String?) {
 
 @Composable
 private fun StatsRow(uiState: DrivingUiState) {
-    val colors = POCOTheme.colors
-    Row(horizontalArrangement = Arrangement.spacedBy(PocoSpacing.space16)) {
+    val colors = MungoTheme.colors
+    Row(horizontalArrangement = Arrangement.spacedBy(MungoSpacing.space16)) {
         StatTile(
             label = "급제동",
             value = "${uiState.hardBrakeCount}회",
@@ -389,7 +389,7 @@ private fun CarWindow.label(): String = when (this) {
 @Preview(widthDp = 1700, heightDp = 1100)
 @Composable
 private fun DrivingScreenPreview() {
-    POCOTheme(darkTheme = false) {
+    MungoTheme(darkTheme = false) {
         DrivingScreen(
             uiState = DrivingUiState(
                 petName = "현댕이",

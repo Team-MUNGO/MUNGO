@@ -8,7 +8,7 @@ import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onRoot
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.poco.core.designsystem.FitWideWindow
-import com.example.poco.core.theme.POCOTheme
+import com.example.poco.core.theme.MungoTheme
 import com.example.poco.data.vehicle.VehicleIdentity
 import com.example.poco.data.vehicle.VehicleLinkState
 import com.example.poco.presentation.boarding.ChecklistPreview
@@ -38,7 +38,7 @@ class Page3DesignGalleryTest {
     @Test fun page3Gallery() {
         val screen = mutableStateOf("home")
         compose.setContent {
-            POCOTheme(darkTheme = false) {
+            MungoTheme(darkTheme = false) {
                 when (screen.value) {
                     "settings-alerts" -> SettingsScreen(SettingsPage.ALERTS, {
                     }, {}) { AlertsPage(AlertSettings(hasPet = true), {}, {}, {}, {}) }

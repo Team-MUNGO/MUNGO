@@ -25,7 +25,7 @@ class PetDrivingProfile @Inject constructor(private val pets: PetRepository) {
     suspend fun load(): DrivingSettings? = profile.first()
 }
 
-/** Comfort range comes from the POCO standard for this pet (breed · weight · age). */
+/** Comfort range comes from the mungo standard for this pet (breed · weight · age). */
 fun Pet.toDrivingSettings(): DrivingSettings? = runCatching {
     val comfort = temperatureStandard.comfort
     DrivingSettings(

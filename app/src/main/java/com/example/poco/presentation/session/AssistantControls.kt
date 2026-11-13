@@ -30,7 +30,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import com.example.poco.R
-import com.example.poco.core.theme.POCOTheme
+import com.example.poco.core.theme.MungoTheme
 import com.example.poco.presentation.session.component.DrivingInk
 import com.example.poco.presentation.session.component.DrivingMuted
 
@@ -46,13 +46,13 @@ internal fun AssistantControls(
 ) {
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         state.error?.let {
-            Text(it, style = POCOTheme.typography.body3, color = DrivingMuted, maxLines = 2)
+            Text(it, style = MungoTheme.typography.body3, color = DrivingMuted, maxLines = 2)
         }
         if (state.question.isNotBlank() && state.phase != AssistantPhase.IDLE) {
             Text(
                 "“${state.question}”",
                 maxLines = 2,
-                style = POCOTheme.typography.body2,
+                style = MungoTheme.typography.body2,
                 color = DrivingInk
             )
         }
@@ -101,18 +101,18 @@ internal fun AssistantConnectionDialog(
     var accepted by remember { mutableStateOf(state.consented) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("POCO 음성 AI 연결") },
+        title = { Text("mungo 음성 AI 연결") },
         text = {
             Column(
                 Modifier.verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 Text(
-                    "음성은 Pleos 음성 인식으로 처리합니다. 인식된 질문과 최소 차량 상태를 POCO 서버 및 Gemini에 전송합니다. 휴게소 질문은 권한 허용 후 현재 위치를 POCO 서버에 전송하며, 위치 좌표는 Gemini에 보내지 않습니다."
+                    "음성은 Pleos 음성 인식으로 처리합니다. 인식된 질문과 최소 차량 상태를 mungo 서버 및 Gemini에 전송합니다. 휴게소 질문은 권한 허용 후 현재 위치를 mungo 서버에 전송하며, 위치 좌표는 Gemini에 보내지 않습니다."
                 )
                 Text(
-                    "질문·위치는 POCO 서버에 저장하지 않습니다. Gemini에는 질문·차량 상태·장소 후보를 전송합니다. 연결 해제로 전송을 중단할 수 있습니다.",
-                    style = POCOTheme.typography.caption1
+                    "질문·위치는 mungo 서버에 저장하지 않습니다. Gemini에는 질문·차량 상태·장소 후보를 전송합니다. 연결 해제로 전송을 중단할 수 있습니다.",
+                    style = MungoTheme.typography.caption1
                 )
                 Row {
                     Checkbox(accepted, { accepted = it })

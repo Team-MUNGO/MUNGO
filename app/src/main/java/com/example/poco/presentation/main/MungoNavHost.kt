@@ -40,45 +40,45 @@ import com.example.poco.presentation.session.SessionViewModel
 import com.example.poco.presentation.splash.SplashRoute
 import kotlinx.serialization.Serializable
 
-sealed interface PocoDestination {
-    @Serializable data object Splash : PocoDestination
+sealed interface MungoDestination {
+    @Serializable data object Splash : MungoDestination
 
-    @Serializable data object Onboarding : PocoDestination
+    @Serializable data object Onboarding : MungoDestination
 
-    @Serializable data object ProfileSetup : PocoDestination
+    @Serializable data object ProfileSetup : MungoDestination
 
     /** @param afterProfileSetup 온보딩에서 프로필을 다 만들고 왔으면 권한 다음 바로 홈 */
-    @Serializable data class Permission(val afterProfileSetup: Boolean = false) : PocoDestination
+    @Serializable data class Permission(val afterProfileSetup: Boolean = false) : MungoDestination
 
-    @Serializable data object PetProfile : PocoDestination
+    @Serializable data object PetProfile : MungoDestination
 
-    @Serializable data object Home : PocoDestination
+    @Serializable data object Home : MungoDestination
 
-    @Serializable data object Driving : PocoDestination
+    @Serializable data object Driving : MungoDestination
 
     /** 탑승 준비 (홈 '탑승 준비 시작') */
-    @Serializable data object Boarding : PocoDestination
+    @Serializable data object Boarding : MungoDestination
 
     /** 펫모드 (보호자 외출 중, 홈 펫모드 카드) */
 
     /** 이동 기록 목록 (레일 '이동 기록') — Figma 465:48292 */
-    @Serializable data class Records(val period: String = "MONTH") : PocoDestination
+    @Serializable data class Records(val period: String = "MONTH") : MungoDestination
 
-    @Serializable data class TripSummary(val tripId: String) : PocoDestination
+    @Serializable data class TripSummary(val tripId: String) : MungoDestination
 
-    @Serializable data class TripDetail(val tripId: String) : PocoDestination
+    @Serializable data class TripDetail(val tripId: String) : MungoDestination
 
-    @Serializable data class TripEvents(val tripId: String) : PocoDestination
+    @Serializable data class TripEvents(val tripId: String) : MungoDestination
 
-    @Serializable data class TripMotion(val tripId: String) : PocoDestination
+    @Serializable data class TripMotion(val tripId: String) : MungoDestination
 
     /** 휴식 간격. [tripId]가 있으면 멀미 기록의 추천에서 들어온 것 */
     @Serializable
     data class RestInterval(val tripId: String? = null, val recommended: Int? = null) :
-        PocoDestination
+        MungoDestination
 
     /** 설정 (레일 '설정') */
-    @Serializable data object Settings : PocoDestination
+    @Serializable data object Settings : MungoDestination
 }
 
 private const val REQUEST_PERMISSIONS = "request_permissions"
@@ -91,74 +91,74 @@ private const val APPLIED_TO = "applied_interval_to"
  * 다음부터: 스플래시 → 홈 (펫 프로필은 홈의 펫 프로필 설정 버튼 · 펫 추가하기 · 자리 바꾸기에서 진입)
  */
 @Composable
-fun PocoNavHost(
+fun MungoNavHost(
     modifier: Modifier = Modifier,
     navController: NavHostController = rememberNavController()
 ) {
     val railActions = remember(navController) {
         RailActions(
-            onRecords = { navController.navigateToRailTab(PocoDestination.Records()) },
-            onSettings = { navController.navigateToRailTab(PocoDestination.Settings) }
+            onRecords = { navController.navigateToRailTab(MungoDestination.Records()) },
+            onSettings = { navController.navigateToRailTab(MungoDestination.Settings) }
         )
     }
     CompositionLocalProvider(LocalRailActions provides railActions) {
-        PocoNavGraph(navController, modifier)
+        MungoNavGraph(navController, modifier)
     }
 }
 
 @Composable
-private fun PocoNavGraph(navController: NavHostController, modifier: Modifier) {
+private fun MungoNavGraph(navController: NavHostController, modifier: Modifier) {
     val recordRail: (RecordRailTab) -> Unit = { tab ->
         when (tab) {
-            RecordRailTab.HOME -> navController.navigateToRailTab(PocoDestination.Home)
-            RecordRailTab.HISTORY -> navController.navigateToRailTab(PocoDestination.Records())
-            RecordRailTab.PET -> navController.navigate(PocoDestination.PetProfile)
-            RecordRailTab.SETTINGS -> navController.navigateToRailTab(PocoDestination.Settings)
+            RecordRailTab.HOME -> navController.navigateToRailTab(MungoDestination.Home)
+            RecordRailTab.HISTORY -> navController.navigateToRailTab(MungoDestination.Records())
+            RecordRailTab.PET -> navController.navigate(MungoDestination.PetProfile)
+            RecordRailTab.SETTINGS -> navController.navigateToRailTab(MungoDestination.Settings)
         }
     }
     NavHost(
         navController = navController,
-        startDestination = PocoDestination.Splash,
+        startDestination = MungoDestination.Splash,
         modifier = modifier
     ) {
-        composable<PocoDestination.Splash> {
+        composable<MungoDestination.Splash> {
             FitWideWindow {
                 SplashRoute(
                     navigateToOnboarding = {
-                        navController.navigate(PocoDestination.Onboarding) {
-                            popUpTo(PocoDestination.Splash) { inclusive = true }
+                        navController.navigate(MungoDestination.Onboarding) {
+                            popUpTo(MungoDestination.Splash) { inclusive = true }
                         }
                     },
                     navigateToHome = {
-                        navController.navigate(PocoDestination.Home) {
-                            popUpTo(PocoDestination.Splash) { inclusive = true }
+                        navController.navigate(MungoDestination.Home) {
+                            popUpTo(MungoDestination.Splash) { inclusive = true }
                         }
                     }
                 )
             }
         }
-        composable<PocoDestination.Onboarding> {
+        composable<MungoDestination.Onboarding> {
             FitWideWindow {
                 OnboardingRoute(
                     navigateToProfileSetup = {
-                        navController.navigate(PocoDestination.ProfileSetup)
+                        navController.navigate(MungoDestination.ProfileSetup)
                     },
                     navigateToPermission = {
-                        navController.navigate(PocoDestination.Permission()) {
-                            popUpTo(PocoDestination.Onboarding) { inclusive = true }
+                        navController.navigate(MungoDestination.Permission()) {
+                            popUpTo(MungoDestination.Onboarding) { inclusive = true }
                         }
                     }
                 )
             }
         }
-        composable<PocoDestination.ProfileSetup> {
+        composable<MungoDestination.ProfileSetup> {
             FitWideWindow {
                 ProfileSetupRoute(
                     navigateBack = { navController.popBackStack() },
                     // 프로필 완성 '시작하기' → 바로 홈 (Figma 온보딩_page_05 → Home)
                     navigateNext = {
-                        navController.navigate(PocoDestination.Home) {
-                            popUpTo(PocoDestination.Onboarding) { inclusive = true }
+                        navController.navigate(MungoDestination.Home) {
+                            popUpTo(MungoDestination.Onboarding) { inclusive = true }
                         }
                         navController.currentBackStackEntry?.savedStateHandle?.set(
                             REQUEST_PERMISSIONS,
@@ -168,26 +168,26 @@ private fun PocoNavGraph(navController: NavHostController, modifier: Modifier) {
                 )
             }
         }
-        composable<PocoDestination.Permission> { entry ->
+        composable<MungoDestination.Permission> { entry ->
             FitWideWindow {
                 val afterProfileSetup =
-                    entry.toRoute<PocoDestination.Permission>().afterProfileSetup
+                    entry.toRoute<MungoDestination.Permission>().afterProfileSetup
                 PermissionRoute(
                     navigateNext = {
-                        val next: PocoDestination =
+                        val next: MungoDestination =
                             if (afterProfileSetup) {
-                                PocoDestination.Home
+                                MungoDestination.Home
                             } else {
-                                PocoDestination.PetProfile
+                                MungoDestination.PetProfile
                             }
                         navController.navigate(next) {
-                            popUpTo<PocoDestination.Permission> { inclusive = true }
+                            popUpTo<MungoDestination.Permission> { inclusive = true }
                         }
                     }
                 )
             }
         }
-        composable<PocoDestination.PetProfile> {
+        composable<MungoDestination.PetProfile> {
             FitWideWindow {
                 MyPetRoute(
                     navigateHome = {
@@ -195,15 +195,15 @@ private fun PocoNavGraph(navController: NavHostController, modifier: Modifier) {
                         if (navController.previousBackStackEntry != null) {
                             navController.popBackStack()
                         } else {
-                            navController.navigate(PocoDestination.Home) {
-                                popUpTo(PocoDestination.PetProfile) { inclusive = true }
+                            navController.navigate(MungoDestination.Home) {
+                                popUpTo(MungoDestination.PetProfile) { inclusive = true }
                             }
                         }
                     }
                 )
             }
         }
-        composable<PocoDestination.Home> { entry ->
+        composable<MungoDestination.Home> { entry ->
             FitWideWindow {
                 // 온보딩에서 바로 왔으면 차량 정보 권한을 시스템 창으로 한 번 요청한다 (거부해도 홈은 그대로)
                 val askPermissions =
@@ -226,23 +226,23 @@ private fun PocoNavGraph(navController: NavHostController, modifier: Modifier) {
                     }
                 }
                 HomeRoute(
-                    navigateToPetProfile = { navController.navigate(PocoDestination.PetProfile) },
-                    navigateToBoarding = { navController.navigate(PocoDestination.Boarding) },
-                    navigateToDriving = { navController.navigate(PocoDestination.Driving) },
+                    navigateToPetProfile = { navController.navigate(MungoDestination.PetProfile) },
+                    navigateToBoarding = { navController.navigate(MungoDestination.Boarding) },
+                    navigateToDriving = { navController.navigate(MungoDestination.Driving) },
                     navigateToWeeklyRecords = {
-                        navController.navigateToRailTab(PocoDestination.Records("WEEK"))
+                        navController.navigateToRailTab(MungoDestination.Records("WEEK"))
                     }
                 )
             }
         }
-        composable<PocoDestination.Boarding> {
+        composable<MungoDestination.Boarding> {
             FitWideWindow {
                 BoardingRoute(
                     navigateBack = { navController.popBackStack() },
-                    navigateToPetProfile = { navController.navigate(PocoDestination.PetProfile) },
+                    navigateToPetProfile = { navController.navigate(MungoDestination.PetProfile) },
                     navigateToDriving = {
-                        navController.navigate(PocoDestination.Driving) {
-                            popUpTo<PocoDestination.Boarding> { inclusive = true }
+                        navController.navigate(MungoDestination.Driving) {
+                            popUpTo<MungoDestination.Boarding> { inclusive = true }
                         }
                     }
                 )
@@ -250,7 +250,7 @@ private fun PocoNavGraph(navController: NavHostController, modifier: Modifier) {
         }
         // 주행 화면: 홈 · 탑승 준비(주행 시작) · 기어 D 자동 시작 모두 여기로 온다.
         // 컴포트 점수 · 휴식 · AI 어시스턴트 · 이동 기록 저장을 하는 주행 세션 (Figma Page 3)
-        composable<PocoDestination.Driving> {
+        composable<MungoDestination.Driving> {
             val session: SessionViewModel = hiltViewModel()
             val state by session.uiState.collectAsStateWithLifecycle()
             val ended = state.session.lastEndedTripId
@@ -259,32 +259,32 @@ private fun PocoNavGraph(navController: NavHostController, modifier: Modifier) {
                 // Only a session that ends here opens its summary (not an older one).
                 if (ended != null && ended != startedWith) {
                     // 설정 > 알림 '도착 요약'을 끄면 요약 없이 홈으로
-                    val next: PocoDestination =
+                    val next: MungoDestination =
                         if (session.arrivalSummary.value) {
-                            PocoDestination.TripSummary(
+                            MungoDestination.TripSummary(
                                 ended
                             )
                         } else {
-                            PocoDestination.Home
+                            MungoDestination.Home
                         }
                     navController.navigate(next) {
-                        popUpTo<PocoDestination.Driving> { inclusive = true }
+                        popUpTo<MungoDestination.Driving> { inclusive = true }
                         launchSingleTop = true
                     }
                 }
             }
             SessionRoute(
-                onOpenHistory = { navController.navigate(PocoDestination.Records()) },
-                onOpenSettings = { navController.navigate(PocoDestination.Settings) },
+                onOpenHistory = { navController.navigate(MungoDestination.Records()) },
+                onOpenSettings = { navController.navigate(MungoDestination.Settings) },
                 autoStart = true,
-                onOpenPetProfile = { navController.navigate(PocoDestination.PetProfile) },
+                onOpenPetProfile = { navController.navigate(MungoDestination.PetProfile) },
                 viewModel = session
             )
         }
-        composable<PocoDestination.Records> { entry ->
-            val initialPeriod = entry.toRoute<PocoDestination.Records>().period
+        composable<MungoDestination.Records> { entry ->
+            val initialPeriod = entry.toRoute<MungoDestination.Records>().period
             TripHistoryRoute(
-                onOpen = { navController.navigate(PocoDestination.TripDetail(it)) },
+                onOpen = { navController.navigate(MungoDestination.TripDetail(it)) },
                 onNavigate = recordRail,
                 initialPeriod =
                 com.example.poco.presentation.record.Period.entries.firstOrNull {
@@ -294,36 +294,36 @@ private fun PocoNavGraph(navController: NavHostController, modifier: Modifier) {
                     ?: com.example.poco.presentation.record.Period.MONTH
             )
         }
-        composable<PocoDestination.Settings> {
+        composable<MungoDestination.Settings> {
             SettingsRoute(
                 onNavigate = recordRail,
-                onOpenInterval = { navController.navigate(PocoDestination.RestInterval()) }
+                onOpenInterval = { navController.navigate(MungoDestination.RestInterval()) }
             )
         }
-        composable<PocoDestination.TripSummary> { entry ->
-            val id = entry.toRoute<PocoDestination.TripSummary>().tripId
+        composable<MungoDestination.TripSummary> { entry ->
+            val id = entry.toRoute<MungoDestination.TripSummary>().tripId
             TripSummaryRoute(
                 id,
-                onDetail = { navController.navigate(PocoDestination.TripDetail(id)) },
-                onDone = { navController.navigateToRailTab(PocoDestination.Home) }
+                onDetail = { navController.navigate(MungoDestination.TripDetail(id)) },
+                onDone = { navController.navigateToRailTab(MungoDestination.Home) }
             )
         }
-        composable<PocoDestination.TripDetail> { entry ->
-            val id = entry.toRoute<PocoDestination.TripDetail>().tripId
+        composable<MungoDestination.TripDetail> { entry ->
+            val id = entry.toRoute<MungoDestination.TripDetail>().tripId
             TripDetailRoute(
                 id,
                 onBack = { navController.popBackStack() },
-                onEvents = { navController.navigate(PocoDestination.TripEvents(id)) },
-                onMotion = { navController.navigate(PocoDestination.TripMotion(id)) }
+                onEvents = { navController.navigate(MungoDestination.TripEvents(id)) },
+                onMotion = { navController.navigate(MungoDestination.TripMotion(id)) }
             )
         }
-        composable<PocoDestination.TripEvents> { entry ->
-            TripEventsRoute(entry.toRoute<PocoDestination.TripEvents>().tripId, onBack = {
+        composable<MungoDestination.TripEvents> { entry ->
+            TripEventsRoute(entry.toRoute<MungoDestination.TripEvents>().tripId, onBack = {
                 navController.popBackStack()
             })
         }
-        composable<PocoDestination.TripMotion> { entry ->
-            val id = entry.toRoute<PocoDestination.TripMotion>().tripId
+        composable<MungoDestination.TripMotion> { entry ->
+            val id = entry.toRoute<MungoDestination.TripMotion>().tripId
             val settings: RestSettingsViewModel = hiltViewModel()
             val handle = entry.savedStateHandle
             val from by handle.getStateFlow<Int?>(APPLIED_FROM, null).collectAsStateWithLifecycle()
@@ -331,7 +331,7 @@ private fun PocoNavGraph(navController: NavHostController, modifier: Modifier) {
             MotionSicknessRoute(
                 id,
                 onBack = { navController.popBackStack() },
-                onOpenInterval = { navController.navigate(PocoDestination.RestInterval(id, it)) },
+                onOpenInterval = { navController.navigate(MungoDestination.RestInterval(id, it)) },
                 applied = if (from != null && to != null) AppliedInterval(from!!, to!!) else null,
                 onUndo = { change ->
                     settings.setInterval(change.from)
@@ -341,8 +341,8 @@ private fun PocoNavGraph(navController: NavHostController, modifier: Modifier) {
                 onToastShown = {}
             )
         }
-        composable<PocoDestination.RestInterval> { entry ->
-            val args = entry.toRoute<PocoDestination.RestInterval>()
+        composable<MungoDestination.RestInterval> { entry ->
+            val args = entry.toRoute<MungoDestination.RestInterval>()
             RestIntervalRoute(
                 recommended = args.recommended,
                 tripId = args.tripId,
@@ -362,9 +362,9 @@ private fun PocoNavGraph(navController: NavHostController, modifier: Modifier) {
 }
 
 /** 레일 탭 이동: 홈 위에 한 단계만 쌓고 같은 탭은 다시 열지 않는다 */
-private fun NavHostController.navigateToRailTab(destination: PocoDestination) {
+private fun NavHostController.navigateToRailTab(destination: MungoDestination) {
     navigate(destination) {
-        popUpTo<PocoDestination.Home>()
+        popUpTo<MungoDestination.Home>()
         launchSingleTop = true
     }
 }

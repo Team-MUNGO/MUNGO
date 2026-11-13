@@ -20,7 +20,7 @@ import com.example.poco.core.driving.DrivingSettings
 import com.example.poco.core.driving.PetSeat
 import com.example.poco.core.driving.Reading
 import com.example.poco.core.driving.WindowCloseStatus
-import com.example.poco.core.theme.POCOTheme
+import com.example.poco.core.theme.MungoTheme
 import com.example.poco.data.assistant.AssistPlace
 import com.example.poco.data.assistant.AssistResponse
 import com.example.poco.data.assistant.AssistSources
@@ -56,7 +56,7 @@ class SessionScreenTest {
                 AssistantUiState(configured = true, consented = true, anonymousAuth = true)
             )
         compose.setContent {
-            POCOTheme { SessionScreen(state.value, {}, {}, {}, {}, assistantState = ai.value) }
+            MungoTheme { SessionScreen(state.value, {}, {}, {}, {}, assistantState = ai.value) }
         }
         val before = compose.onNodeWithText("실내 온도").fetchSemanticsNode().boundsInRoot
         // Figma 488:10266: 말한 안내가 없어도 음성 카드는 지금 상태 문장을, 아래엔 질문 안내 줄을 늘 보여 준다
@@ -98,7 +98,7 @@ class SessionScreenTest {
                 DrivingSessionState(active = true, gleoResponse = "실제 음성 안내", ttsSpeaking = true)
             )
         compose.setContent {
-            POCOTheme { SessionScreen(SessionUiState(session.value), {}, {}, {}, {}) }
+            MungoTheme { SessionScreen(SessionUiState(session.value), {}, {}, {}, {}) }
         }
         compose.onNodeWithText("“실제 음성 안내”").assertExists()
         compose.runOnIdle { session.value = session.value.copy(ttsSpeaking = false) }
@@ -108,7 +108,7 @@ class SessionScreenTest {
     @Test fun proposalPreservesTileGeometryAndUnverifiedPlaceIsDisabled() {
         val session = mutableStateOf(DrivingSessionState(active = true))
         compose.setContent {
-            POCOTheme { SessionScreen(SessionUiState(session.value), {}, {}, {}, {}) }
+            MungoTheme { SessionScreen(SessionUiState(session.value), {}, {}, {}, {}) }
         }
         val before = compose.onNodeWithText("실내 온도").fetchSemanticsNode().boundsInRoot
         val place =
@@ -153,7 +153,7 @@ class SessionScreenTest {
         )
         val narrow = mutableStateOf(false)
         compose.setContent {
-            POCOTheme {
+            MungoTheme {
                 Box(Modifier.width(if (narrow.value) 560.dp else 1280.dp).fillMaxHeight()) {
                     SessionScreen(SessionUiState(session), {}, {}, {}, {})
                 }
@@ -168,7 +168,7 @@ class SessionScreenTest {
 
     @Test fun windowFailureRemainsVisibleWithRetry() {
         compose.setContent {
-            POCOTheme {
+            MungoTheme {
                 SessionScreen(
                     SessionUiState(
                         DrivingSessionState(
@@ -279,7 +279,7 @@ class SessionScreenTest {
         val current = mutableStateOf(states.getValue("proposal"))
         val narrow = mutableStateOf(false)
         compose.setContent {
-            POCOTheme {
+            MungoTheme {
                 Box(Modifier.width(if (narrow.value) 600.dp else 1280.dp).fillMaxHeight()) {
                     SessionScreen(SessionUiState(current.value), {}, {}, {}, {})
                 }

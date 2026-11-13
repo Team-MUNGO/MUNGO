@@ -42,7 +42,7 @@ import com.example.poco.core.designsystem.PetPhoto
 import com.example.poco.core.designsystem.component.pressable
 import com.example.poco.core.designsystem.hasFullPetImage
 import com.example.poco.core.theme.MungoRadius
-import com.example.poco.core.theme.POCOTheme
+import com.example.poco.core.theme.MungoTheme
 import com.example.poco.core.util.iGa
 import com.example.poco.data.model.PetSeat
 import com.example.poco.data.model.Restraint
@@ -56,7 +56,7 @@ import kotlinx.coroutines.delay
 
 @Composable
 internal fun ColumnScope.ReadyLeft(uiState: BoardingUiState) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val pets = uiState.selectedPets
     val name = pets.firstOrNull()?.name ?: "반려견"
     val onPassenger = uiState.selectedIds.any { uiState.seats[it] == PetSeat.PASSENGER }
@@ -92,7 +92,7 @@ internal fun ColumnScope.ReadyLeft(uiState: BoardingUiState) {
 
 @Composable
 private fun SummaryRow(label: String, value: String) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Row {
         Text(
             text = label,
@@ -111,7 +111,7 @@ private fun SummaryRow(label: String, value: String) {
 /** 오른쪽: 펫 그림 + 방금 말한 한마디 */
 @Composable
 internal fun ReadyPanel(uiState: BoardingUiState) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -155,7 +155,7 @@ internal fun ReadyPanel(uiState: BoardingUiState) {
  */
 @Composable
 private fun ReadyCard(uiState: BoardingUiState, modifier: Modifier = Modifier) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val pets = uiState.selectedPets
     val names = pets.joinToString(", ") { it.name }.ifBlank { "반려견" }
     val dark = colors.isDark
@@ -281,7 +281,7 @@ internal fun DriveLayoutDialog(
     onDismiss: () -> Unit,
     onPick: (DriveLayout) -> Unit
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     // 고르지 않으면 추천(3분할)으로 출발. 말하는 중에는 기다린다
     var secondsLeft by remember { mutableIntStateOf(AUTO_START_SECONDS) }
     LaunchedEffect(isListening) {
@@ -367,7 +367,7 @@ internal fun DriveLayoutDialog(
 
 @Composable
 private fun RowScope.LayoutOption(layout: DriveLayout, selected: Boolean, onClick: () -> Unit) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val shape = RoundedCornerShape(MungoRadius.xl)
     Column(
         modifier = Modifier
@@ -457,7 +457,7 @@ private fun RowScope.PreviewPane(
     outlined: Boolean = false,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val shape = RoundedCornerShape(MungoRadius.sm)
     Column(
         modifier = Modifier

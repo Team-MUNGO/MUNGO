@@ -36,8 +36,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.poco.R
 import com.example.poco.core.designsystem.MungoLogo
-import com.example.poco.core.theme.POCOTheme
-import com.example.poco.core.theme.PocoSpacing
+import com.example.poco.core.theme.MungoSpacing
+import com.example.poco.core.theme.MungoTheme
 import com.example.poco.presentation.design.Mg
 import kotlinx.coroutines.delay
 
@@ -156,7 +156,7 @@ private const val PREPARE_TIMEOUT_MS = 3_000L
 /** 정지 화면 (미리보기용): 흰 바탕 가운데 로고 + 한 줄 소개, 아래에 Pleos Connect 표기 (피그마 스플래시) */
 @Composable
 private fun SplashScreen(modifier: Modifier = Modifier) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -182,7 +182,7 @@ private fun SplashScreen(modifier: Modifier = Modifier) {
             color = Color(0xFF9AA4B0),
             modifier = Modifier
                 .align(Alignment.BottomCenter)
-                .padding(bottom = PocoSpacing.space48)
+                .padding(bottom = MungoSpacing.space48)
         )
     }
 }
@@ -190,11 +190,11 @@ private fun SplashScreen(modifier: Modifier = Modifier) {
 @Preview(widthDp = 1700, heightDp = 1184)
 @Composable
 private fun SplashScreenPreview() {
-    POCOTheme(darkTheme = false) { SplashScreen() }
+    MungoTheme(darkTheme = false) { SplashScreen() }
 }
 
 @Preview(widthDp = 1700, heightDp = 1184)
 @Composable
 private fun SplashScreenDarkPreview() {
-    POCOTheme(darkTheme = true) { SplashScreen() }
+    MungoTheme(darkTheme = true) { SplashScreen() }
 }

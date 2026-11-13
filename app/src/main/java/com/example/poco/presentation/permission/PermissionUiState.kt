@@ -1,6 +1,6 @@
 package com.example.poco.presentation.permission
 
-import com.example.poco.core.designsystem.PocoIcon
+import com.example.poco.core.designsystem.MungoBaseIcon
 import kotlinx.collections.immutable.ImmutableSet
 import kotlinx.collections.immutable.toPersistentSet
 
@@ -21,7 +21,7 @@ data class PermissionUiState(
 
 /** 권한 동의 화면의 한 줄 = 데이터 묶음 하나. "무엇을 해주는지"를 한 줄로 설명한다. */
 enum class PermissionGroup(
-    val icon: PocoIcon,
+    val icon: MungoBaseIcon,
     val title: String,
     /** {name} = 반려견 이름 */
     val description: String,
@@ -32,7 +32,7 @@ enum class PermissionGroup(
     val requiredTitle: String = ""
 ) {
     DRIVING(
-        icon = PocoIcon.CAR,
+        icon = MungoBaseIcon.CAR,
         title = "속도 · 조향 · 브레이크",
         description = "흔들림을 컴포트 점수로 바꿔요",
         requiredTitle = "주행 정보는 꼭 필요해요",
@@ -47,7 +47,7 @@ enum class PermissionGroup(
         )
     ),
     WINDOW(
-        icon = PocoIcon.WINDOW,
+        icon = MungoBaseIcon.WINDOW,
         title = "창문 상태",
         description = "{name} 옆 창문이 열리면 바로 알려요",
         requiredTitle = "창문 정보는 꼭 필요해요",
@@ -57,14 +57,14 @@ enum class PermissionGroup(
         )
     ),
     CLIMATE(
-        icon = PocoIcon.THERMOMETER,
+        icon = MungoBaseIcon.THERMOMETER,
         title = "공조 온도",
         description = "뒷좌석이 덥거나 추우면 알려요",
         requiredTitle = "공조 온도는 꼭 필요해요",
         permissions = listOf("pleos.car.permission.CAR_CLIMATE")
     ),
     VOICE(
-        icon = PocoIcon.SPEAKER,
+        icon = MungoBaseIcon.SPEAKER,
         title = "음성 안내",
         description = "화면 대신 차 스피커로 말해요",
         isRequired = false,

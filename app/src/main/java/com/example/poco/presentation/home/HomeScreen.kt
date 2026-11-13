@@ -51,7 +51,7 @@ import com.example.poco.core.designsystem.component.pressable
 import com.example.poco.core.designsystem.hasFullPetImage
 import com.example.poco.core.designsystem.previewTrip
 import com.example.poco.core.theme.MungoRadius
-import com.example.poco.core.theme.POCOTheme
+import com.example.poco.core.theme.MungoTheme
 import com.example.poco.core.util.eulReul
 import com.example.poco.core.util.toMonthDay
 import com.example.poco.data.model.MotionSensitivity
@@ -118,7 +118,7 @@ private fun HomeScreen(
     onRelink: () -> Unit = {},
     onOpenWeekTrips: () -> Unit = {}
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Row(
         modifier = modifier
             .fillMaxSize()
@@ -214,8 +214,8 @@ private fun LinkedPetPanel(
     onOpenPet: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val colors = POCOTheme.colors
-    val typography = POCOTheme.typography
+    val colors = MungoTheme.colors
+    val typography = MungoTheme.typography
     val pet = uiState.pet
     val today = remember { System.currentTimeMillis().toMonthDay() }
     Column(
@@ -340,7 +340,7 @@ private fun LinkedPetPanel(
  */
 @Composable
 private fun PetTag(text: String, linked: Boolean) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Box(
         modifier = Modifier
             .heightIn(min = 44.dp)
@@ -358,7 +358,7 @@ private fun PetTag(text: String, linked: Boolean) {
 
 @Composable
 private fun GearBadge(gear: String) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Box(
         modifier = Modifier
             .size(44.dp)
@@ -381,7 +381,7 @@ private fun RowScope.StatusTile(
     highlighted: Boolean = false,
     alert: Boolean = false
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val shape = RoundedCornerShape(MungoRadius.lg)
     val accent = highlighted || alert
     Column(
@@ -442,7 +442,7 @@ private fun RowScope.StatusTile(
 
 /** 기준을 벗어난 값의 면 (라이트 #FFF1E2 · 다크는 망고 subtle) */
 @Composable
-private fun com.example.poco.core.theme.POCOColors.alertSurface(): Color =
+private fun com.example.poco.core.theme.MungoColors.alertSurface(): Color =
     if (isDark) bgAccentSubtle else Mg.AlertBg
 
 // region 연동 해지 패널 (Figma 488:11669 정보 패널)
@@ -453,7 +453,7 @@ private fun UnlinkedPetPanel(
     onOpenPet: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val pet = uiState.pet
     val today = remember { System.currentTimeMillis().toMonthDay() }
     Column(
@@ -550,7 +550,7 @@ private fun UnlinkedPetPanel(
 
 @Composable
 private fun OffStatusTile(icon: MungoIcon, label: String, modifier: Modifier = Modifier) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val iconColor = if (colors.isDark) colors.textSecondary else OFF_ICON
     Column(
         modifier = modifier
@@ -589,7 +589,7 @@ private fun DriveCard(
 
 @Composable
 private fun LinkedDriveCard(pet: Pet?, onStartDrive: () -> Unit, modifier: Modifier = Modifier) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val name = pet?.name ?: "우리 아이"
     HomeCard(modifier = modifier, padding = 48.dp) {
         Row(modifier = Modifier.fillMaxSize()) {
@@ -640,7 +640,7 @@ private fun LinkedDriveCard(pet: Pet?, onStartDrive: () -> Unit, modifier: Modif
 /** Figma 488:11750 히어로 (연동 해지): 칩 → 두 줄 제목 → 안내 → 둥근 사각 '다시 연결하기' */
 @Composable
 private fun UnlinkedDriveCard(pet: Pet?, onRelink: () -> Unit, modifier: Modifier = Modifier) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val name = pet?.name ?: "우리 아이"
     Row(
         modifier = modifier
@@ -732,7 +732,7 @@ private fun WeekTripCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     HomeCard(modifier = modifier.pressable(RoundedCornerShape(MungoRadius.xl), onClick = onClick)) {
         CardHeader(icon = MungoIcon.CALENDAR, title = "이번 주 이동")
         Spacer(Modifier.height(16.dp))
@@ -774,7 +774,7 @@ private fun WeekTripCard(
 
 @Composable
 private fun CardHeader(icon: MungoIcon, title: String) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Row(verticalAlignment = Alignment.CenterVertically) {
         Box(
             modifier = Modifier
@@ -797,7 +797,7 @@ private fun CardHeader(icon: MungoIcon, title: String) {
 
 @Composable
 private fun BigValue(value: String, unit: String?) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Row(verticalAlignment = Alignment.Bottom) {
         Text(
             text = value,
@@ -828,7 +828,7 @@ private fun BigValue(value: String, unit: String?) {
 /** 아직 이동 기록이 없을 때: 빈 링 + '–' */
 @Composable
 private fun EmptyRing(size: Dp = RING_SIZE) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val track = colors.borderDefault
     Box(modifier = Modifier.size(size), contentAlignment = Alignment.Center) {
         Canvas(modifier = Modifier.fillMaxSize()) {
@@ -843,7 +843,7 @@ private fun EmptyRing(size: Dp = RING_SIZE) {
                 style = Stroke(width = stroke, cap = StrokeCap.Round)
             )
         }
-        Text(text = "–", style = POCOTheme.typography.title1, color = colors.textTertiary)
+        Text(text = "–", style = MungoTheme.typography.title1, color = colors.textTertiary)
     }
 }
 
@@ -873,14 +873,14 @@ private fun OffLabel(text: String) {
     Text(
         text = text,
         style = Mg.regular(21, 25),
-        color = POCOTheme.colors.textSecondary,
+        color = MungoTheme.colors.textSecondary,
         maxLines = 1
     )
 }
 
 @Composable
 private fun OffValue(value: String, unit: String?) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Row(verticalAlignment = Alignment.Bottom) {
         Text(text = value, style = Mg.bold(67, 80), color = colors.textTertiary)
         unit?.let {
@@ -901,7 +901,7 @@ private fun RecentTripOffCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     OffCard(modifier = modifier, onClick = onClick) {
         OffLabel(trip?.let { "최근 이동 · ${it.endedAtMillis.relativeDay()}" } ?: "최근 이동")
         Spacer(Modifier.height(22.dp))
@@ -938,7 +938,7 @@ private fun WeekTripOffCard(
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {}
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val max = counts.maxOrNull() ?: 0
     OffCard(modifier = modifier, onClick = onClick) {
         OffLabel("이번 주 이동")
@@ -988,7 +988,7 @@ private fun WeekTripOffCard(
 
 @Composable
 private fun RestIntervalOffCard(minutes: Int, reason: String?, modifier: Modifier = Modifier) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     OffCard(modifier = modifier) {
         OffLabel("휴식 추천 간격")
         Spacer(Modifier.height(22.dp))
@@ -1021,22 +1021,22 @@ private fun RestIntervalOffCard(minutes: Int, reason: String?, modifier: Modifie
 }
 
 @Composable
-private fun offCardColor(): Color = POCOTheme.colors.let {
+private fun offCardColor(): Color = MungoTheme.colors.let {
     if (it.isDark) it.bgSurface else Color(0xFFE8EBEE)
 }
 
 @Composable
-private fun offTrackColor(): Color = POCOTheme.colors.let {
+private fun offTrackColor(): Color = MungoTheme.colors.let {
     if (it.isDark) it.bgNeutral else Color(0xFFD9DDE2)
 }
 
 @Composable
-private fun offStrongColor(): Color = POCOTheme.colors.let {
+private fun offStrongColor(): Color = MungoTheme.colors.let {
     if (it.isDark) it.textTertiary else Color(0xFFB0B8C1)
 }
 
 @Composable
-private fun offTagColor(): Color = POCOTheme.colors.let {
+private fun offTagColor(): Color = MungoTheme.colors.let {
     if (it.isDark) it.bgSurfaceSunken else Color(0xFFDDE1E5)
 }
 
@@ -1081,7 +1081,7 @@ private fun HomeCard(
 ) {
     Column(
         modifier = modifier
-            .background(POCOTheme.colors.bgSurface, RoundedCornerShape(MungoRadius.xl))
+            .background(MungoTheme.colors.bgSurface, RoundedCornerShape(MungoRadius.xl))
             .padding(padding),
         content = content
     )
@@ -1093,7 +1093,7 @@ private fun VerticalLine() {
         modifier = Modifier
             .width(1.dp)
             .fillMaxHeight()
-            .background(POCOTheme.colors.borderDefault)
+            .background(MungoTheme.colors.borderDefault)
     )
 }
 
@@ -1163,13 +1163,13 @@ private fun previewState() = HomeUiState(
 @Preview(widthDp = 1700, heightDp = 1184)
 @Composable
 internal fun HomeScreenPreview() {
-    POCOTheme(darkTheme = false) { HomeScreen(previewState(), {}, {}) }
+    MungoTheme(darkTheme = false) { HomeScreen(previewState(), {}, {}) }
 }
 
 @Preview(widthDp = 1700, heightDp = 1184, name = "다크 모드")
 @Composable
 private fun HomeScreenDarkPreview() {
-    POCOTheme(darkTheme = true) {
+    MungoTheme(darkTheme = true) {
         HomeScreen(previewState().copy(lastTrip = previewTrip()), {}, {})
     }
 }
@@ -1177,19 +1177,19 @@ private fun HomeScreenDarkPreview() {
 @Preview(widthDp = 1700, heightDp = 1184, name = "첫 실행 (빈 상태)")
 @Composable
 private fun HomeScreenEmptyPreview() {
-    POCOTheme(darkTheme = false) { HomeScreen(HomeUiState(), {}, {}) }
+    MungoTheme(darkTheme = false) { HomeScreen(HomeUiState(), {}, {}) }
 }
 
 @Preview(widthDp = 1700, heightDp = 1184, name = "실내 온도 경고 (더움)")
 @Composable
 internal fun HomeScreenHotPreview() {
-    POCOTheme(darkTheme = false) { HomeScreen(previewState().copy(seatTemperature = 29f), {}, {}) }
+    MungoTheme(darkTheme = false) { HomeScreen(previewState().copy(seatTemperature = 29f), {}, {}) }
 }
 
 @Preview(widthDp = 1700, heightDp = 1184, name = "차량 연동 해지")
 @Composable
 internal fun HomeScreenUnlinkedPreview() {
-    POCOTheme(darkTheme = false) {
+    MungoTheme(darkTheme = false) {
         HomeScreen(
             previewState().copy(
                 isVehicleLinked = false,

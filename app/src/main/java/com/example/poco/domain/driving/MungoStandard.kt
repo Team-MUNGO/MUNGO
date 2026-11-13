@@ -10,7 +10,7 @@ import com.example.poco.data.model.PetSize
  * 근거: 개 열중립 범위 20~30°C(NRC) · 단모견 하한 15°C · 실내 사육 상한 29.5°C(USDA)
  * · 선 승객 편안 1.0~1.5m/s² · 좌우 불편 1.5 / 매우 1.75 / 극심 2.0m/s² · 운전 점수용 급제동 0.3~0.5g
  */
-object PocoStandard {
+object MungoStandard {
     /** 모든 유형: 이 온도 이상이면 즉시 위험 경고 */
     const val DANGER_CELSIUS = 29.5f
 
@@ -183,12 +183,12 @@ data class TemperatureStandard(
 
     fun isCold(celsius: Float) = celsius <= coldAt
 
-    fun isDanger(celsius: Float) = celsius >= PocoStandard.DANGER_CELSIUS
+    fun isDanger(celsius: Float) = celsius >= MungoStandard.DANGER_CELSIUS
 }
 
 /** 이 펫의 온도 기준 (종류 · 몸무게 · 나이로 자동) */
 val Pet.temperatureStandard: TemperatureStandard
-    get() = PocoStandard.temperature(PocoStandard.petTypes(breed, weightKg, ageYears))
+    get() = MungoStandard.temperature(MungoStandard.petTypes(breed, weightKg, ageYears))
 
 /**
  * ③ 반려동물별 보정: 흔들림 기준점에 곱한다 (작을수록 더 작은 흔들림부터 알림).

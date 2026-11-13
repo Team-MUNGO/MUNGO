@@ -70,7 +70,7 @@ enum class VoiceFrequency {
 /**
  * 몸무게로 자동 분류되는 크기.
  * 소형 10kg 미만 · 중형 10~25kg 미만 · 대형 25kg 이상.
- * 온도 · 흔들림 기준은 domain/driving/PocoStandard (mungo 기준점)에서 정한다
+ * 온도 · 흔들림 기준은 domain/driving/MungoStandard (mungo 기준점)에서 정한다
  */
 enum class PetSize {
     SMALL,

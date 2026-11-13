@@ -58,7 +58,7 @@ class DrivingEventDetector(
             adjacentRate > config.accelerationMax ||
             adjacentRate < -config.brakingMax
         ) {
-            anomaly("POCO sensor-policy exclusion: $rate km/h/s (adjacent $adjacentRate)")
+            anomaly("mungo sensor-policy exclusion: $rate km/h/s (adjacent $adjacentRate)")
             resetSpeed()
             speeds.addLast(sample)
             return events
@@ -108,7 +108,7 @@ class DrivingEventDetector(
 
     /**
      * Steering-wheel angle (degrees, either sign) from the vehicle API. Sharp turn when the estimated
-     * lateral acceleration stays at or above the POCO threshold for [ComfortScoreConfig.steeringHoldMs]
+     * lateral acceleration stays at or above the mungo threshold for [ComfortScoreConfig.steeringHoldMs]
      * at [ComfortScoreConfig.turnMinSpeed] or faster; re-armed once it falls below the mild level.
      */
     fun onSteering(at: Long, degrees: Double): List<DrivingEvent> {

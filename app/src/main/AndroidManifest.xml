@@ -47,7 +47,7 @@
 
 
     <application
-        android:name=".PocoApplication"
+        android:name=".MungoApplication"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
         android:fullBackupContent="@xml/backup_rules"
@@ -55,7 +55,7 @@
         android:label="@string/app_name"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
-        android:theme="@style/Theme.POCO">
+        android:theme="@style/Theme.Mungo">
         <uses-library
             android:name="android.car"
             android:required="false" />
@@ -64,7 +64,7 @@
             android:name=".presentation.main.MainActivity"
             android:exported="true"
             android:label="@string/app_name"
-            android:theme="@style/Theme.POCO"
+            android:theme="@style/Theme.Mungo"
             android:windowSoftInputMode="adjustResize">
             <!-- 방향을 고정하지 않는다: Pleos 화면 분할(2분할 · 3분할)에서 앱 창이 세로로 좁아져도
                  "창 크기를 넓게 조정하세요"로 막히지 않도록 -->

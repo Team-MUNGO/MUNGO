@@ -56,7 +56,7 @@ import com.example.poco.core.designsystem.clearFocusOnTap
 import com.example.poco.core.designsystem.component.pressable
 import com.example.poco.core.designsystem.hasFullPetImage
 import com.example.poco.core.theme.MungoRadius
-import com.example.poco.core.theme.POCOTheme
+import com.example.poco.core.theme.MungoTheme
 import com.example.poco.core.util.toMonthDay
 import com.example.poco.data.model.MotionSensitivity
 import com.example.poco.data.model.Pet
@@ -160,7 +160,7 @@ private fun MyPetScreen(
     actions: MyPetActions,
     modifier: Modifier = Modifier
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Row(
         modifier = modifier
             .fillMaxSize()
@@ -195,7 +195,7 @@ private fun MyPetScreen(
 
 @Composable
 private fun PetListPanel(uiState: MyPetUiState, actions: MyPetActions) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Column(
         modifier = Modifier
             .width(LIST_WIDTH)
@@ -224,7 +224,7 @@ private fun PetListPanel(uiState: MyPetUiState, actions: MyPetActions) {
 
 @Composable
 private fun PetListCard(pet: Pet, selected: Boolean, onClick: () -> Unit) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val shape = RoundedCornerShape(MungoRadius.lg)
     Row(
         modifier = Modifier
@@ -245,7 +245,7 @@ private fun PetListCard(pet: Pet, selected: Boolean, onClick: () -> Unit) {
         Column(modifier = Modifier.weight(1f)) {
             Text(
                 text = pet.name,
-                style = POCOTheme.typography.title2.copy(fontWeight = FontWeight.Bold),
+                style = MungoTheme.typography.title2.copy(fontWeight = FontWeight.Bold),
                 color = colors.textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis
@@ -263,7 +263,7 @@ private fun PetListCard(pet: Pet, selected: Boolean, onClick: () -> Unit) {
 
 @Composable
 private fun AddPetCard(selected: Boolean, onClick: () -> Unit) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val shape = RoundedCornerShape(MungoRadius.lg)
     val dash = if (selected) colors.borderAccent else colors.borderStrong
     Row(
@@ -299,14 +299,14 @@ private fun AddPetCard(selected: Boolean, onClick: () -> Unit) {
 
 @Composable
 private fun PetDetail(pet: Pet, stats: TripStats, canEdit: Boolean, actions: MyPetActions) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Column(modifier = Modifier.fillMaxSize()) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             PetAvatar(pet.photoPath, pet.breed, 136.dp)
             Spacer(Modifier.width(32.dp))
             Text(
                 text = pet.name,
-                style = POCOTheme.typography.h2,
+                style = MungoTheme.typography.h2,
                 color = colors.textPrimary,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -369,7 +369,7 @@ private fun BasicInfoCard(pet: Pet, modifier: Modifier = Modifier) {
             "크기" to (pet.size?.label() ?: "—")
         )
         rows.forEachIndexed { i, (label, value) ->
-            if (i > 0) HorizontalDivider(color = POCOTheme.colors.borderDefault)
+            if (i > 0) HorizontalDivider(color = MungoTheme.colors.borderDefault)
             InfoRow(label = label, value = value)
         }
     }
@@ -383,7 +383,7 @@ private fun CareCard(
     onToggle: (PetTrait) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     WhiteCard(modifier = modifier) {
         CardTitle("케어 기준")
         Spacer(Modifier.height(8.dp))
@@ -435,12 +435,12 @@ private fun StatsRow(stats: TripStats) {
 
 @Composable
 private fun StatCard(label: String, value: String, unit: String?, modifier: Modifier = Modifier) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     WhiteCard(modifier = modifier, vertical = 32.dp) {
         Text(text = label, style = Mg.regular(24, 32), color = colors.textSecondary)
         Spacer(Modifier.height(12.dp))
         Row(verticalAlignment = Alignment.Bottom) {
-            Text(text = value, style = POCOTheme.typography.h2, color = colors.textPrimary)
+            Text(text = value, style = MungoTheme.typography.h2, color = colors.textPrimary)
             unit?.let {
                 Text(
                     text = it,
@@ -462,7 +462,7 @@ internal fun PetAvatar(photoPath: String?, breed: String?, size: Dp) {
     Box(
         modifier = Modifier
             .size(size)
-            .background(POCOTheme.colors.bgAccentSubtle, CircleShape),
+            .background(MungoTheme.colors.bgAccentSubtle, CircleShape),
         contentAlignment = Alignment.Center
     ) {
         PetPhoto(
@@ -481,7 +481,7 @@ internal fun WhiteCard(
 ) {
     Column(
         modifier = modifier
-            .background(POCOTheme.colors.bgSurface, RoundedCornerShape(MungoRadius.xl))
+            .background(MungoTheme.colors.bgSurface, RoundedCornerShape(MungoRadius.xl))
             .padding(horizontal = 36.dp, vertical = vertical),
         content = content
     )
@@ -491,14 +491,14 @@ internal fun WhiteCard(
 private fun CardTitle(text: String) {
     Text(
         text = text,
-        style = POCOTheme.typography.title2.copy(fontWeight = FontWeight.Bold),
-        color = POCOTheme.colors.textPrimary
+        style = MungoTheme.typography.title2.copy(fontWeight = FontWeight.Bold),
+        color = MungoTheme.colors.textPrimary
     )
 }
 
 @Composable
 private fun InfoRow(label: String, value: String) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -522,7 +522,7 @@ private fun InfoRow(label: String, value: String) {
 /** 케어 기준 칩: 고르면 망고 + ✓ */
 @Composable
 internal fun CareChip(text: String, selected: Boolean, onClick: (() -> Unit)?) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Row(
         modifier = Modifier
             .height(64.dp)
@@ -540,7 +540,7 @@ internal fun CareChip(text: String, selected: Boolean, onClick: (() -> Unit)?) {
         }
         Text(
             text = text,
-            style = POCOTheme.typography.title3.copy(
+            style = MungoTheme.typography.title3.copy(
                 fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal
             ),
             color = if (selected) colors.textOnAccent else colors.textPrimary
@@ -557,7 +557,7 @@ internal fun PillButton(
     enabled: Boolean = true,
     primary: Boolean = false
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val content = when {
         !enabled -> colors.textDisabled
         primary -> colors.textOnAccent
@@ -596,7 +596,7 @@ private fun VerticalLine() {
         modifier = Modifier
             .width(1.dp)
             .fillMaxHeight()
-            .background(POCOTheme.colors.borderDefault)
+            .background(MungoTheme.colors.borderDefault)
     )
 }
 
@@ -641,7 +641,7 @@ internal val previewPets = listOf(
 @Preview(widthDp = 1700, heightDp = 1184)
 @Composable
 internal fun MyPetDetailPreview() {
-    POCOTheme {
+    MungoTheme {
         MyPetScreen(
             uiState = MyPetUiState(
                 pets = previewPets,
@@ -657,7 +657,7 @@ internal fun MyPetDetailPreview() {
 @Preview(widthDp = 1700, heightDp = 1184)
 @Composable
 internal fun MyPetEditPreview() {
-    POCOTheme {
+    MungoTheme {
         MyPetScreen(
             uiState = MyPetUiState(
                 pets = previewPets,

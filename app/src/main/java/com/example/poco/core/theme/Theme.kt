@@ -8,24 +8,24 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
 
-object POCOTheme {
-    val colors: POCOColors
+object MungoTheme {
+    val colors: MungoColors
         @Composable @ReadOnlyComposable
-        get() = LocalPOCOColorsProvider.current
-    val typography: POCOTypography
+        get() = LocalMungoColorsProvider.current
+    val typography: MungoTypography
         @Composable @ReadOnlyComposable
-        get() = LocalPOCOTypographyProvider.current
+        get() = LocalMungoTypographyProvider.current
 }
 
 @Composable
-fun ProvidePOCOColorsAndTypography(
-    colors: POCOColors,
-    typography: POCOTypography,
+fun ProvideMungoColorsAndTypography(
+    colors: MungoColors,
+    typography: MungoTypography,
     content: @Composable () -> Unit
 ) {
     CompositionLocalProvider(
-        LocalPOCOColorsProvider provides colors,
-        LocalPOCOTypographyProvider provides typography,
+        LocalMungoColorsProvider provides colors,
+        LocalMungoTypographyProvider provides typography,
         content = content
     )
 }
@@ -34,10 +34,10 @@ fun ProvidePOCOColorsAndTypography(
  * @param darkTheme 기본은 시스템 설정을 따른다 (Pleos 야간 테마 포함)
  */
 @Composable
-fun POCOTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
-    ProvidePOCOColorsAndTypography(
-        colors = if (darkTheme) darkPOCOColors else defaultPOCOColors,
-        typography = defaultPOCOTypography
+fun MungoTheme(darkTheme: Boolean = isSystemInDarkTheme(), content: @Composable () -> Unit) {
+    ProvideMungoColorsAndTypography(
+        colors = if (darkTheme) darkMungoColors else defaultMungoColors,
+        typography = defaultMungoTypography
     ) {
         MaterialTheme(
             colorScheme = if (darkTheme) darkColorScheme() else lightColorScheme(),

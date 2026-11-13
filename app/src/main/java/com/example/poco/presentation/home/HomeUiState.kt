@@ -3,8 +3,8 @@ package com.example.poco.presentation.home
 import com.example.poco.core.driving.RestIntervalPolicy
 import com.example.poco.data.model.Pet
 import com.example.poco.data.model.TripSummary
+import com.example.poco.domain.driving.MungoStandard
 import com.example.poco.domain.driving.PetType
-import com.example.poco.domain.driving.PocoStandard
 import com.example.poco.domain.driving.temperatureStandard
 
 data class HomeUiState(
@@ -46,7 +46,7 @@ data class HomeUiState(
             val temperature = seatTemperature ?: return CheckStatus.UNKNOWN
             // mungo 기준점 ①: 견종 유형별 더움 · 추움 기준 (펫이 없으면 기본 유형)
             val standard = pet?.temperatureStandard
-                ?: PocoStandard.temperature(setOf(PetType.BASIC))
+                ?: MungoStandard.temperature(setOf(PetType.BASIC))
             val isOff = standard.isHot(temperature) || standard.isCold(temperature)
             return if (isOff) CheckStatus.WARNING else CheckStatus.OK
         }

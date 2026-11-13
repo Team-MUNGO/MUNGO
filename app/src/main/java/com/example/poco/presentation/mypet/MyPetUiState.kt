@@ -5,8 +5,8 @@ import com.example.poco.data.model.Pet
 import com.example.poco.data.model.PetTrait
 import com.example.poco.data.model.TripStats
 import com.example.poco.data.model.VoiceFrequency
+import com.example.poco.domain.driving.MungoStandard
 import com.example.poco.domain.driving.PetType
-import com.example.poco.domain.driving.PocoStandard
 import com.example.poco.presentation.boarding.toCelsius
 import com.example.poco.presentation.petprofile.PetForm
 
@@ -61,12 +61,12 @@ fun PetTrait.careLabel(breed: String = ""): String = when (this) {
 }
 
 private fun isBrachycephalic(breed: String): Boolean =
-    PetType.BRACHYCEPHALIC in PocoStandard.petTypes(breed, null, null)
+    PetType.BRACHYCEPHALIC in MungoStandard.petTypes(breed, null, null)
 
 /** 정보로 알 수 있는 케어 기준: 8살 이상 → 노령견, 단두종 → 더위에 약해요 */
 fun derivedCareTraits(breed: String, weightKg: Float?, ageYears: Int?): Set<PetTrait> = buildSet {
     if ((ageYears ?: 0) >= SENIOR_AGE) add(PetTrait.SENIOR)
-    if (PetType.BRACHYCEPHALIC in PocoStandard.petTypes(breed, weightKg, ageYears)) {
+    if (PetType.BRACHYCEPHALIC in MungoStandard.petTypes(breed, weightKg, ageYears)) {
         add(PetTrait.HEAT_SENSITIVE)
     }
 }
@@ -97,8 +97,8 @@ fun restIntervalLabel(traits: Set<PetTrait>): String =
 
 /** 실내 적정 온도 "22~24°C" */
 fun comfortRangeLabel(pet: Pet): String {
-    val comfort = PocoStandard.temperature(
-        PocoStandard.petTypes(pet.breed, pet.weightKg, pet.ageYears)
+    val comfort = MungoStandard.temperature(
+        MungoStandard.petTypes(pet.breed, pet.weightKg, pet.ageYears)
     ).comfort
     return "${comfort.start.toCelsius()}~${comfort.endInclusive.toCelsius()}°C"
 }

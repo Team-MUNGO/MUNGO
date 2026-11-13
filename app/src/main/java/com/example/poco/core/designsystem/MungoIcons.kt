@@ -18,7 +18,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.example.poco.R
-import com.example.poco.core.theme.POCOTheme
+import com.example.poco.core.theme.MungoTheme
 
 /*
  * mungo 아이콘 · 로고
@@ -303,7 +303,7 @@ val MungoIcon.imageVector: ImageVector
 fun MungoIconView(
     icon: MungoIcon,
     modifier: Modifier = Modifier,
-    tint: Color = POCOTheme.colors.textPrimary,
+    tint: Color = MungoTheme.colors.textPrimary,
     size: Dp = 24.dp,
     contentDescription: String? = null
 ) {
@@ -326,7 +326,11 @@ fun MungoIconView(
 fun MungoLogo(modifier: Modifier = Modifier, height: Dp = 40.dp) {
     Image(
         painter = painterResource(
-            if (POCOTheme.colors.isDark) R.drawable.mungo_logo_dark else R.drawable.mungo_logo_light
+            if (MungoTheme.colors.isDark) {
+                R.drawable.mungo_logo_dark
+            } else {
+                R.drawable.mungo_logo_light
+            }
         ),
         contentDescription = "mungo",
         contentScale = ContentScale.Fit,

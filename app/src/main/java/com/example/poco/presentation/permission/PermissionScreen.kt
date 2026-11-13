@@ -26,20 +26,20 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.poco.core.designsystem.PocoIcon
-import com.example.poco.core.designsystem.PocoIconView
-import com.example.poco.core.designsystem.PocoMark
-import com.example.poco.core.designsystem.PocoWordmark
+import com.example.poco.core.designsystem.MungoBaseIcon
+import com.example.poco.core.designsystem.MungoBaseIconView
+import com.example.poco.core.designsystem.MungoMark
+import com.example.poco.core.designsystem.MungoWordmark
+import com.example.poco.core.designsystem.component.MungoButton
+import com.example.poco.core.designsystem.component.MungoButtonStyle
+import com.example.poco.core.designsystem.component.MungoChip
 import com.example.poco.core.designsystem.component.PermissionBanner
 import com.example.poco.core.designsystem.component.PermissionCard
-import com.example.poco.core.designsystem.component.PocoButton
-import com.example.poco.core.designsystem.component.PocoButtonStyle
-import com.example.poco.core.designsystem.component.PocoChip
-import com.example.poco.core.theme.POCOTheme
-import com.example.poco.core.theme.PocoLayout
-import com.example.poco.core.theme.PocoRadius
-import com.example.poco.core.theme.PocoSize
-import com.example.poco.core.theme.PocoSpacing
+import com.example.poco.core.theme.MungoBaseLayout
+import com.example.poco.core.theme.MungoBaseRadius
+import com.example.poco.core.theme.MungoBaseSize
+import com.example.poco.core.theme.MungoSpacing
+import com.example.poco.core.theme.MungoTheme
 import com.example.poco.core.util.eulReul
 
 @Composable
@@ -79,7 +79,7 @@ private fun PermissionScreen(
     onAllow: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Box(
         modifier = modifier
             .fillMaxSize()
@@ -89,15 +89,18 @@ private fun PermissionScreen(
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(horizontal = PocoLayout.screenHorizontal, vertical = PocoSpacing.space48)
+                .padding(
+                    horizontal = MungoBaseLayout.screenHorizontal,
+                    vertical = MungoSpacing.space48
+                )
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                PocoWordmark(height = 40.dp)
+                MungoWordmark(height = 40.dp)
                 Spacer(Modifier.weight(1f))
-                PocoChip(text = "처음 한 번만 확인해요", icon = PocoIcon.SHIELD)
+                MungoChip(text = "처음 한 번만 확인해요", icon = MungoBaseIcon.SHIELD)
             }
 
             Row(
@@ -109,45 +112,48 @@ private fun PermissionScreen(
                 Column(modifier = Modifier.weight(1f)) {
                     Box(
                         modifier = Modifier
-                            .size(PocoSize.avatarHome * 1.25f)
-                            .background(colors.backgroundCard, RoundedCornerShape(PocoRadius.r36)),
+                            .size(MungoBaseSize.avatarHome * 1.25f)
+                            .background(
+                                colors.backgroundCard,
+                                RoundedCornerShape(MungoBaseRadius.r36)
+                            ),
                         contentAlignment = Alignment.Center
                     ) {
-                        PocoMark(modifier = Modifier.size(PocoSize.avatarHome))
+                        MungoMark(modifier = Modifier.size(MungoBaseSize.avatarHome))
                     }
-                    Spacer(Modifier.height(PocoSpacing.space40))
+                    Spacer(Modifier.height(MungoSpacing.space40))
                     Text(
                         text = "${uiState.petName.eulReul} 지켜보려면\n차량 정보가 필요해요",
-                        style = POCOTheme.typography.headingXl,
+                        style = MungoTheme.typography.headingXl,
                         color = colors.textPrimary
                     )
-                    Spacer(Modifier.height(PocoSpacing.space20))
+                    Spacer(Modifier.height(MungoSpacing.space20))
                     Text(
                         text = "주행 중에는 화면 대신 음성으로 알려드려요.\n언제든 설정에서 바꿀 수 있어요.",
-                        style = POCOTheme.typography.bodyM,
+                        style = MungoTheme.typography.bodyM,
                         color = colors.textSecondary
                     )
-                    Spacer(Modifier.height(PocoSpacing.space24))
+                    Spacer(Modifier.height(MungoSpacing.space24))
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        PocoIconView(
-                            PocoIcon.LOCK,
+                        MungoBaseIconView(
+                            MungoBaseIcon.LOCK,
                             tint = colors.safe,
-                            modifier = Modifier.size(PocoSize.icon24)
+                            modifier = Modifier.size(MungoBaseSize.icon24)
                         )
-                        Spacer(Modifier.width(PocoSpacing.space8))
+                        Spacer(Modifier.width(MungoSpacing.space8))
                         Text(
                             text = "정보는 이 차 안에서만 쓰여요",
-                            style = POCOTheme.typography.bodyM,
+                            style = MungoTheme.typography.bodyM,
                             color = colors.textPrimary
                         )
                     }
                 }
 
-                Spacer(Modifier.width(PocoSpacing.space48))
+                Spacer(Modifier.width(MungoSpacing.space48))
 
                 Column(
                     modifier = Modifier.weight(1.3f),
-                    verticalArrangement = Arrangement.spacedBy(PocoSpacing.space12)
+                    verticalArrangement = Arrangement.spacedBy(MungoSpacing.space12)
                 ) {
                     PermissionGroup.entries.forEach { group ->
                         PermissionCard(
@@ -158,15 +164,15 @@ private fun PermissionScreen(
                             onCheckedChange = { onToggle(group) }
                         )
                     }
-                    Spacer(Modifier.height(PocoSpacing.space12))
-                    Row(horizontalArrangement = Arrangement.spacedBy(PocoSpacing.space16)) {
-                        PocoButton(
+                    Spacer(Modifier.height(MungoSpacing.space12))
+                    Row(horizontalArrangement = Arrangement.spacedBy(MungoSpacing.space16)) {
+                        MungoButton(
                             text = "나중에",
                             onClick = onLater,
-                            style = PocoButtonStyle.SECONDARY,
+                            style = MungoButtonStyle.SECONDARY,
                             modifier = Modifier.weight(1f)
                         )
-                        PocoButton(
+                        MungoButton(
                             text = "허용하고 시작",
                             onClick = onAllow,
                             modifier = Modifier.weight(1.7f)
@@ -184,7 +190,7 @@ private fun PermissionScreen(
                 onConfirm = onDismissBanner,
                 modifier = Modifier
                     .align(Alignment.TopCenter)
-                    .padding(top = PocoSpacing.space48)
+                    .padding(top = MungoSpacing.space48)
             )
         }
     }
@@ -193,7 +199,7 @@ private fun PermissionScreen(
 @Preview(widthDp = 1920, heightDp = 1080)
 @Composable
 private fun PermissionScreenPreview() {
-    POCOTheme(darkTheme = false) {
+    MungoTheme(darkTheme = false) {
         PermissionScreen(PermissionUiState(), {}, {}, {}, {})
     }
 }
@@ -201,7 +207,7 @@ private fun PermissionScreenPreview() {
 @Preview(widthDp = 1920, heightDp = 1080, name = "필수 권한 배너")
 @Composable
 private fun PermissionScreenBannerPreview() {
-    POCOTheme(darkTheme = false) {
+    MungoTheme(darkTheme = false) {
         PermissionScreen(PermissionUiState(requiredBanner = PermissionGroup.WINDOW), {}, {}, {}, {})
     }
 }
@@ -209,7 +215,7 @@ private fun PermissionScreenBannerPreview() {
 @Preview(widthDp = 1920, heightDp = 1080, name = "다크 모드")
 @Composable
 private fun PermissionScreenDarkPreview() {
-    POCOTheme(darkTheme = true) {
+    MungoTheme(darkTheme = true) {
         PermissionScreen(PermissionUiState(), {}, {}, {}, {})
     }
 }

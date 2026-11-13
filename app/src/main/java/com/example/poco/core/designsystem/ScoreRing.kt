@@ -20,7 +20,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.example.poco.core.theme.POCOTheme
+import com.example.poco.core.theme.MungoTheme
 
 val RingTrack = Color(0xFFE6E6E6) // neutral/200
 private val RingStart = Color(0xFFFFB257) // mango/300
@@ -35,11 +35,11 @@ fun ScoreRing(
     score: Int,
     modifier: Modifier = Modifier,
     strokeWidth: Dp = 10.dp,
-    scoreStyle: TextStyle = POCOTheme.typography.hmiTitle,
+    scoreStyle: TextStyle = MungoTheme.typography.hmiTitle,
     label: String? = null,
     progressColor: Color? = null
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val track = colors.borderDefault
     val density = LocalDensity.current
     BoxWithConstraints(modifier = modifier, contentAlignment = Alignment.Center) {
@@ -48,7 +48,7 @@ fun ScoreRing(
         val inner = (minOf(maxWidth, maxHeight) - strokeWidth * 2).coerceAtLeast(1.dp)
         val scoreSize =
             with(density) { minOf(scoreStyle.fontSize.toPx(), (inner * 0.34f).toPx()).toSp() }
-        val labelStyle = POCOTheme.typography.caption
+        val labelStyle = MungoTheme.typography.caption
         val labelSize =
             with(density) { minOf(labelStyle.fontSize.toPx(), (inner * 0.09f).toPx()).toSp() }
         Canvas(modifier = Modifier.fillMaxSize()) {

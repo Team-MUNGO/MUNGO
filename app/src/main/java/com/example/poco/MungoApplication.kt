@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 import timber.log.Timber
 
 @HiltAndroidApp
-class PocoApplication : Application() {
+class MungoApplication : Application() {
     @Inject lateinit var restRecommendations: RestRecommendationCoordinator
 
     @Inject lateinit var legacyTrips: LegacyTripImporter

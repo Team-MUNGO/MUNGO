@@ -55,13 +55,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.poco.R
-import com.example.poco.core.theme.pocoFontFamily
+import com.example.poco.core.theme.mungoFontFamily
 
 /**
  * Design tokens sampled from Figma "Danzle_프론트 참고" Page 3 (464:45661). All sizes below are in
  * Figma frame pixels; [DesignCanvas] maps one Figma pixel to one dp at the reference size.
  */
-val LocalDesignFont = staticCompositionLocalOf { pocoFontFamily }
+val LocalDesignFont = staticCompositionLocalOf { mungoFontFamily }
 
 object Mg {
     val Bg = Color(0xFFF4F5F7)
@@ -141,7 +141,7 @@ fun DesignCanvas(
     refWidth: Float,
     refHeight: Float,
     modifier: Modifier = Modifier,
-    fontFamily: FontFamily = pocoFontFamily,
+    fontFamily: FontFamily = mungoFontFamily,
     content: @Composable BoxScope.() -> Unit
 ) {
     BoxWithConstraints(modifier.fillMaxSize().background(Mg.Bg)) {

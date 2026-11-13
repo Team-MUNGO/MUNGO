@@ -23,13 +23,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import com.example.poco.core.designsystem.PocoIcon
-import com.example.poco.core.designsystem.PocoIconView
-import com.example.poco.core.theme.POCOTheme
-import com.example.poco.core.theme.PocoRadius
-import com.example.poco.core.theme.PocoSize
-import com.example.poco.core.theme.PocoSpacing
-import com.example.poco.core.theme.PocoStroke
+import com.example.poco.core.designsystem.MungoBaseIcon
+import com.example.poco.core.designsystem.MungoBaseIconView
+import com.example.poco.core.theme.MungoBaseRadius
+import com.example.poco.core.theme.MungoBaseSize
+import com.example.poco.core.theme.MungoSpacing
+import com.example.poco.core.theme.MungoStroke
+import com.example.poco.core.theme.MungoTheme
 
 /*
  * mungo 피드백 컴포넌트 · DS-05 Content & Feedback
@@ -44,14 +44,14 @@ import com.example.poco.core.theme.PocoStroke
  */
 @Composable
 fun InfoRow(
-    icon: PocoIcon,
+    icon: MungoBaseIcon,
     label: String,
     value: String,
     status: String,
     tone: StatusTone,
     modifier: Modifier = Modifier
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val (background, border, statusColor, tileBackground, tileTint) = when (tone) {
         StatusTone.HOT -> InfoColors(
             colors.warnBg,
@@ -75,27 +75,27 @@ fun InfoRow(
             colors.textPrimary
         )
     }
-    val shape = RoundedCornerShape(PocoRadius.r24)
+    val shape = RoundedCornerShape(MungoBaseRadius.r24)
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .height(PocoSize.infoRowHeight)
+            .height(MungoBaseSize.infoRowHeight)
             .background(background, shape)
-            .border(PocoStroke.card, border, shape)
-            .padding(horizontal = PocoSpacing.space16),
+            .border(MungoStroke.card, border, shape)
+            .padding(horizontal = MungoSpacing.space16),
         verticalAlignment = Alignment.CenterVertically
     ) {
         IconBox(icon = icon, background = tileBackground, tint = tileTint)
-        Spacer(Modifier.width(PocoSpacing.space16))
+        Spacer(Modifier.width(MungoSpacing.space16))
         Column(modifier = Modifier.weight(1f)) {
-            Text(text = label, style = POCOTheme.typography.caption, color = colors.textSecondary)
+            Text(text = label, style = MungoTheme.typography.caption, color = colors.textSecondary)
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     text = "$value · ",
-                    style = POCOTheme.typography.titleM,
+                    style = MungoTheme.typography.titleM,
                     color = colors.textPrimary
                 )
-                Text(text = status, style = POCOTheme.typography.titleM, color = statusColor)
+                Text(text = status, style = MungoTheme.typography.titleM, color = statusColor)
             }
         }
         StatusCircle(tone = tone)
@@ -120,7 +120,7 @@ private data class InfoColors(
  */
 @Composable
 fun AlertCard(
-    icon: PocoIcon,
+    icon: MungoBaseIcon,
     eyebrow: String,
     title: String,
     description: String,
@@ -131,7 +131,7 @@ fun AlertCard(
     modifier: Modifier = Modifier,
     tone: StatusTone = StatusTone.HOT
 ) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     val (background, border, accent, eyebrowColor) = when (tone) {
         StatusTone.COLD -> listOf(
             colors.coldBg,
@@ -141,48 +141,52 @@ fun AlertCard(
         )
         else -> listOf(colors.warnBg, colors.warnBorder, colors.tangerine, colors.warnText)
     }
-    val shape = RoundedCornerShape(PocoRadius.r24)
+    val shape = RoundedCornerShape(MungoBaseRadius.r24)
     Column(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = PocoSize.alertCardHeight)
+            .heightIn(min = MungoBaseSize.alertCardHeight)
             .background(background, shape)
-            .border(PocoStroke.control, border, shape)
-            .padding(PocoSpacing.space24),
-        verticalArrangement = Arrangement.spacedBy(PocoSpacing.space16)
+            .border(MungoStroke.control, border, shape)
+            .padding(MungoSpacing.space24),
+        verticalArrangement = Arrangement.spacedBy(MungoSpacing.space16)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
                 modifier = Modifier
-                    .size(PocoSize.iconTile)
+                    .size(MungoBaseSize.iconTile)
                     .background(accent, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                PocoIconView(icon, tint = Color.White, modifier = Modifier.size(PocoSize.icon28))
+                MungoBaseIconView(
+                    icon,
+                    tint = Color.White,
+                    modifier = Modifier.size(MungoBaseSize.icon28)
+                )
             }
-            Spacer(Modifier.width(PocoSpacing.space16))
+            Spacer(Modifier.width(MungoSpacing.space16))
             Column {
-                Text(text = eyebrow, style = POCOTheme.typography.micro, color = eyebrowColor)
+                Text(text = eyebrow, style = MungoTheme.typography.micro, color = eyebrowColor)
                 Text(
                     text = title,
-                    style = POCOTheme.typography.headingM,
+                    style = MungoTheme.typography.headingM,
                     color = colors.textPrimary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )
                 Text(
                     text = description,
-                    style = POCOTheme.typography.caption,
+                    style = MungoTheme.typography.caption,
                     color = colors.textSecondary
                 )
             }
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(PocoSpacing.space16)) {
-            PocoButton(text = primaryText, onClick = onPrimary, modifier = Modifier.weight(6f))
-            PocoButton(
+        Row(horizontalArrangement = Arrangement.spacedBy(MungoSpacing.space16)) {
+            MungoButton(text = primaryText, onClick = onPrimary, modifier = Modifier.weight(6f))
+            MungoButton(
                 text = secondaryText,
                 onClick = onSecondary,
-                style = PocoButtonStyle.SECONDARY,
+                style = MungoButtonStyle.SECONDARY,
                 modifier = Modifier.weight(4f)
             )
         }
@@ -201,40 +205,40 @@ fun VoiceCard(
     onTurnOn: () -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val colors = POCOTheme.colors
-    val shape = RoundedCornerShape(PocoRadius.r24)
+    val colors = MungoTheme.colors
+    val shape = RoundedCornerShape(MungoBaseRadius.r24)
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .heightIn(min = PocoSize.voiceCardHeight)
+            .heightIn(min = MungoBaseSize.voiceCardHeight)
             .background(colors.backgroundCard, shape)
-            .border(PocoStroke.card, colors.borderDefault, shape)
-            .padding(horizontal = PocoSpacing.space24, vertical = PocoSpacing.space16),
+            .border(MungoStroke.card, colors.borderDefault, shape)
+            .padding(horizontal = MungoSpacing.space24, vertical = MungoSpacing.space16),
         verticalAlignment = Alignment.CenterVertically
     ) {
         if (isVoiceOn) {
             Box(
                 modifier = Modifier
-                    .size(PocoSize.iconTile)
+                    .size(MungoBaseSize.iconTile)
                     .background(colors.logoColor, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                PocoIconView(
-                    PocoIcon.SPEAKER,
+                MungoBaseIconView(
+                    MungoBaseIcon.SPEAKER,
                     tint = colors.logoBackground,
-                    modifier = Modifier.size(PocoSize.icon28)
+                    modifier = Modifier.size(MungoBaseSize.icon28)
                 )
             }
-            Spacer(Modifier.width(PocoSpacing.space16))
+            Spacer(Modifier.width(MungoSpacing.space16))
             Column(modifier = Modifier.weight(1f)) {
                 Text(
                     text = "mungo 음성 안내",
-                    style = POCOTheme.typography.caption,
+                    style = MungoTheme.typography.caption,
                     color = colors.textSecondary
                 )
                 Text(
                     text = message?.let { "“$it”" } ?: "필요할 때 말로 알려드릴게요",
-                    style = POCOTheme.typography.titleM,
+                    style = MungoTheme.typography.titleM,
                     color = colors.textPrimary,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
@@ -243,24 +247,24 @@ fun VoiceCard(
         } else {
             Box(
                 modifier = Modifier
-                    .size(PocoSize.iconTile)
+                    .size(MungoBaseSize.iconTile)
                     .background(colors.fieldBackground, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                PocoIconView(
-                    PocoIcon.SPEAKER_OFF,
+                MungoBaseIconView(
+                    MungoBaseIcon.SPEAKER_OFF,
                     tint = colors.textSecondary,
-                    modifier = Modifier.size(PocoSize.icon28)
+                    modifier = Modifier.size(MungoBaseSize.icon28)
                 )
             }
-            Spacer(Modifier.width(PocoSpacing.space16))
+            Spacer(Modifier.width(MungoSpacing.space16))
             Text(
                 text = "음성 안내 꺼짐",
-                style = POCOTheme.typography.titleM,
+                style = MungoTheme.typography.titleM,
                 color = colors.textPrimary,
                 modifier = Modifier.weight(1f)
             )
-            PocoButton(text = "음성 켜기", onClick = onTurnOn, icon = PocoIcon.SPEAKER)
+            MungoButton(text = "음성 켜기", onClick = onTurnOn, icon = MungoBaseIcon.SPEAKER)
         }
     }
 }
@@ -272,11 +276,11 @@ fun VoiceCard(
 /** 예) ● 급제동 / 3회 */
 @Composable
 fun StatTile(label: String, value: String, dotColor: Color, modifier: Modifier = Modifier) {
-    val colors = POCOTheme.colors
+    val colors = MungoTheme.colors
     Column(
         modifier = modifier
-            .background(colors.fieldBackground, RoundedCornerShape(PocoRadius.r20))
-            .padding(horizontal = PocoSpacing.space16, vertical = PocoSpacing.space12)
+            .background(colors.fieldBackground, RoundedCornerShape(MungoBaseRadius.r20))
+            .padding(horizontal = MungoSpacing.space16, vertical = MungoSpacing.space12)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(
@@ -284,11 +288,11 @@ fun StatTile(label: String, value: String, dotColor: Color, modifier: Modifier =
                     .size(12.dp)
                     .background(dotColor, CircleShape)
             )
-            Spacer(Modifier.width(PocoSpacing.space8))
-            Text(text = label, style = POCOTheme.typography.caption, color = colors.textSecondary)
+            Spacer(Modifier.width(MungoSpacing.space8))
+            Text(text = label, style = MungoTheme.typography.caption, color = colors.textSecondary)
         }
-        Spacer(Modifier.height(PocoSpacing.space4))
-        Text(text = value, style = POCOTheme.typography.titleM, color = colors.textPrimary)
+        Spacer(Modifier.height(MungoSpacing.space4))
+        Text(text = value, style = MungoTheme.typography.titleM, color = colors.textPrimary)
     }
 }
 
@@ -305,45 +309,45 @@ fun PermissionBanner(
     modifier: Modifier = Modifier,
     tag: String = "필수 권한"
 ) {
-    val colors = POCOTheme.colors
-    val shape = RoundedCornerShape(PocoRadius.r28)
+    val colors = MungoTheme.colors
+    val shape = RoundedCornerShape(MungoBaseRadius.r28)
     Row(
         modifier = modifier
             .widthIn(max = 960.dp)
             .fillMaxWidth()
             .heightIn(min = 200.dp)
             .background(colors.backgroundCard, shape)
-            .border(PocoStroke.card, colors.borderDefault, shape)
-            .padding(horizontal = PocoSpacing.space32, vertical = PocoSpacing.space24),
+            .border(MungoStroke.card, colors.borderDefault, shape)
+            .padding(horizontal = MungoSpacing.space32, vertical = MungoSpacing.space24),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
             modifier = Modifier
-                .size(PocoSize.iconTileLarge)
+                .size(MungoBaseSize.iconTileLarge)
                 .background(colors.tangerine, CircleShape),
             contentAlignment = Alignment.Center
         ) {
-            PocoIconView(
-                PocoIcon.WARNING,
+            MungoBaseIconView(
+                MungoBaseIcon.WARNING,
                 tint = colors.logoBackground,
-                modifier = Modifier.size(PocoSize.icon32)
+                modifier = Modifier.size(MungoBaseSize.icon32)
             )
         }
-        Spacer(Modifier.width(PocoSpacing.space24))
+        Spacer(Modifier.width(MungoSpacing.space24))
         Column(
             modifier = Modifier.weight(1f),
-            verticalArrangement = Arrangement.spacedBy(PocoSpacing.space8)
+            verticalArrangement = Arrangement.spacedBy(MungoSpacing.space8)
         ) {
-            PocoTag(text = tag, style = PocoTagStyle.WARN)
-            Text(text = title, style = POCOTheme.typography.headingM, color = colors.textPrimary)
+            MungoTag(text = tag, style = MungoTagStyle.WARN)
+            Text(text = title, style = MungoTheme.typography.headingM, color = colors.textPrimary)
             Text(
                 text = description,
-                style = POCOTheme.typography.bodyM,
+                style = MungoTheme.typography.bodyM,
                 color = colors.textSecondary
             )
         }
-        Spacer(Modifier.width(PocoSpacing.space24))
-        PocoButton(text = "확인", onClick = onConfirm)
+        Spacer(Modifier.width(MungoSpacing.space24))
+        MungoButton(text = "확인", onClick = onConfirm)
     }
 }
 
@@ -353,23 +357,23 @@ fun PermissionBanner(
 
 /** 예) ✓ 보리를 동승자로 등록했어요 */
 @Composable
-fun PocoToast(text: String, modifier: Modifier = Modifier, detail: String? = null) {
-    val colors = POCOTheme.colors
+fun MungoToast(text: String, modifier: Modifier = Modifier, detail: String? = null) {
+    val colors = MungoTheme.colors
     Row(
         modifier = modifier
-            .heightIn(min = PocoSize.buttonHeight)
+            .heightIn(min = MungoBaseSize.buttonHeight)
             .background(colors.logoBackground, CircleShape)
-            .padding(start = PocoSpacing.space16, end = PocoSpacing.space32),
+            .padding(start = MungoSpacing.space16, end = MungoSpacing.space32),
         verticalAlignment = Alignment.CenterVertically
     ) {
         StatusCircle(tone = StatusTone.OK)
-        Spacer(Modifier.width(PocoSpacing.space16))
-        Text(text = text, style = POCOTheme.typography.titleM, color = Color.White)
+        Spacer(Modifier.width(MungoSpacing.space16))
+        Text(text = text, style = MungoTheme.typography.titleM, color = Color.White)
         detail?.let {
-            Spacer(Modifier.width(PocoSpacing.space32))
+            Spacer(Modifier.width(MungoSpacing.space32))
             Text(
                 text = it,
-                style = POCOTheme.typography.bodyM,
+                style = MungoTheme.typography.bodyM,
                 color = Color.White.copy(alpha = 0.6f)
             )
         }
