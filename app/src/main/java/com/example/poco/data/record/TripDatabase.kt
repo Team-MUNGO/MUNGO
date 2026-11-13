@@ -48,7 +48,8 @@ data class TripEntity(
     val destination: String? = null,
     /** User-entered motion-sickness checklist (comma separated); not a diagnosis. */
     val motionSicknessSigns: String? = null,
-    /** True when any value came from debug simulation; such trips are labeled, never mixed silently. */
+    /** True when any value came from debug simulation; such trips are labeled,
+     never mixed silently. */
     val simulated: Boolean = false,
     /** AI "오늘 한 줄" (/summary). Written once after completion; null until it arrives. */
     val aiOneLine: String? = null

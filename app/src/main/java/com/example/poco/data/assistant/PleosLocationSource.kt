@@ -10,8 +10,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.withTimeout
 
 interface AssistantLocationSource {
@@ -98,7 +98,12 @@ internal fun freshLocation(
 }
 
 /** Continuous location fix used for the GPS-bearing turn detector and the trip's latest position. */
-data class LocationFix(val latitude: Double, val longitude: Double, val headingDegrees: Double?, val epochMs: Long)
+data class LocationFix(
+    val latitude: Double,
+    val longitude: Double,
+    val headingDegrees: Double?,
+    val epochMs: Long
+)
 
 interface LocationStream {
     fun observe(): kotlinx.coroutines.flow.Flow<LocationFix>
@@ -123,8 +128,17 @@ class PleosLocationStream @Inject constructor(@ApplicationContext private val co
                 location ?: return
                 freshLocation(location.latitude, location.longitude, location.timestampMillis, now)
                     ?: return
-                val heading = location.heading.toDouble().takeIf { it.isFinite() && it in 0.0..360.0 }
-                trySend(LocationFix(location.latitude, location.longitude, heading, location.timestampMillis))
+                val heading = location.heading.toDouble().takeIf {
+                    it.isFinite() && it in 0.0..360.0
+                }
+                trySend(
+                    LocationFix(
+                        location.latitude,
+                        location.longitude,
+                        heading,
+                        location.timestampMillis
+                    )
+                )
             }
             override fun onError(exception: Exception) = Unit
         }

@@ -80,8 +80,15 @@ fun SettingsRoute(
         onNavigate = onNavigate,
         toast = toast,
         dialog = if (confirmUnlink) {
-            { UnlinkDialog(onCancel = { confirmUnlink = false }, onConfirm = { confirmUnlink = false; viewModel.unlink() }) }
-        } else null
+            {
+                UnlinkDialog(onCancel = { confirmUnlink = false }, onConfirm = {
+                    confirmUnlink = false
+                    viewModel.unlink()
+                })
+            }
+        } else {
+            null
+        }
     ) {
         when (page) {
             SettingsPage.ALERTS -> AlertsPage(
@@ -92,7 +99,9 @@ fun SettingsRoute(
                 onOpenInterval = onOpenInterval
             )
             SettingsPage.VEHICLE -> VehiclePage(
-                link, identity, voice,
+                link,
+                identity,
+                voice,
                 onUnlink = { confirmUnlink = true },
                 onRelink = viewModel::relink,
                 onVoice = viewModel::setVoice
@@ -111,7 +120,7 @@ internal fun SettingsScreen(
     dialog: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    DesignCanvas(RecordRefWidth, RecordRefHeight) {
+    DesignCanvas(RECORD_REF_WIDTH, RECORD_REF_HEIGHT) {
         Row(Modifier.fillMaxSize()) {
             RecordRail(RailTab.SETTINGS, onNavigate)
             // 설정 메뉴: 134 → 551 (Figma "설정 메뉴")
@@ -119,14 +128,23 @@ internal fun SettingsScreen(
                 Modifier.width(417.dp).fillMaxHeight().background(Color.White)
                     .border(1.dp, Mg.Line).padding(start = 20.dp, end = 22.dp, top = 52.dp)
             ) {
-                Text("설정", style = Mg.bold(37, 50), color = Mg.Ink, modifier = Modifier.padding(start = 17.dp))
+                Text(
+                    "설정",
+                    style = Mg.bold(37, 50),
+                    color = Mg.Ink,
+                    modifier = Modifier.padding(start = 17.dp)
+                )
                 Spacer(Modifier.height(34.dp))
                 SettingsPage.entries.forEach { item ->
                     MenuItem(item, item == page) { onPage(item) }
                     Spacer(Modifier.height(15.dp))
                 }
             }
-            Column(Modifier.weight(1f).fillMaxHeight().padding(start = 43.dp, end = 43.dp, top = 52.dp, bottom = 24.dp)) {
+            Column(
+                Modifier.weight(
+                    1f
+                ).fillMaxHeight().padding(start = 43.dp, end = 43.dp, top = 52.dp, bottom = 24.dp)
+            ) {
                 Text(
                     if (page == SettingsPage.ALERTS) "알림" else page.label,
                     style = Mg.bold(40, 54),
@@ -138,7 +156,11 @@ internal fun SettingsScreen(
         }
         toast?.let { SettingsToast(it, Modifier.align(Alignment.TopCenter).offset(y = 548.dp)) }
         dialog?.let { show ->
-            Box(Modifier.fillMaxSize().background(Mg.Scrim).clickable(enabled = false) {}, contentAlignment = Alignment.Center) { show() }
+            Box(
+                Modifier.fillMaxSize().background(Mg.Scrim).clickable(enabled = false) {
+                },
+                contentAlignment = Alignment.Center
+            ) { show() }
         }
     }
 }
@@ -154,7 +176,12 @@ private fun MenuItem(item: SettingsPage, selected: Boolean, onClick: () -> Unit)
     ) {
         MgIcon(item.icon, fg, 30.dp)
         Spacer(Modifier.width(18.dp))
-        Text(item.label, style = if (selected) Mg.bold(27, 36) else Mg.regular(27, 36), color = fg, modifier = Modifier.weight(1f))
+        Text(
+            item.label,
+            style = if (selected) Mg.bold(27, 36) else Mg.regular(27, 36),
+            color = fg,
+            modifier = Modifier.weight(1f)
+        )
         MgIcon(MgIcons.ChevronRight, if (selected) Color.White else Mg.Faint, 26.dp)
     }
 }
@@ -171,19 +198,28 @@ internal fun AlertsPage(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(15.dp)) {
         ToggleRow(
-            MgIcons.Cup, "휴식 쉼터 제안",
+            MgIcons.Cup,
+            "휴식 쉼터 제안",
             "배변 주기에 맞춰 쉴 곳을 알려 줘요 · ${intervalText(alerts.intervalMinutes)} 간격",
-            checked = alerts.restSuggestion, enabled = alerts.hasPet, onChange = onRest,
+            checked = alerts.restSuggestion,
+            enabled = alerts.hasPet,
+            onChange = onRest,
             onClickBody = onOpenInterval
         )
         ToggleRow(
-            MgIcons.Window, "창문 안전 알림",
+            MgIcons.Window,
+            "창문 안전 알림",
             "기준보다 많이 열리면 알려 줘요 · 기준 ${alerts.windowAlertPercent}%",
-            checked = alerts.windowAlert, enabled = alerts.hasPet, onChange = onWindow
+            checked = alerts.windowAlert,
+            enabled = alerts.hasPet,
+            onChange = onWindow
         )
         ToggleRow(
-            MgIcons.Flag, "도착 요약", "도착하면 점수와 다음 운전 팁을 보여 줘요",
-            checked = alerts.arrivalSummary, onChange = onArrival
+            MgIcons.Flag,
+            "도착 요약",
+            "도착하면 점수와 다음 운전 팁을 보여 줘요",
+            checked = alerts.arrivalSummary,
+            onChange = onArrival
         )
     }
     if (!alerts.hasPet) {
@@ -207,14 +243,30 @@ private fun ToggleRow(
 ) {
     RowCard(height) {
         Row(
-            Modifier.weight(1f).then(if (onClickBody != null) Modifier.clickable(onClick = onClickBody) else Modifier),
+            Modifier.weight(1f).then(
+                if (onClickBody !=
+                    null
+                ) {
+                    Modifier.clickable(onClick = onClickBody)
+                } else {
+                    Modifier
+                }
+            ),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Badge(icon, background = if (enabled) Mg.IconBg else Mg.Chip, tint = if (enabled) Mg.OrangeText else Mg.Muted)
+            Badge(
+                icon,
+                background = if (enabled) Mg.IconBg else Mg.Chip,
+                tint = if (enabled) Mg.OrangeText else Mg.Muted
+            )
             Spacer(Modifier.width(23.dp))
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                 Text(title, style = Mg.bold(titleSize, (titleSize * 1.3f).toInt()), color = Mg.Ink)
-                Text(body, style = Mg.regular(bodySize, (bodySize * 1.35f).toInt()), color = Mg.Muted)
+                Text(
+                    body,
+                    style = Mg.regular(bodySize, (bodySize * 1.35f).toInt()),
+                    color = Mg.Muted
+                )
             }
         }
         SettingsToggle(checked, onChange, enabled)
@@ -224,7 +276,9 @@ private fun ToggleRow(
 @Composable
 private fun RowCard(height: Dp, content: @Composable RowScope.() -> Unit) {
     Row(
-        Modifier.fillMaxWidth().height(height).clip(RoundedCornerShape(Mg.Radius)).background(Color.White)
+        Modifier.fillMaxWidth().height(
+            height
+        ).clip(RoundedCornerShape(Mg.Radius)).background(Color.White)
             .padding(start = 29.dp, end = 37.dp),
         verticalAlignment = Alignment.CenterVertically,
         content = content
@@ -232,8 +286,16 @@ private fun RowCard(height: Dp, content: @Composable RowScope.() -> Unit) {
 }
 
 @Composable
-private fun Badge(icon: ImageVector, size: Dp = 63.dp, background: Color = Mg.IconBg, tint: Color = Mg.OrangeText) {
-    Box(Modifier.size(size).clip(CircleShape).background(background), contentAlignment = Alignment.Center) {
+private fun Badge(
+    icon: ImageVector,
+    size: Dp = 63.dp,
+    background: Color = Mg.IconBg,
+    tint: Color = Mg.OrangeText
+) {
+    Box(
+        Modifier.size(size).clip(CircleShape).background(background),
+        contentAlignment = Alignment.Center
+    ) {
         MgIcon(icon, tint, size * 0.45f)
     }
 }
@@ -254,7 +316,12 @@ private fun SettingsToggle(checked: Boolean, onChange: (Boolean) -> Unit, enable
 
 @Composable
 private fun SectionLabel(text: String) {
-    Text(text, style = Mg.bold(23, 31), color = Mg.Muted, modifier = Modifier.padding(start = 8.dp, top = 24.dp, bottom = 12.dp))
+    Text(
+        text,
+        style = Mg.bold(23, 31),
+        color = Mg.Muted,
+        modifier = Modifier.padding(start = 8.dp, top = 24.dp, bottom = 12.dp)
+    )
 }
 
 @Composable
@@ -291,37 +358,52 @@ internal fun VehiclePage(
     val linked = link.linked
     // 연결된 차량
     Row(
-        Modifier.fillMaxWidth().height(170.dp).clip(RoundedCornerShape(Mg.Radius)).background(Color.White)
+        Modifier.fillMaxWidth().height(
+            170.dp
+        ).clip(RoundedCornerShape(Mg.Radius)).background(Color.White)
             .padding(start = 32.dp, end = 37.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Box(
-            Modifier.size(186.dp, 116.dp).clip(RoundedCornerShape(20.dp)).background(if (linked) Mg.IconBg else Mg.Chip),
+            Modifier.size(
+                186.dp,
+                116.dp
+            ).clip(RoundedCornerShape(20.dp)).background(if (linked) Mg.IconBg else Mg.Chip),
             contentAlignment = Alignment.Center
         ) {
-            Image(rememberVectorPainter(carIllustration(if (linked) Mg.Orange else Mg.BarGrey)), contentDescription = null, modifier = Modifier.size(158.dp, 75.dp))
+            Image(
+                rememberVectorPainter(carIllustration(if (linked) Mg.Orange else Mg.BarGrey)),
+                contentDescription = null,
+                modifier = Modifier.size(158.dp, 75.dp)
+            )
         }
         Spacer(Modifier.width(36.dp))
         Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             Text(
                 identity?.displayName ?: if (linked) "연결된 차량" else "차량",
-                style = Mg.bold(35, 46), color = Mg.Ink
+                style = Mg.bold(35, 46),
+                color = Mg.Ink
             )
             Text(
                 when {
-                    !linked -> "연동 해지됨" + (link.changedAt?.let { " · ${unlinkedAtLabel(it)}" } ?: "")
+                    !linked ->
+                        "연동 해지됨" +
+                            (link.changedAt?.let { " · ${unlinkedAtLabel(it)}" } ?: "")
                     identity == null -> "mungo 연결됨 · 차량 정보를 읽는 중"
                     identity.displayName == null -> "mungo 연결됨 · 차종 정보를 받지 못했어요"
                     else -> "mungo 연결됨 · ${syncLabel(identity.readAt)}"
                 },
-                style = Mg.regular(24, 32), color = Mg.Muted
+                style = Mg.regular(24, 32),
+                color = Mg.Muted
             )
         }
         if (linked) {
             Chip("연결됨", Mg.OrangeText, Mg.IconBg, MgIcons.Check)
             Spacer(Modifier.width(12.dp))
             Box(
-                Modifier.heightIn(min = 53.dp).clip(CircleShape).border(2.dp, Mg.Line, CircleShape).background(Color.White)
+                Modifier.heightIn(
+                    min = 53.dp
+                ).clip(CircleShape).border(2.dp, Mg.Line, CircleShape).background(Color.White)
                     .clickable(onClick = onUnlink).padding(horizontal = 28.dp, vertical = 10.dp),
                 contentAlignment = Alignment.Center
             ) { Text("해지", style = Mg.bold(24, 32), color = Mg.Ink) }
@@ -335,18 +417,32 @@ internal fun VehiclePage(
             ) { Text("다시 연결", style = Mg.bold(24, 32), color = Color.White) }
         }
     }
-    SectionLabel(if (linked) "필수 · 멍고의 핵심 기능이라 따로 끌 수 없어요" else "필수 · 다시 연결하면 바로 사용할 수 있어요 · 이동 기록과 프로필은 그대로 있어요")
+    SectionLabel(
+        if (linked) {
+            "필수 · 멍고의 핵심 기능이라 따로 끌 수 없어요"
+        } else {
+            "필수 · 다시 연결하면 바로 사용할 수 있어요 · 이동 기록과 프로필은 그대로 있어요"
+        }
+    )
     Column(verticalArrangement = Arrangement.spacedBy(13.dp)) {
         requiredFeatures.forEach { f ->
             RowCard(110.dp) {
-                Badge(f.icon, size = 60.dp, background = if (linked) Mg.IconBg else Mg.Chip, tint = if (linked) Mg.OrangeText else Mg.Muted)
+                Badge(
+                    f.icon,
+                    size = 60.dp,
+                    background = if (linked) Mg.IconBg else Mg.Chip,
+                    tint = if (linked) Mg.OrangeText else Mg.Muted
+                )
                 Spacer(Modifier.width(23.dp))
                 Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     Text(f.title, style = Mg.bold(27, 36), color = Mg.Ink)
                     Text(f.body, style = Mg.regular(21, 28), color = Mg.Muted)
                 }
-                if (linked) Chip("사용 중", Color(0xFF4E5968), Mg.Chip, MgIcons.Check, small = true)
-                else Chip("멈춤", Mg.Faint, Mg.Chip, small = true)
+                if (linked) {
+                    Chip("사용 중", Color(0xFF4E5968), Mg.Chip, MgIcons.Check, small = true)
+                } else {
+                    Chip("멈춤", Mg.Faint, Mg.Chip, small = true)
+                }
             }
         }
     }
@@ -360,10 +456,19 @@ internal fun VehiclePage(
 }
 
 @Composable
-private fun Chip(text: String, color: Color, background: Color, icon: ImageVector? = null, small: Boolean = false) {
+private fun Chip(
+    text: String,
+    color: Color,
+    background: Color,
+    icon: ImageVector? = null,
+    small: Boolean = false
+) {
     Row(
         Modifier.clip(CircleShape).background(background)
-            .padding(horizontal = if (small) 20.dp else 24.dp, vertical = if (small) 8.dp else 10.dp),
+            .padding(
+                horizontal = if (small) 20.dp else 24.dp,
+                vertical = if (small) 8.dp else 10.dp
+            ),
         verticalAlignment = Alignment.CenterVertically
     ) {
         icon?.let {
@@ -378,7 +483,11 @@ private fun Chip(text: String, color: Color, background: Color, icon: ImageVecto
 @Composable
 private fun UnlinkDialog(onCancel: () -> Unit, onConfirm: () -> Unit) {
     Column(
-        Modifier.width(857.dp).clip(RoundedCornerShape(33.dp)).background(Color.White).padding(horizontal = 53.dp, vertical = 48.dp)
+        Modifier.width(
+            857.dp
+        ).clip(
+            RoundedCornerShape(33.dp)
+        ).background(Color.White).padding(horizontal = 53.dp, vertical = 48.dp)
     ) {
         Badge(MgIcons.Car, size = 73.dp)
         Spacer(Modifier.height(28.dp))
@@ -394,11 +503,21 @@ private fun UnlinkDialog(onCancel: () -> Unit, onConfirm: () -> Unit) {
         Spacer(Modifier.height(48.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
             Box(
-                Modifier.weight(1f).height(103.dp).clip(CircleShape).border(2.dp, Mg.Line, CircleShape).clickable(onClick = onCancel),
+                Modifier.weight(
+                    1f
+                ).height(
+                    103.dp
+                ).clip(
+                    CircleShape
+                ).border(2.dp, Mg.Line, CircleShape).clickable(onClick = onCancel),
                 contentAlignment = Alignment.Center
             ) { Text("취소", style = Mg.bold(27, 36), color = Mg.Ink) }
             Box(
-                Modifier.weight(1f).height(103.dp).clip(CircleShape).background(Mg.Orange).clickable(onClick = onConfirm),
+                Modifier.weight(
+                    1f
+                ).height(
+                    103.dp
+                ).clip(CircleShape).background(Mg.Orange).clickable(onClick = onConfirm),
                 contentAlignment = Alignment.Center
             ) { Text("해지하기", style = Mg.bold(27, 36), color = Color.White) }
         }
@@ -417,10 +536,15 @@ private fun Bullet(icon: ImageVector, tint: Color, text: String, strong: Boolean
 @Composable
 private fun SettingsToast(text: String, modifier: Modifier) {
     Row(
-        modifier.height(86.dp).clip(CircleShape).background(Mg.Ink).padding(start = 30.dp, end = 36.dp),
+        modifier.height(
+            86.dp
+        ).clip(CircleShape).background(Mg.Ink).padding(start = 30.dp, end = 36.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(Modifier.size(40.dp).clip(CircleShape).background(Mg.Orange), contentAlignment = Alignment.Center) {
+        Box(
+            Modifier.size(40.dp).clip(CircleShape).background(Mg.Orange),
+            contentAlignment = Alignment.Center
+        ) {
             MgIcon(MgIcons.Check, Color.White, 24.dp)
         }
         Spacer(Modifier.width(16.dp))
@@ -435,23 +559,70 @@ private fun carIllustration(body: Color): ImageVector = remember(body) {
     val tyre = Color(0xFF191F28)
     val hub = Color(0xFFC9CED4)
     ImageVector.Builder("car", 158.dp, 75.dp, 157.82f, 74.91f).apply {
-        addPath(pathData = addPathNodes("M0 56.18V40.13C1.78002 32.9967 7.13002 28.5367 16.05 26.75L40.12 24.08L58.85 5.35C62.4167 1.78333 67.7667 0 74.9 0H115.02C122.153 0 127.503 2.67667 131.07 8.03L144.45 24.08C151.583 25.86 156.04 30.3167 157.82 37.45V56.18C157.82 59.7467 156.037 61.53 152.47 61.53H5.35002C1.78335 61.53 0 59.7467 0 56.18Z"), fill = SolidColor(body))
-        addPath(pathData = addPathNodes("M61.52 22.74L70.88 9.36C72.6667 7.58 75.3434 6.69 78.91 6.69H96.3V22.74H61.52Z"), fill = SolidColor(glass))
-        addPath(pathData = addPathNodes("M102.99 6.69H119.04C122.607 6.69 125.28 8.02667 127.06 10.7L135.09 22.74H102.99V6.69Z"), fill = SolidColor(glass))
-        addPath(pathData = addPathNodes("M10.69 33.44H5.35002C3.8699 33.44 2.67002 34.6399 2.67002 36.12V37.45C2.67002 38.9301 3.8699 40.13 5.35002 40.13H10.69C12.1701 40.13 13.37 38.9301 13.37 37.45V36.12C13.37 34.6399 12.1701 33.44 10.69 33.44Z"), fill = SolidColor(glass))
-        addPath(pathData = addPathNodes("M34.77 74.91A13.38 13.38 0 1 0 34.77 48.15A13.38 13.38 0 1 0 34.77 74.91Z"), fill = SolidColor(tyre))
-        addPath(pathData = addPathNodes("M34.77 66.88A5.35 5.35 0 1 0 34.77 56.18A5.35 5.35 0 1 0 34.77 66.88Z"), fill = SolidColor(hub))
-        addPath(pathData = addPathNodes("M125.72 74.91A13.38 13.38 0 1 0 125.72 48.15A13.38 13.38 0 1 0 125.72 74.91Z"), fill = SolidColor(tyre))
-        addPath(pathData = addPathNodes("M125.72 66.88A5.35 5.35 0 1 0 125.72 56.18A5.35 5.35 0 1 0 125.72 66.88Z"), fill = SolidColor(hub))
+        addPath(
+            pathData = addPathNodes(
+                "M0 56.18V40.13C1.78002 32.9967 7.13002 28.5367 16.05 26.75L40.12 24.08L58.85 5.35C62.4167 1.78333 67.7667 0 74.9 0H115.02C122.153 0 127.503 2.67667 131.07 8.03L144.45 24.08C151.583 25.86 156.04 30.3167 157.82 37.45V56.18C157.82 59.7467 156.037 61.53 152.47 61.53H5.35002C1.78335 61.53 0 59.7467 0 56.18Z"
+            ),
+            fill = SolidColor(body)
+        )
+        addPath(
+            pathData = addPathNodes(
+                "M61.52 22.74L70.88 9.36C72.6667 7.58 75.3434 6.69 78.91 6.69H96.3V22.74H61.52Z"
+            ),
+            fill = SolidColor(glass)
+        )
+        addPath(
+            pathData = addPathNodes(
+                "M102.99 6.69H119.04C122.607 6.69 125.28 8.02667 127.06 10.7L135.09 22.74H102.99V6.69Z"
+            ),
+            fill = SolidColor(glass)
+        )
+        addPath(
+            pathData = addPathNodes(
+                "M10.69 33.44H5.35002C3.8699 33.44 2.67002 34.6399 2.67002 36.12V37.45C2.67002 38.9301 3.8699 40.13 5.35002 40.13H10.69C12.1701 40.13 13.37 38.9301 13.37 37.45V36.12C13.37 34.6399 12.1701 33.44 10.69 33.44Z"
+            ),
+            fill = SolidColor(glass)
+        )
+        addPath(
+            pathData = addPathNodes(
+                "M34.77 74.91A13.38 13.38 0 1 0 34.77 48.15A13.38 13.38 0 1 0 34.77 74.91Z"
+            ),
+            fill = SolidColor(tyre)
+        )
+        addPath(
+            pathData = addPathNodes(
+                "M34.77 66.88A5.35 5.35 0 1 0 34.77 56.18A5.35 5.35 0 1 0 34.77 66.88Z"
+            ),
+            fill = SolidColor(hub)
+        )
+        addPath(
+            pathData = addPathNodes(
+                "M125.72 74.91A13.38 13.38 0 1 0 125.72 48.15A13.38 13.38 0 1 0 125.72 74.91Z"
+            ),
+            fill = SolidColor(tyre)
+        )
+        addPath(
+            pathData = addPathNodes(
+                "M125.72 66.88A5.35 5.35 0 1 0 125.72 56.18A5.35 5.35 0 1 0 125.72 66.88Z"
+            ),
+            fill = SolidColor(hub)
+        )
     }.build()
 }
 
 private fun unlinkedAtLabel(epoch: Long): String {
     val then = Calendar.getInstance().apply { timeInMillis = epoch }
     val now = Calendar.getInstance()
-    val sameDay = then.get(Calendar.YEAR) == now.get(Calendar.YEAR) && then.get(Calendar.DAY_OF_YEAR) == now.get(Calendar.DAY_OF_YEAR)
+    val sameDay =
+        then.get(Calendar.YEAR) == now.get(Calendar.YEAR) &&
+            then.get(Calendar.DAY_OF_YEAR) == now.get(Calendar.DAY_OF_YEAR)
     val time = SimpleDateFormat("a h:mm", Locale.KOREAN).format(then.time)
-    return if (sameDay) "오늘 $time" else SimpleDateFormat("M월 d일 ", Locale.KOREAN).format(then.time) + time
+    return if (sameDay) {
+        "오늘 $time"
+    } else {
+        SimpleDateFormat("M월 d일 ", Locale.KOREAN).format(then.time) +
+            time
+    }
 }
 
 private fun syncLabel(readAt: Long): String {
@@ -476,7 +647,9 @@ private val sdkFeatures = listOf(
 @Composable
 internal fun ColumnScope.AppInfoPage(version: String, linked: Boolean) {
     Row(
-        Modifier.fillMaxWidth().height(170.dp).clip(RoundedCornerShape(Mg.Radius)).background(Color.White)
+        Modifier.fillMaxWidth().height(
+            170.dp
+        ).clip(RoundedCornerShape(Mg.Radius)).background(Color.White)
             .padding(start = 44.dp, end = 43.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -495,19 +668,28 @@ internal fun ColumnScope.AppInfoPage(version: String, linked: Boolean) {
             Spacer(Modifier.height(20.dp))
             sdkFeatures.forEachIndexed { index, f ->
                 if (index > 0) Box(Modifier.fillMaxWidth().height(1.dp).background(Mg.Line))
-                Row(Modifier.fillMaxWidth().height(122.dp), verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    Modifier.fillMaxWidth().height(122.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Badge(f.icon, size = 61.dp)
                     Spacer(Modifier.width(22.dp))
                     Column(Modifier.weight(1f)) {
                         Text(f.title, style = Mg.bold(25, 34), color = Mg.Ink)
                         Text(f.sdk, style = Mg.regular(20, 27), color = Mg.Muted)
                     }
-                    if (linked) Chip("연결", Mg.OrangeText, Mg.IconBg, MgIcons.Check, small = true)
-                    else Chip("멈춤", Mg.Faint, Mg.Chip, small = true)
+                    if (linked) {
+                        Chip("연결", Mg.OrangeText, Mg.IconBg, MgIcons.Check, small = true)
+                    } else {
+                        Chip("멈춤", Mg.Faint, Mg.Chip, small = true)
+                    }
                 }
             }
         }
-        Column(Modifier.weight(1f).fillMaxHeight(), verticalArrangement = Arrangement.spacedBy(28.dp)) {
+        Column(
+            Modifier.weight(1f).fillMaxHeight(),
+            verticalArrangement = Arrangement.spacedBy(28.dp)
+        ) {
             InfoCard(Modifier.fillMaxWidth()) {
                 Text("멀미징후 기록", style = Mg.bold(28, 37), color = Mg.Ink)
                 Spacer(Modifier.height(8.dp))
@@ -531,7 +713,9 @@ internal fun ColumnScope.AppInfoPage(version: String, linked: Boolean) {
     Spacer(Modifier.height(10.dp))
     Text(
         "© 2026 Team 멍고 · 현대자동차그룹 차량용 앱 개발 공모전 출품작",
-        style = Mg.regular(19, 25), color = Color(0xFFB0B8C1), textAlign = TextAlign.Center,
+        style = Mg.regular(19, 25),
+        color = Color(0xFFB0B8C1),
+        textAlign = TextAlign.Center,
         modifier = Modifier.fillMaxWidth()
     )
 }
@@ -539,7 +723,9 @@ internal fun ColumnScope.AppInfoPage(version: String, linked: Boolean) {
 @Composable
 private fun InfoCard(modifier: Modifier, content: @Composable ColumnScope.() -> Unit) {
     Column(
-        modifier.clip(RoundedCornerShape(Mg.Radius)).background(Color.White).padding(horizontal = 36.dp, vertical = 36.dp),
+        modifier.clip(
+            RoundedCornerShape(Mg.Radius)
+        ).background(Color.White).padding(horizontal = 36.dp, vertical = 36.dp),
         content = content
     )
 }

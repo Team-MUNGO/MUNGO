@@ -120,7 +120,9 @@ class DrivingEventDetector(
     /** Estimated lateral acceleration (m/s²) for [degrees] of steering at [speedKmh]. */
     fun lateralMps2(degrees: Double, speedKmh: Double): Double {
         val v = abs(speedKmh) / 3.6
-        val wheel = Math.toRadians(abs(degrees) / config.steeringRatio).coerceAtMost(Math.toRadians(45.0))
+        val wheel = Math.toRadians(
+            abs(degrees) / config.steeringRatio
+        ).coerceAtMost(Math.toRadians(45.0))
         return v * v * tan(wheel) / config.wheelbaseM
     }
 

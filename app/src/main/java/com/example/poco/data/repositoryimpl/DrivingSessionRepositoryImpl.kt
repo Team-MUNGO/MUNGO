@@ -40,11 +40,11 @@ import com.example.poco.data.record.TripEventEntity
 import com.example.poco.data.record.TripEventType
 import com.example.poco.data.record.TripRecordSink
 import com.example.poco.data.repository.DrivingSessionRepository
-import com.example.poco.data.repository.VehicleMotionRepository
 import com.example.poco.data.repository.HvacRepository
 import com.example.poco.data.repository.NaviRepository
 import com.example.poco.data.repository.RestRecommendationDue
 import com.example.poco.data.repository.TtsRepository
+import com.example.poco.data.repository.VehicleMotionRepository
 import com.example.poco.data.repository.VehicleRepository
 import com.example.poco.data.repository.WindowRepository
 import com.example.poco.data.settings.UserSettingsRepository
@@ -129,23 +129,38 @@ class DrivingSessionRepositoryImpl @Inject constructor(
 
     private fun epoch(mono: Long) = startedEpoch + (mono - started)
 
-    private fun record(type: String, delta: Int? = null, after: Int? = null, detail: String? = null, key: String? = null, at: Long = clock.now()) {
+    private fun record(
+        type: String,
+        delta: Int? = null,
+        after: Int? = null,
+        detail: String? = null,
+        key: String? = null,
+        at: Long = clock.now()
+    ) {
         val snapshot = state.value
         val trip = snapshot.tripId ?: return
         val eventEpoch = epoch(at)
         val fix = latestLocation?.takeIf {
-            eventEpoch - it.epochMs in 0..30_000 && it.latitude.isFinite() && it.longitude.isFinite() &&
-                it.latitude in -90.0..90.0 && it.longitude in -180.0..180.0
+            eventEpoch - it.epochMs in 0..30_000 &&
+                it.latitude.isFinite() &&
+                it.longitude.isFinite() &&
+                it.latitude in -90.0..90.0 &&
+                it.longitude in -180.0..180.0
         }
-        recorder.event(TripEventEntity(
-            tripId = trip, atEpoch = eventEpoch, type = type, scoreDelta = delta,
-            scoreAfter = after, detail = detail, dedupeKey = key,
-            scoreBefore = if (after != null && delta != null) after - delta else null,
-            latitude = fix?.latitude, longitude = fix?.longitude, locationAtEpoch = fix?.epochMs,
-            temperatureC = snapshot.temperature.valueOrNull(), windowPercent = snapshot.windowPercent.valueOrNull(),
-            seat = snapshot.settings?.seat?.name,
-            guidanceText = snapshot.guidance?.displayText ?: snapshot.gleoResponse
-        ))
+        recorder.event(
+            TripEventEntity(
+                tripId = trip, atEpoch = eventEpoch, type = type, scoreDelta = delta,
+                scoreAfter = after, detail = detail, dedupeKey = key,
+                scoreBefore = if (after != null && delta != null) after - delta else null,
+                latitude = fix?.latitude,
+                longitude = fix?.longitude,
+                locationAtEpoch = fix?.epochMs,
+                temperatureC = snapshot.temperature.valueOrNull(),
+                windowPercent = snapshot.windowPercent.valueOrNull(),
+                seat = snapshot.settings?.seat?.name,
+                guidanceText = snapshot.guidance?.displayText ?: snapshot.gleoResponse
+            )
+        )
     }
 
     override fun start(settings: DrivingSettings) {
@@ -195,9 +210,13 @@ class DrivingSessionRepositoryImpl @Inject constructor(
                     p.changeInterval(minutes, started)
                     recorder.begin(
                         TripEntity(
-                            id = tripId, petName = settings.petName, petWeightTenths = settings.weightTenths,
-                            petSize = settings.petSize?.name, seat = settings.seat.name,
-                            startedAtEpoch = startedEpoch, startRestIntervalMinutes = p.snapshot.intervalMinutes,
+                            id = tripId,
+                            petName = settings.petName,
+                            petWeightTenths = settings.weightTenths,
+                            petSize = settings.petSize?.name,
+                            seat = settings.seat.name,
+                            startedAtEpoch = startedEpoch,
+                            startRestIntervalMinutes = p.snapshot.intervalMinutes,
                             simulated = simulated
                         )
                     )
@@ -288,8 +307,20 @@ class DrivingSessionRepositoryImpl @Inject constructor(
                 if (clock.now() - started > 8_000) {
                     mutableState.update {
                         it.copy(
-                            speed = if (it.speed == Reading.Unknown) Reading.Unavailable("속도 수신 없음") else it.speed,
-                            gear = if (it.gear == Reading.Unknown) Reading.Unavailable("기어 수신 없음") else it.gear
+                            speed = if (it.speed ==
+                                Reading.Unknown
+                            ) {
+                                Reading.Unavailable("속도 수신 없음")
+                            } else {
+                                it.speed
+                            },
+                            gear = if (it.gear ==
+                                Reading.Unknown
+                            ) {
+                                Reading.Unavailable("기어 수신 없음")
+                            } else {
+                                it.gear
+                            }
                         )
                     }
                 }
@@ -303,12 +334,21 @@ class DrivingSessionRepositoryImpl @Inject constructor(
                 }
                 planner?.checkRecommendation(clock.now())?.let { due ->
                     val eventId = "rest-${tripId.take(8)}-${due.cycle}"
-                    record(TripEventType.AI_REST_REQUEST, detail = "cycle ${due.cycle}", key = eventId)
-                    recommendations.tryEmit(RestRecommendationDue(tripId, due.cycle, eventId, due.remainingMs))
+                    record(
+                        TripEventType.AI_REST_REQUEST,
+                        detail = "cycle ${due.cycle}",
+                        key = eventId
+                    )
+                    recommendations.tryEmit(
+                        RestRecommendationDue(tripId, due.cycle, eventId, due.remainingMs)
+                    )
                 }
                 publishRest()
                 mutableState.update {
-                    it.copy(elapsedMs = (clock.now() - started).coerceAtLeast(0), comfort = calculator.state)
+                    it.copy(
+                        elapsedMs = (clock.now() - started).coerceAtLeast(0),
+                        comfort = calculator.state
+                    )
                 }
             }
         }
@@ -316,7 +356,10 @@ class DrivingSessionRepositoryImpl @Inject constructor(
 
     private fun onSpeed(update: VehicleUpdate.Speed) {
         val sample = update.reading.valueOrNull()
-        if (sample != null && sample.at <= clock.now() && clock.now() - sample.at <= config.sensorStaleMs) {
+        if (sample != null &&
+            sample.at <= clock.now() &&
+            clock.now() - sample.at <= config.sensorStaleMs
+        ) {
             applyEvents(detector.onSpeed(sample))
             mutableState.update { it.copy(speed = update.reading) }
             // Actual re-departure: moving in a non-P gear. P->D at 0 km/h is not a departure.
@@ -327,7 +370,15 @@ class DrivingSessionRepositoryImpl @Inject constructor(
         } else {
             detector.resetSpeed()
             mutableState.update {
-                it.copy(speed = if (sample != null) Reading.Unavailable("차량 속도 갱신 지연") else update.reading)
+                it.copy(
+                    speed = if (sample !=
+                        null
+                    ) {
+                        Reading.Unavailable("차량 속도 갱신 지연")
+                    } else {
+                        update.reading
+                    }
+                )
             }
         }
     }
@@ -338,8 +389,10 @@ class DrivingSessionRepositoryImpl @Inject constructor(
         val rest = planner?.snapshot
         val resting = rest != null && rest.phase != RestPhase.DRIVING && parked()
         val speed = state.value.speed.valueOrNull()
-        val stable = state.value.gear.valueOrNull() == DrivingGear.DRIVE && speed != null &&
-            clock.now() - speed.at <= config.sensorStaleMs && abs(speed.kmh) >= 5
+        val stable = state.value.gear.valueOrNull() == DrivingGear.DRIVE &&
+            speed != null &&
+            clock.now() - speed.at <= config.sensorStaleMs &&
+            abs(speed.kmh) >= 5
         calculator.tick(resting, stable)
         drainScore()
     }
@@ -347,8 +400,17 @@ class DrivingSessionRepositoryImpl @Inject constructor(
     private fun drainScore() {
         calculator.drainChanges().forEach { change ->
             record(
-                if (change.reason == "RECOVERY") TripEventType.SCORE_RECOVERY else TripEventType.SCORE_PENALTY,
-                change.delta, change.scoreAfter, change.reason, at = change.at
+                if (change.reason ==
+                    "RECOVERY"
+                ) {
+                    TripEventType.SCORE_RECOVERY
+                } else {
+                    TripEventType.SCORE_PENALTY
+                },
+                change.delta,
+                change.scoreAfter,
+                change.reason,
+                at = change.at
             )
         }
     }
@@ -364,11 +426,17 @@ class DrivingSessionRepositoryImpl @Inject constructor(
         val now = clock.now()
         if (value != null && now - lastTemperatureSample >= 60_000) {
             lastTemperatureSample = now
-            record(TripEventType.TEMPERATURE_SAMPLE, detail = "%.1f".format(java.util.Locale.ROOT, value))
+            record(
+                TripEventType.TEMPERATURE_SAMPLE,
+                detail = "%.1f".format(java.util.Locale.ROOT, value)
+            )
         }
         val outside = status == CabinTemperatureStatus.HOT || status == CabinTemperatureStatus.COLD
         if (outside && status != lastTemperatureStatus) {
-            record(TripEventType.TEMPERATURE_OUT_OF_RANGE, detail = "${status.name}:%.1f".format(java.util.Locale.ROOT, value))
+            record(
+                TripEventType.TEMPERATURE_OUT_OF_RANGE,
+                detail = "${status.name}:%.1f".format(java.util.Locale.ROOT, value)
+            )
         }
         // UNKNOWN (no measurement) neither ends nor starts an episode: no value is invented.
         if (status != CabinTemperatureStatus.UNKNOWN) lastTemperatureStatus = status
@@ -405,7 +473,11 @@ class DrivingSessionRepositoryImpl @Inject constructor(
             }
             is RestEvent.Completed -> {
                 calculator.markRestCompleted()
-                record(TripEventType.REST_COMPLETED, detail = event.durationMs.toString(), at = event.departedAt)
+                record(
+                    TripEventType.REST_COMPLETED,
+                    detail = event.durationMs.toString(),
+                    at = event.departedAt
+                )
                 record(TripEventType.DEPARTED, at = event.departedAt)
                 // Rest-proposal guidance belongs to the finished cycle.
                 ledger.removeWhere { it.priority == GuidancePriority.REST_PROPOSAL }
@@ -463,7 +535,9 @@ class DrivingSessionRepositoryImpl @Inject constructor(
                 throw e
             } catch (e: Exception) {
                 if (token == generation) {
-                    mutableState.update { it.copy(ttsError = e.message ?: "음성 안내 실패", ttsSpeaking = false) }
+                    mutableState.update {
+                        it.copy(ttsError = e.message ?: "음성 안내 실패", ttsSpeaking = false)
+                    }
                 }
             } finally {
                 ledger.finishedSpeaking(guidance.id)
@@ -488,7 +562,11 @@ class DrivingSessionRepositoryImpl @Inject constructor(
         announce(
             Guidance(
                 proposal.eventId,
-                if (proposal.automatic) GuidancePriority.REST_PROPOSAL else GuidancePriority.AI_ANSWER,
+                if (proposal.automatic) {
+                    GuidancePriority.REST_PROPOSAL
+                } else {
+                    GuidancePriority.AI_ANSWER
+                },
                 text,
                 proposal.response.ttsText
             )
@@ -523,9 +601,19 @@ class DrivingSessionRepositoryImpl @Inject constructor(
                 record(TripEventType.WAYPOINT_ADDED, detail = place.placeId)
                 val eta = tracker.etaMinutesText()
                 state.value.proposal?.let { ledger.remove(it.eventId) }
-                mutableState.update { it.copy(waypoint = WaypointUiState.Added(place.name, eta), proposal = null) }
-                val text = if (eta != null) "$eta 뒤 ${place.name}에 들를게요." else "${place.name}을 경유지로 추가했어요."
-                announce(Guidance("wp-added-${place.placeId}", GuidancePriority.REST_PROPOSAL, text))
+                mutableState.update {
+                    it.copy(waypoint = WaypointUiState.Added(place.name, eta), proposal = null)
+                }
+                val text = if (eta !=
+                    null
+                ) {
+                    "$eta 뒤 ${place.name}에 들를게요."
+                } else {
+                    "${place.name}을 경유지로 추가했어요."
+                }
+                announce(
+                    Guidance("wp-added-${place.placeId}", GuidancePriority.REST_PROPOSAL, text)
+                )
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -537,7 +625,9 @@ class DrivingSessionRepositoryImpl @Inject constructor(
                 }
                 record(TripEventType.WAYPOINT_FAILED, detail = message.take(120))
                 // Failure is shown on screen only; success-only TTS policy.
-                mutableState.update { it.copy(waypoint = WaypointUiState.Failed(place.name, message)) }
+                mutableState.update {
+                    it.copy(waypoint = WaypointUiState.Failed(place.name, message))
+                }
             }
         }
     }
@@ -548,7 +638,9 @@ class DrivingSessionRepositoryImpl @Inject constructor(
         val added = state.value.waypoint as? WaypointUiState.Added ?: return
         if (added.cancelling || tracker.finished) return
         val token = generation
-        mutableState.update { it.copy(waypoint = added.copy(cancelling = true, cancelError = null)) }
+        mutableState.update {
+            it.copy(waypoint = added.copy(cancelling = true, cancelError = null))
+        }
         scope.launch {
             try {
                 waypoints.remove(tracker.place)
@@ -566,7 +658,13 @@ class DrivingSessionRepositoryImpl @Inject constructor(
                 }
                 mutableState.update {
                     val w = it.waypoint
-                    if (w is WaypointUiState.Added) it.copy(waypoint = w.copy(cancelling = false, cancelError = message)) else it
+                    if (w is WaypointUiState.Added) {
+                        it.copy(
+                            waypoint = w.copy(cancelling = false, cancelError = message)
+                        )
+                    } else {
+                        it
+                    }
                 }
             }
         }
@@ -580,13 +678,21 @@ class DrivingSessionRepositoryImpl @Inject constructor(
                 if (!tracker.finished) {
                     mutableState.update {
                         val w = it.waypoint
-                        if (w is WaypointUiState.Added) it.copy(waypoint = w.copy(etaText = tracker.etaMinutesText())) else it
+                        if (w is WaypointUiState.Added) {
+                            it.copy(
+                                waypoint = w.copy(etaText = tracker.etaMinutesText())
+                            )
+                        } else {
+                            it
+                        }
                     }
                 }
             }
             is NaviRouteUpdate.Arrived -> if (update.first) {
                 record(TripEventType.WAYPOINT_ARRIVED, detail = update.name.take(100))
-                mutableState.update { it.copy(waypoint = WaypointUiState.Arrived(tracker.place.name)) }
+                mutableState.update {
+                    it.copy(waypoint = WaypointUiState.Arrived(tracker.place.name))
+                }
                 tracker.onArrived(parked())?.let(::onWaypointSignal)
             }
             NaviRouteUpdate.RouteEnded -> if (!tracker.arrived) {
@@ -598,13 +704,27 @@ class DrivingSessionRepositoryImpl @Inject constructor(
     private fun onWaypointSignal(signal: WaypointSignal) {
         when (signal) {
             is WaypointSignal.FiveMinutes -> announce(
-                Guidance("wp-5min-${signal.placeId}", GuidancePriority.WAYPOINT_FIVE_MINUTES, "5분 뒤 휴게소예요. 물을 준비해 주세요.")
+                Guidance(
+                    "wp-5min-${signal.placeId}",
+                    GuidancePriority.WAYPOINT_FIVE_MINUTES,
+                    "5분 뒤 휴게소예요. 물을 준비해 주세요."
+                )
             )
             is WaypointSignal.ArrivedAndParked -> {
                 ledger.removeWhere { it.id.startsWith("wp-5min-") || it.id.startsWith("wp-added-") }
-                announce(Guidance("wp-arrived-${signal.placeId}", GuidancePriority.WAYPOINT_ARRIVAL, "도착했어요. 물부터 챙겨 주세요."))
+                announce(
+                    Guidance(
+                        "wp-arrived-${signal.placeId}",
+                        GuidancePriority.WAYPOINT_ARRIVAL,
+                        "도착했어요. 물부터 챙겨 주세요."
+                    )
+                )
                 // Verified arrival + confirmed P: a real rest starts (not P alone).
-                planner?.startRest(clock.now(), parked(), RestStartSource.WAYPOINT_ARRIVAL)?.let(::onRestEvent)
+                planner?.startRest(
+                    clock.now(),
+                    parked(),
+                    RestStartSource.WAYPOINT_ARRIVAL
+                )?.let(::onRestEvent)
             }
             is WaypointSignal.Cancelled -> {
                 record(TripEventType.WAYPOINT_CANCELLED, detail = signal.placeId)
@@ -612,7 +732,9 @@ class DrivingSessionRepositoryImpl @Inject constructor(
                 publishGuidance()
                 waypointTracker = null
                 mutableState.update {
-                    val name = (it.waypoint as? WaypointUiState.Added)?.name ?: return@update it.copy(waypoint = WaypointUiState.None)
+                    val name =
+                        (it.waypoint as? WaypointUiState.Added)?.name
+                            ?: return@update it.copy(waypoint = WaypointUiState.None)
                     it.copy(waypoint = WaypointUiState.Cancelled(name))
                 }
             }
@@ -631,7 +753,9 @@ class DrivingSessionRepositoryImpl @Inject constructor(
             mutableState.update { it.copy(canCloseWindow = range.canWrite) }
             scope.launch(start = CoroutineStart.UNDISPATCHED) {
                 windows.observeWindowPosition(settings.seat.window)
-                    .catch { error -> if (current()) windowUnavailable(error.message ?: "창문 관찰 실패") }
+                    .catch { error ->
+                        if (current()) windowUnavailable(error.message ?: "창문 관찰 실패")
+                    }
                     .collect { raw ->
                         if (current()) {
                             windowRevision++
@@ -650,7 +774,9 @@ class DrivingSessionRepositoryImpl @Inject constructor(
     }
 
     private fun windowUnavailable(reason: String) {
-        mutableState.update { it.copy(windowPercent = Reading.Unavailable(reason), canCloseWindow = false) }
+        mutableState.update {
+            it.copy(windowPercent = Reading.Unavailable(reason), canCloseWindow = false)
+        }
     }
 
     private fun windowGuidanceId() = "window-$windowEpisode"
@@ -662,9 +788,12 @@ class DrivingSessionRepositoryImpl @Inject constructor(
             return
         }
         // 설정 > 알림 '창문 안전 알림'을 끄면 열림 경고 · 음성 안내를 하지 않는다 (위치 값은 계속 보여 준다)
-        val entered = warningDetector.update(percent) && mutableState.value.settings?.windowAlerts != false
+        val entered =
+            warningDetector.update(percent) && mutableState.value.settings?.windowAlerts != false
         mutableState.update {
-            val closing = it.closeStatus == WindowCloseStatus.REQUESTING || it.closeStatus == WindowCloseStatus.VERIFYING
+            val closing =
+                it.closeStatus == WindowCloseStatus.REQUESTING ||
+                    it.closeStatus == WindowCloseStatus.VERIFYING
             it.copy(
                 windowPercent = Reading.Value(percent),
                 canCloseWindow = range.canWrite,
@@ -706,7 +835,9 @@ class DrivingSessionRepositoryImpl @Inject constructor(
         if (!snapshot.canCloseWindow) return
         val token = generation
         closeJob = scope.launch {
-            mutableState.update { it.copy(closeStatus = WindowCloseStatus.REQUESTING, closeError = null) }
+            mutableState.update {
+                it.copy(closeStatus = WindowCloseStatus.REQUESTING, closeError = null)
+            }
             try {
                 withTimeout(config.closeTimeoutMs) {
                     windows.setWindowPosition(settings.seat.window, 0).getOrThrow()
@@ -734,18 +865,32 @@ class DrivingSessionRepositoryImpl @Inject constructor(
 
     private fun closeFailed(message: String) {
         if (state.value.windowPercent.valueOrNull() == 0.0) return
-        mutableState.update { it.copy(windowWarning = true, closeStatus = WindowCloseStatus.FAILED, closeError = message) }
+        mutableState.update {
+            it.copy(
+                windowWarning = true,
+                closeStatus = WindowCloseStatus.FAILED,
+                closeError = message
+            )
+        }
     }
 
     override fun dismissWindowWarning() {
-        if (state.value.closeStatus == WindowCloseStatus.REQUESTING || state.value.closeStatus == WindowCloseStatus.VERIFYING) return
+        if (state.value.closeStatus == WindowCloseStatus.REQUESTING ||
+            state.value.closeStatus == WindowCloseStatus.VERIFYING
+        ) {
+            return
+        }
         mutableState.update { it.copy(windowWarning = false) }
         ledger.remove(windowGuidanceId())
         publishGuidance()
     }
 
     override fun updateGleoResponse(text: String?) {
-        if (state.value.active) mutableState.update { it.copy(gleoResponse = text?.takeIf(String::isNotBlank)) }
+        if (state.value.active) {
+            mutableState.update {
+                it.copy(gleoResponse = text?.takeIf(String::isNotBlank))
+            }
+        }
     }
 
     override fun end() {
@@ -763,7 +908,14 @@ class DrivingSessionRepositoryImpl @Inject constructor(
             drainScore()
             finishScope.launch {
                 runCatching {
-                    recorder.complete(tripId, epoch(now), final, (elapsed - restMs).coerceAtLeast(0), restMs, s.restCount)
+                    recorder.complete(
+                        tripId,
+                        epoch(now),
+                        final,
+                        (elapsed - restMs).coerceAtLeast(0),
+                        restMs,
+                        s.restCount
+                    )
                 }.onFailure { Timber.w(it, "trip completion") }
             }
         }

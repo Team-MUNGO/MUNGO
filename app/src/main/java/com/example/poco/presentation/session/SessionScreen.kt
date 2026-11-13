@@ -1,13 +1,11 @@
 package com.example.poco.presentation.session
 
-import com.example.poco.data.assistant.FUSED_LOCATION_PERMISSION
-import androidx.compose.ui.platform.LocalContext
-import android.provider.Settings
-import android.net.Uri
-import android.content.Intent
-import android.content.ContextWrapper
-import android.content.Context
 import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
+import android.content.Intent
+import android.net.Uri
+import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -40,6 +38,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -52,8 +51,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.poco.R
 import com.example.poco.core.driving.DrivingGear
 import com.example.poco.core.driving.RestPhase
-import com.example.poco.core.driving.WindowCloseStatus
 import com.example.poco.core.driving.valueOrNull
+import com.example.poco.data.assistant.FUSED_LOCATION_PERMISSION
 import com.example.poco.data.model.DrivingSessionState
 import com.example.poco.presentation.design.DesignCanvas
 import com.example.poco.presentation.design.DrawableIcon
@@ -110,12 +109,16 @@ fun SessionRoute(
         rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
             assistant.locationPermission(granted)
             // 첫 실행에서 거부한 뒤 '다시 묻지 않음' 상태면 시스템 창이 뜨지 않는다 → 앱 설정의 권한 화면으로 보낸다
-            if (!granted && activity != null &&
+            if (!granted &&
+                activity != null &&
                 !activity.shouldShowRequestPermissionRationale(FUSED_LOCATION_PERMISSION)
             ) {
                 runCatching {
                     activity.startActivity(
-                        Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.fromParts("package", activity.packageName, null))
+                        Intent(
+                            Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            Uri.fromParts("package", activity.packageName, null)
+                        )
                     )
                 }
             }
@@ -127,10 +130,14 @@ fun SessionRoute(
     val profile by viewModel.profile.collectAsStateWithLifecycle()
     // Denial still permits the session; speed then explicitly reports unavailable.
     val permission =
-        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { viewModel.startWithProfile() }
+        rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+            viewModel.startWithProfile()
+        }
     val start = {
         when (profile) {
-            is SessionProfile.Ready -> permission.launch(arrayOf("android.car.permission.CAR_SPEED", "pleos.car.permission.FUSED_LOCATION"))
+            is SessionProfile.Ready -> permission.launch(
+                arrayOf("android.car.permission.CAR_SPEED", "pleos.car.permission.FUSED_LOCATION")
+            )
             SessionProfile.Missing -> onOpenPetProfile()
             SessionProfile.Loading -> Unit
         }
@@ -197,9 +204,9 @@ data class SessionActions(
 internal val SplitLayoutMaxWidth = 1000.dp
 
 /** Figma app area (header + content) plus the outer margin: full 1172 x 980, split 578 x 980. */
-private const val FullRefWidth = 1220f
-private const val SplitRefWidth = 618f
-private const val RefHeight = 1028f
+private const val FULL_REF_WIDTH = 1220f
+private const val SPLIT_REF_WIDTH = 618f
+private const val REF_HEIGHT = 1028f
 
 @Composable
 fun SessionScreen(
@@ -225,19 +232,40 @@ fun SessionScreen(
     val state = uiState.session
     var confirmEnd by rememberSaveable { mutableStateOf(false) }
     val actions = SessionActions(
-        onStart, { confirmEnd = true }, onAsk, onCancelAi, onSetupAi, onDismissProposal, onAddWaypoint,
-        onCancelWaypoint, onStartRest, onReadyToDepart, onOpenHistory, onOpenSettings, onDismissWarning, onCloseWindow,
+        onStart, {
+            confirmEnd = true
+        }, onAsk, onCancelAi, onSetupAi, onDismissProposal, onAddWaypoint,
+        onCancelWaypoint,
+        onStartRest,
+        onReadyToDepart,
+        onOpenHistory,
+        onOpenSettings,
+        onDismissWarning,
+        onCloseWindow,
         onAllowLocation
     )
     BoxWithConstraints(modifier.fillMaxSize().background(Mg.Bg)) {
         val split = maxWidth < SplitLayoutMaxWidth
         // Each layout has its own reference size; the split panel is not a scaled-down full screen.
-        DesignCanvas(if (split) SplitRefWidth else FullRefWidth, RefHeight) {
-            Column(Modifier.fillMaxSize().padding(horizontal = if (split) 20.dp else 24.dp, vertical = 24.dp)) {
+        DesignCanvas(if (split) SPLIT_REF_WIDTH else FULL_REF_WIDTH, REF_HEIGHT) {
+            Column(
+                Modifier.fillMaxSize().padding(
+                    horizontal = if (split) 20.dp else 24.dp,
+                    vertical = 24.dp
+                )
+            ) {
                 DrivingHeader(state, assistantState, actions, showStatus = split)
                 Spacer(Modifier.height(22.dp))
                 Box(Modifier.weight(1f).fillMaxWidth()) {
-                    if (split) SplitDrivingLayout(state, assistantState, actions) else FullDrivingLayout(state, assistantState, actions)
+                    if (split) {
+                        SplitDrivingLayout(
+                            state,
+                            assistantState,
+                            actions
+                        )
+                    } else {
+                        FullDrivingLayout(state, assistantState, actions)
+                    }
                 }
             }
             if (state.windowWarning && !split) {
@@ -258,7 +286,12 @@ fun SessionScreen(
 
 /** Figma "멍고 헤더": paw + mungo, status chip, then the round Gleo (voice) button. */
 @Composable
-private fun DrivingHeader(state: DrivingSessionState, ai: AssistantUiState, actions: SessionActions, showStatus: Boolean) {
+private fun DrivingHeader(
+    state: DrivingSessionState,
+    ai: AssistantUiState,
+    actions: SessionActions,
+    showStatus: Boolean
+) {
     val resting = state.active && state.rest.phase != RestPhase.DRIVING
     val parked = state.gear.valueOrNull() == DrivingGear.PARK
     Row(Modifier.fillMaxWidth().height(60.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -267,24 +300,44 @@ private fun DrivingHeader(state: DrivingSessionState, ai: AssistantUiState, acti
         Text("mungo", style = Mg.bold(28, 35), color = Mg.Ink)
         Spacer(Modifier.width(16.dp))
         // Figma 488:10266 · 488:10634: 전체 화면에선 상태 칩이 왼쪽 카드 맨 위로 옮겨 갔다 (헤더엔 로고만)
-        if (showStatus) when {
-            !state.active -> Pill("주행 준비", background = Mg.Chip, color = Mg.Muted, height = 40.dp)
-            resting -> Pill(
-                "휴식 중", background = Mg.Peach, color = Mg.OrangeText, height = 40.dp,
-                leading = { DrawableIcon(R.drawable.driving_cup, Mg.OrangeText, 16.dp) }
-            )
-            else -> Pill("주행 중", background = Mg.Peach, color = Mg.OrangeText, height = 40.dp)
+        if (showStatus) {
+            when {
+                !state.active -> Pill(
+                    "주행 준비",
+                    background = Mg.Chip,
+                    color = Mg.Muted,
+                    height = 40.dp
+                )
+                resting -> Pill(
+                    "휴식 중",
+                    background = Mg.Peach,
+                    color = Mg.OrangeText,
+                    height = 40.dp,
+                    leading = { DrawableIcon(R.drawable.driving_cup, Mg.OrangeText, 16.dp) }
+                )
+                else -> Pill("주행 중", background = Mg.Peach, color = Mg.OrangeText, height = 40.dp)
+            }
         }
         if (state.simulatedSource) {
             Spacer(Modifier.width(10.dp))
-            Pill("에뮬레이터 데이터", background = Color(0xFFFFF4E8), color = Mg.OrangeText, height = 40.dp, style = Mg.Caption)
+            Pill(
+                "에뮬레이터 데이터",
+                background = Color(0xFFFFF4E8),
+                color = Mg.OrangeText,
+                height = 40.dp,
+                style = Mg.Caption
+            )
         }
         Spacer(Modifier.weight(1f))
         if (!state.active) {
             HeaderLink("이동 기록", actions.onOpenHistory)
             HeaderLink("설정", actions.onOpenSettings)
         } else {
-            if (state.rest.phase == RestPhase.DRIVING && parked) HeaderLink("휴식 시작", actions.onStartRest)
+            if (state.rest.phase == RestPhase.DRIVING &&
+                parked
+            ) {
+                HeaderLink("휴식 시작", actions.onStartRest)
+            }
             HeaderLink("주행 종료", actions.onEnd)
         }
         Spacer(Modifier.width(8.dp))
@@ -296,7 +349,9 @@ private fun DrivingHeader(state: DrivingSessionState, ai: AssistantUiState, acti
 private fun HeaderLink(text: String, onClick: () -> Unit) {
     Text(
         text,
-        Modifier.clip(CircleShape).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 12.dp),
+        Modifier.clip(
+            CircleShape
+        ).clickable(onClick = onClick).padding(horizontal = 14.dp, vertical = 12.dp),
         style = Mg.BodyStrong,
         color = Mg.Muted
     )
@@ -307,7 +362,9 @@ private fun GleoButton(state: DrivingSessionState, ai: AssistantUiState, actions
     val ready = ai.configured && ai.consented && (ai.connected || ai.anonymousAuth)
     val listening = ai.phase != AssistantPhase.IDLE
     Box(
-        Modifier.size(60.dp).clip(CircleShape).background(if (listening) Mg.Orange else Color.White, CircleShape)
+        Modifier.size(
+            60.dp
+        ).clip(CircleShape).background(if (listening) Mg.Orange else Color.White, CircleShape)
             .clickable {
                 when {
                     listening -> actions.onCancelAi()
@@ -323,35 +380,66 @@ private fun GleoButton(state: DrivingSessionState, ai: AssistantUiState, actions
 }
 
 @Composable
-private fun FullDrivingLayout(state: DrivingSessionState, ai: AssistantUiState, actions: SessionActions) {
+private fun FullDrivingLayout(
+    state: DrivingSessionState,
+    ai: AssistantUiState,
+    actions: SessionActions
+) {
     val resting = state.active && state.rest.phase != RestPhase.DRIVING
     Row(Modifier.fillMaxSize(), horizontalArrangement = Arrangement.spacedBy(20.dp)) {
         if (resting) {
             RestSummaryFull(state, Modifier.width(420.dp).fillMaxHeight())
             Column(Modifier.weight(1f).fillMaxHeight()) {
                 // Figma 488:10672 ~ 488:10701: 412 · 30 · 186 · 29 · 120 · 25 · 96
-                RestChecklist(state, compact = false, modifier = Modifier.fillMaxWidth().height(412.dp))
+                RestChecklist(
+                    state,
+                    compact = false,
+                    modifier = Modifier.fillMaxWidth().height(412.dp)
+                )
                 Spacer(Modifier.height(30.dp))
-                GleoSlot(state, ai, actions, compact = false, modifier = Modifier.fillMaxWidth().height(186.dp), restMode = true)
+                GleoSlot(
+                    state,
+                    ai,
+                    actions,
+                    compact = false,
+                    modifier = Modifier.fillMaxWidth().height(186.dp),
+                    restMode = true
+                )
                 Spacer(Modifier.height(29.dp))
-                RestPlaceCard(state, compact = false, modifier = Modifier.fillMaxWidth().height(120.dp))
+                RestPlaceCard(
+                    state,
+                    compact = false,
+                    modifier = Modifier.fillMaxWidth().height(120.dp)
+                )
                 Spacer(Modifier.weight(1f))
                 RestDepartButton(state, actions, Modifier.fillMaxWidth().height(96.dp))
             }
         } else {
             ComfortCardFull(state, Modifier.width(420.dp).fillMaxHeight())
             Column(Modifier.weight(1f).fillMaxHeight()) {
-                Row(Modifier.fillMaxWidth().height(218.dp), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                Row(
+                    Modifier.fillMaxWidth().height(218.dp),
+                    horizontalArrangement = Arrangement.spacedBy(18.dp)
+                ) {
                     RestOrWaypointTile(state, TileSize.Full, Modifier.weight(1f).fillMaxHeight())
                     DriveTimeTile(state, TileSize.Full, Modifier.weight(1f).fillMaxHeight())
                 }
                 Spacer(Modifier.height(18.dp))
-                Row(Modifier.fillMaxWidth().height(218.dp), horizontalArrangement = Arrangement.spacedBy(18.dp)) {
+                Row(
+                    Modifier.fillMaxWidth().height(218.dp),
+                    horizontalArrangement = Arrangement.spacedBy(18.dp)
+                ) {
                     TemperatureTile(state, TileSize.Full, Modifier.weight(1f).fillMaxHeight())
                     WindowTile(state, TileSize.Full, Modifier.weight(1f).fillMaxHeight())
                 }
                 Spacer(Modifier.height(20.dp))
-                GleoSlot(state, ai, actions, compact = false, modifier = Modifier.fillMaxWidth().weight(1f))
+                GleoSlot(
+                    state,
+                    ai,
+                    actions,
+                    compact = false,
+                    modifier = Modifier.fillMaxWidth().weight(1f)
+                )
             }
         }
     }
@@ -362,9 +450,18 @@ private fun FullDrivingLayout(state: DrivingSessionState, ai: AssistantUiState, 
  * Status card, 2 x 2 compact tiles and one guidance slot; the map itself belongs to Navi.
  */
 @Composable
-private fun SplitDrivingLayout(state: DrivingSessionState, ai: AssistantUiState, actions: SessionActions) {
+private fun SplitDrivingLayout(
+    state: DrivingSessionState,
+    ai: AssistantUiState,
+    actions: SessionActions
+) {
     if (state.windowWarning) {
-        WindowWarningPanel(state, actions.onDismissWarning, actions.onCloseWindow, Modifier.fillMaxSize())
+        WindowWarningPanel(
+            state,
+            actions.onDismissWarning,
+            actions.onCloseWindow,
+            Modifier.fillMaxSize()
+        )
         return
     }
     val resting = state.active && state.rest.phase != RestPhase.DRIVING
@@ -376,29 +473,52 @@ private fun SplitDrivingLayout(state: DrivingSessionState, ai: AssistantUiState,
             Spacer(Modifier.height(16.dp))
             RestPlaceCard(state, compact = true, modifier = Modifier.fillMaxWidth().height(112.dp))
             Spacer(Modifier.height(16.dp))
-            GleoSlot(state, ai, actions, compact = true, modifier = Modifier.fillMaxWidth().weight(1f), restMode = true)
+            GleoSlot(
+                state,
+                ai,
+                actions,
+                compact = true,
+                modifier = Modifier.fillMaxWidth().weight(1f),
+                restMode = true
+            )
             Spacer(Modifier.height(20.dp))
             RestDepartButton(state, actions, Modifier.fillMaxWidth().height(96.dp))
         } else {
             ComfortCardSplit(state, Modifier.fillMaxWidth().height(196.dp))
             Spacer(Modifier.height(16.dp))
-            Row(Modifier.fillMaxWidth().height(150.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(
+                Modifier.fillMaxWidth().height(150.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
                 RestOrWaypointTile(state, TileSize.Split, Modifier.weight(1f).fillMaxHeight())
                 DriveTimeTile(state, TileSize.Split, Modifier.weight(1f).fillMaxHeight())
             }
             Spacer(Modifier.height(16.dp))
-            Row(Modifier.fillMaxWidth().height(150.dp), horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(
+                Modifier.fillMaxWidth().height(150.dp),
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
                 TemperatureTile(state, TileSize.Split, Modifier.weight(1f).fillMaxHeight())
                 WindowTile(state, TileSize.Split, Modifier.weight(1f).fillMaxHeight())
             }
             Spacer(Modifier.height(16.dp))
-            GleoSlot(state, ai, actions, compact = true, modifier = Modifier.fillMaxWidth().weight(1f))
+            GleoSlot(
+                state,
+                ai,
+                actions,
+                compact = true,
+                modifier = Modifier.fillMaxWidth().weight(1f)
+            )
         }
     }
 }
 
 @Composable
-private fun RestDepartButton(state: DrivingSessionState, actions: SessionActions, modifier: Modifier) {
+private fun RestDepartButton(
+    state: DrivingSessionState,
+    actions: SessionActions,
+    modifier: Modifier
+) {
     if (state.rest.phase == RestPhase.READY_TO_DEPART) {
         Box(
             modifier.background(Color.White, CircleShape),
@@ -418,7 +538,11 @@ private fun RestDepartButton(state: DrivingSessionState, actions: SessionActions
 
 /** Full layout: modal popup over the mungo area (Figma 464:46215). */
 @Composable
-private fun WindowWarningDialog(state: DrivingSessionState, onDismiss: () -> Unit, onClose: () -> Unit) {
+private fun WindowWarningDialog(
+    state: DrivingSessionState,
+    onDismiss: () -> Unit,
+    onClose: () -> Unit
+) {
     val busy = windowWarningBusy(state)
     Dialog(
         onDismissRequest = { if (!busy) onDismiss() },
@@ -431,17 +555,32 @@ private fun WindowWarningDialog(state: DrivingSessionState, onDismiss: () -> Uni
 /** 주행 종료 확인: 피그마에 없는 화면이라 창문 경고 팝업과 같은 멍고 카드 · 버튼 스타일로 맞춘다. */
 @Composable
 private fun EndConfirmDialog(onDismiss: () -> Unit, onEnd: () -> Unit) {
-    Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
         Column(
-            Modifier.width(620.dp).background(Color.White, RoundedCornerShape(Mg.Radius)).padding(40.dp)
+            Modifier.width(
+                620.dp
+            ).background(Color.White, RoundedCornerShape(Mg.Radius)).padding(40.dp)
         ) {
             Text("주행을 종료할까요?", style = Mg.bold(33, 44), color = Mg.Ink)
             Spacer(Modifier.height(12.dp))
             Text("이번 주행 기록을 저장하고 요약을 보여 드려요.", style = Mg.regular(25, 34), color = Mg.Muted)
             Spacer(Modifier.height(36.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                SecondaryButton("계속 주행", onDismiss, Modifier.weight(1f).height(84.dp), style = Mg.bold(27, 36))
-                PrimaryButton("주행 종료", onEnd, Modifier.weight(1f).height(84.dp), style = Mg.bold(27, 36))
+                SecondaryButton(
+                    "계속 주행",
+                    onDismiss,
+                    Modifier.weight(1f).height(84.dp),
+                    style = Mg.bold(27, 36)
+                )
+                PrimaryButton(
+                    "주행 종료",
+                    onEnd,
+                    Modifier.weight(1f).height(84.dp),
+                    style = Mg.bold(27, 36)
+                )
             }
         }
     }
@@ -451,7 +590,10 @@ private fun EndConfirmDialog(onDismiss: () -> Unit, onEnd: () -> Unit) {
 @Composable
 internal fun IdleStartCard(actions: SessionActions, compact: Boolean, modifier: Modifier) {
     Column(
-        modifier.background(Color.White, RoundedCornerShape(Mg.Radius)).padding(if (compact) 24.dp else 28.dp),
+        modifier.background(
+            Color.White,
+            RoundedCornerShape(Mg.Radius)
+        ).padding(if (compact) 24.dp else 28.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         Text("반려견과 출발할 준비가 됐나요?", style = Mg.semi(if (compact) 25 else 27, 36), color = Mg.Ink)

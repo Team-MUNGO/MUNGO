@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,6 +17,7 @@ import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Text
@@ -29,26 +29,25 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.foundation.layout.widthIn
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import com.example.poco.R
 import com.example.poco.core.designsystem.MungoIcon
 import com.example.poco.core.designsystem.MungoIconView
 import com.example.poco.core.designsystem.PetPhoto
-import com.example.poco.core.designsystem.hasFullPetImage
 import com.example.poco.core.designsystem.component.pressable
+import com.example.poco.core.designsystem.hasFullPetImage
 import com.example.poco.core.theme.MungoRadius
-import com.example.poco.R
-import com.example.poco.presentation.design.DrawableIcon
-import com.example.poco.presentation.design.Mg
 import com.example.poco.core.theme.POCOTheme
 import com.example.poco.core.util.iGa
 import com.example.poco.data.model.PetSeat
 import com.example.poco.data.model.Restraint
+import com.example.poco.presentation.design.DrawableIcon
+import com.example.poco.presentation.design.Mg
 import com.example.poco.presentation.petprofile.label
 import kotlin.math.roundToInt
 import kotlinx.coroutines.delay
@@ -82,7 +81,8 @@ internal fun ColumnScope.ReadyLeft(uiState: BoardingUiState) {
         CheckItem.WINDOW in uiState.manualChecks -> "직접 확인"
         else -> "—"
     }
-    Column(verticalArrangement = Arrangement.spacedBy(23.dp)) { // 줄 간격 59
+    Column(verticalArrangement = Arrangement.spacedBy(23.dp)) {
+        // 줄 간격 59
         SummaryRow("자리", seatText)
         SummaryRow("고정", "카시트 · 하네스")
         SummaryRow("창문 잠금", windowText)
@@ -177,7 +177,10 @@ private fun ReadyCard(uiState: BoardingUiState, modifier: Modifier = Modifier) {
                 .align(Alignment.BottomEnd)
                 .padding(end = 53.dp, bottom = 56.dp)
                 .size(width = 388.dp, height = 94.dp)
-                .background(if (dark) colors.bgNeutralStrong.copy(alpha = 0.2f) else READY_FLOOR, RoundedCornerShape(40.dp))
+                .background(
+                    if (dark) colors.bgNeutralStrong.copy(alpha = 0.2f) else READY_FLOOR,
+                    RoundedCornerShape(40.dp)
+                )
         )
         // 사진 · 품종 그림은 둥글게 잘린 그림이라 뒷판 위에 원으로 앉힌다 (그림이 없으면 작은 기본 마크)
         Row(
@@ -239,7 +242,11 @@ private fun ReadyCard(uiState: BoardingUiState, modifier: Modifier = Modifier) {
                         style = Mg.regular(24, 29),
                         color = if (dark) colors.textSecondary else READY_SUB
                     )
-                    Text(text = "주행 케어가 바로 시작돼요", style = Mg.bold(24, 29), color = colors.textPrimary)
+                    Text(
+                        text = "주행 케어가 바로 시작돼요",
+                        style = Mg.bold(24, 29),
+                        color = colors.textPrimary
+                    )
                 }
             }
         }

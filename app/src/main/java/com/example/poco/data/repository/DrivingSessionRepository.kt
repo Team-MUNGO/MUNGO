@@ -9,7 +9,12 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
 
 /** Emitted once per rest cycle when <= 20 minutes remain (app-side timer; server keeps none). */
-data class RestRecommendationDue(val tripId: String, val cycle: Int, val eventId: String, val remainingMs: Long)
+data class RestRecommendationDue(
+    val tripId: String,
+    val cycle: Int,
+    val eventId: String,
+    val remainingMs: Long
+)
 
 interface DrivingSessionRepository {
     val state: StateFlow<DrivingSessionState>

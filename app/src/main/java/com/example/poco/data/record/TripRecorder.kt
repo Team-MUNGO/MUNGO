@@ -2,11 +2,11 @@ package com.example.poco.data.record
 
 import javax.inject.Inject
 import javax.inject.Singleton
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.CompletableDeferred
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import timber.log.Timber
@@ -60,6 +60,7 @@ fun countEvents(events: List<TripEventEntity>, initialScore: Int = 100): TripCou
 interface TripRecordSink {
     fun begin(trip: TripEntity)
     fun event(event: TripEventEntity)
+
     /** Returns true only for the first completion of an in-progress trip. */
     suspend fun complete(
         tripId: String,
@@ -82,10 +83,13 @@ interface TripHistoryRepository {
 }
 
 @Singleton
-class TripRecorder @Inject constructor(private val dao: TripDao) : TripRecordSink, TripHistoryRepository {
+class TripRecorder @Inject constructor(private val dao: TripDao) :
+    TripRecordSink,
+    TripHistoryRepository {
     // One writer, FIFO: events are persisted in order and completion runs after queued events.
     private val writer = Dispatchers.IO.limitedParallelism(1)
     private val scope = CoroutineScope(SupervisorJob() + writer)
+
     // limitedParallelism alone does not serialize suspending Room calls. One consumer must
     // await each database operation before taking the next command, including completion.
     private val commands = Channel<suspend () -> Unit>(Channel.UNLIMITED)
@@ -134,7 +138,12 @@ class TripRecorder @Inject constructor(private val dao: TripDao) : TripRecordSin
     ): Boolean = writeAndWait {
         val counts = countEvents(dao.events(tripId))
         dao.complete(
-            tripId, endedAt, finalScore, minOf(counts.minScore, finalScore), drivingMs, restMs, restCount,
+            tripId, endedAt, finalScore,
+            minOf(
+                counts.minScore,
+                finalScore
+            ),
+            drivingMs, restMs, restCount,
             counts.rapidAcceleration, counts.rapidBraking, counts.sharpTurn, counts.repeatedTurns,
             counts.speedBump, counts.windowWarning, counts.temperatureAlert
         ) == 1

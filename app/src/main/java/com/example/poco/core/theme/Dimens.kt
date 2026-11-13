@@ -121,6 +121,7 @@ object MungoSize {
     val iconLg = 32.dp
     val iconXl = 40.dp
     val iconButton = 88.dp
+
     /** Figma 페이지4 입력칸 · 세그먼트 높이 94 (488:7404 · 488:7405) */
     val input = 94.dp
     val segment = 94.dp

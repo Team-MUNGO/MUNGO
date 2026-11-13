@@ -26,7 +26,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.example.poco.core.designsystem.MungoIcon
 import com.example.poco.core.designsystem.MungoIconView
 import com.example.poco.core.designsystem.MungoLogo
@@ -34,9 +33,9 @@ import com.example.poco.core.designsystem.component.PocoButton
 import com.example.poco.core.designsystem.component.PocoButtonSize
 import com.example.poco.core.theme.MungoLayout
 import com.example.poco.core.theme.MungoRadius
-import com.example.poco.presentation.design.Mg
 import com.example.poco.core.theme.POCOTheme
 import com.example.poco.core.theme.PocoSpacing
+import com.example.poco.presentation.design.Mg
 
 /** 온보딩 1페이지에서 소개하는 기능 */
 private data class OnboardingFeature(

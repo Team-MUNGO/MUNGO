@@ -30,13 +30,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -48,12 +47,10 @@ import com.example.poco.core.designsystem.MungoIcon
 import com.example.poco.core.designsystem.MungoIconView
 import com.example.poco.core.designsystem.PetPhoto
 import com.example.poco.core.designsystem.ScoreRing
-import com.example.poco.core.designsystem.component.PocoToggle
 import com.example.poco.core.designsystem.component.pressable
 import com.example.poco.core.designsystem.hasFullPetImage
 import com.example.poco.core.designsystem.previewTrip
 import com.example.poco.core.theme.MungoRadius
-import com.example.poco.presentation.design.Mg
 import com.example.poco.core.theme.POCOTheme
 import com.example.poco.core.util.eulReul
 import com.example.poco.core.util.toMonthDay
@@ -66,6 +63,7 @@ import com.example.poco.domain.driving.PetType
 import com.example.poco.domain.driving.temperatureStandard
 import com.example.poco.presentation.common.MungoNavRail
 import com.example.poco.presentation.common.RailTab
+import com.example.poco.presentation.design.Mg
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -170,8 +168,16 @@ private fun HomeScreen(
                     )
                 } else {
                     // Figma 488:11669: 연동이 꺼지면 기록만 회색으로 보여 준다
-                    RecentTripOffCard(trip = uiState.lastTrip, modifier = cell(), onClick = onOpenWeekTrips)
-                    WeekTripOffCard(counts = uiState.weekTripCounts, modifier = cell(), onClick = onOpenWeekTrips)
+                    RecentTripOffCard(
+                        trip = uiState.lastTrip,
+                        modifier = cell(),
+                        onClick = onOpenWeekTrips
+                    )
+                    WeekTripOffCard(
+                        counts = uiState.weekTripCounts,
+                        modifier = cell(),
+                        onClick = onOpenWeekTrips
+                    )
                     RestIntervalOffCard(
                         minutes = uiState.restIntervalMinutes,
                         reason = uiState.pet?.restReason(),
@@ -197,7 +203,11 @@ private fun PetPanel(uiState: HomeUiState, onOpenPet: () -> Unit, modifier: Modi
 }
 
 @Composable
-private fun LinkedPetPanel(uiState: HomeUiState, onOpenPet: () -> Unit, modifier: Modifier = Modifier) {
+private fun LinkedPetPanel(
+    uiState: HomeUiState,
+    onOpenPet: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     val colors = POCOTheme.colors
     val typography = POCOTheme.typography
     val pet = uiState.pet
@@ -383,7 +393,11 @@ private fun RowScope.StatusTile(
             .then(
                 when {
                     alert -> Modifier.border(ALERT_STROKE, colors.borderAccent, shape)
-                    highlighted -> Modifier.border(2.dp, colors.borderAccent.copy(alpha = 0.4f), shape)
+                    highlighted -> Modifier.border(
+                        2.dp,
+                        colors.borderAccent.copy(alpha = 0.4f),
+                        shape
+                    )
                     else -> Modifier
                 }
             )
@@ -396,7 +410,11 @@ private fun RowScope.StatusTile(
                     .background(colors.bgSurface, CircleShape),
                 contentAlignment = Alignment.Center
             ) {
-                MungoIconView(icon, tint = if (accent) colors.textAccent else colors.textPrimary, size = 22.dp)
+                MungoIconView(
+                    icon,
+                    tint = if (accent) colors.textAccent else colors.textPrimary,
+                    size = 22.dp
+                )
             }
             Spacer(Modifier.width(9.dp))
             Text(
@@ -424,7 +442,11 @@ private fun com.example.poco.core.theme.POCOColors.alertSurface(): Color =
 // region 연동 해지 패널 (Figma 488:11669 정보 패널)
 
 @Composable
-private fun UnlinkedPetPanel(uiState: HomeUiState, onOpenPet: () -> Unit, modifier: Modifier = Modifier) {
+private fun UnlinkedPetPanel(
+    uiState: HomeUiState,
+    onOpenPet: () -> Unit,
+    modifier: Modifier = Modifier
+) {
     val colors = POCOTheme.colors
     val pet = uiState.pet
     val today = remember { System.currentTimeMillis().toMonthDay() }
@@ -435,7 +457,9 @@ private fun UnlinkedPetPanel(uiState: HomeUiState, onOpenPet: () -> Unit, modifi
     ) {
         Text(text = today, style = Mg.regular(20, 24), color = colors.textSecondary)
         Spacer(Modifier.height(47.dp))
-        Column(modifier = Modifier.pressable(RoundedCornerShape(MungoRadius.md), onClick = onOpenPet)) {
+        Column(
+            modifier = Modifier.pressable(RoundedCornerShape(MungoRadius.md), onClick = onOpenPet)
+        ) {
             Box(
                 modifier = Modifier
                     .size(OFF_AVATAR_SIZE)
@@ -640,7 +664,11 @@ private fun UnlinkedDriveCard(pet: Pet?, onRelink: () -> Unit, modifier: Modifie
                 color = colors.textPrimary
             )
             Spacer(Modifier.height(16.dp))
-            Text(text = "이동 기록과 프로필은 그대로 있어요", style = Mg.regular(25, 30), color = colors.textSecondary)
+            Text(
+                text = "이동 기록과 프로필은 그대로 있어요",
+                style = Mg.regular(25, 30),
+                color = colors.textSecondary
+            )
             Spacer(Modifier.weight(1f))
             val shape = RoundedCornerShape(RELINK_RADIUS)
             Box(
@@ -693,7 +721,11 @@ private fun ComfortCard(score: Int?, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun WeekTripCard(counts: List<Int>, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
+private fun WeekTripCard(
+    counts: List<Int>,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
+) {
     val colors = POCOTheme.colors
     HomeCard(modifier = modifier.pressable(RoundedCornerShape(MungoRadius.xl), onClick = onClick)) {
         CardHeader(icon = MungoIcon.CALENDAR, title = "이번 주 이동")
@@ -761,7 +793,20 @@ private fun CardHeader(icon: MungoIcon, title: String) {
 private fun BigValue(value: String, unit: String?) {
     val colors = POCOTheme.colors
     Row(verticalAlignment = Alignment.Bottom) {
-        Text(text = value, style = Mg.bold(if (unit == null) 64 else 67, 80), color = colors.textPrimary)
+        Text(
+            text = value,
+            style = Mg.bold(
+                if (unit ==
+                    null
+                ) {
+                    64
+                } else {
+                    67
+                },
+                80
+            ),
+            color = colors.textPrimary
+        )
         unit?.let {
             Spacer(Modifier.width(8.dp))
             Text(
@@ -819,7 +864,12 @@ private fun OffCard(
 
 @Composable
 private fun OffLabel(text: String) {
-    Text(text = text, style = Mg.regular(21, 25), color = POCOTheme.colors.textSecondary, maxLines = 1)
+    Text(
+        text = text,
+        style = Mg.regular(21, 25),
+        color = POCOTheme.colors.textSecondary,
+        maxLines = 1
+    )
 }
 
 @Composable
@@ -840,7 +890,11 @@ private fun OffValue(value: String, unit: String?) {
 }
 
 @Composable
-private fun RecentTripOffCard(trip: TripSummary?, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
+private fun RecentTripOffCard(
+    trip: TripSummary?,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
+) {
     val colors = POCOTheme.colors
     OffCard(modifier = modifier, onClick = onClick) {
         OffLabel(trip?.let { "최근 이동 · ${it.endedAtMillis.relativeDay()}" } ?: "최근 이동")
@@ -856,7 +910,15 @@ private fun RecentTripOffCard(trip: TripSummary?, modifier: Modifier = Modifier,
             val arc = Size(size.width - stroke, size.height - stroke)
             drawArc(track, 0f, 360f, false, topLeft, arc, style = Stroke(stroke))
             if (sweep > 0f) {
-                drawArc(progress, -90f, sweep, false, topLeft, arc, style = Stroke(stroke, cap = StrokeCap.Round))
+                drawArc(
+                    progress,
+                    -90f,
+                    sweep,
+                    false,
+                    topLeft,
+                    arc,
+                    style = Stroke(stroke, cap = StrokeCap.Round)
+                )
             }
         }
         Spacer(Modifier.height(36.dp))
@@ -865,7 +927,11 @@ private fun RecentTripOffCard(trip: TripSummary?, modifier: Modifier = Modifier,
 }
 
 @Composable
-private fun WeekTripOffCard(counts: List<Int>, modifier: Modifier = Modifier, onClick: () -> Unit = {}) {
+private fun WeekTripOffCard(
+    counts: List<Int>,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
+) {
     val colors = POCOTheme.colors
     val max = counts.maxOrNull() ?: 0
     OffCard(modifier = modifier, onClick = onClick) {
@@ -883,13 +949,26 @@ private fun WeekTripOffCard(counts: List<Int>, modifier: Modifier = Modifier, on
             WEEK_DAYS.forEachIndexed { index, day ->
                 val count = counts.getOrElse(index) { 0 }
                 // 0회는 낮은 점, 가장 많이 다닌 날이 가장 길고 진하다
-                val barHeight = if (count == 0 || max == 0) OFF_BAR_MIN else OFF_BAR_LOW + (OFF_BAR_MAX - OFF_BAR_LOW) * (count.toFloat() / max)
+                val barHeight = if (count == 0 ||
+                    max == 0
+                ) {
+                    OFF_BAR_MIN
+                } else {
+                    OFF_BAR_LOW +
+                        (OFF_BAR_MAX - OFF_BAR_LOW) * (count.toFloat() / max)
+                }
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Box(
                         modifier = Modifier
                             .size(width = 21.dp, height = barHeight)
                             .background(
-                                if (count > 0 && count == max) offStrongColor() else offTrackColor(),
+                                if (count > 0 &&
+                                    count == max
+                                ) {
+                                    offStrongColor()
+                                } else {
+                                    offTrackColor()
+                                },
                                 RoundedCornerShape(5.dp)
                             )
                     )
@@ -936,16 +1015,24 @@ private fun RestIntervalOffCard(minutes: Int, reason: String?, modifier: Modifie
 }
 
 @Composable
-private fun offCardColor(): Color = POCOTheme.colors.let { if (it.isDark) it.bgSurface else Color(0xFFE8EBEE) }
+private fun offCardColor(): Color = POCOTheme.colors.let {
+    if (it.isDark) it.bgSurface else Color(0xFFE8EBEE)
+}
 
 @Composable
-private fun offTrackColor(): Color = POCOTheme.colors.let { if (it.isDark) it.bgNeutral else Color(0xFFD9DDE2) }
+private fun offTrackColor(): Color = POCOTheme.colors.let {
+    if (it.isDark) it.bgNeutral else Color(0xFFD9DDE2)
+}
 
 @Composable
-private fun offStrongColor(): Color = POCOTheme.colors.let { if (it.isDark) it.textTertiary else Color(0xFFB0B8C1) }
+private fun offStrongColor(): Color = POCOTheme.colors.let {
+    if (it.isDark) it.textTertiary else Color(0xFFB0B8C1)
+}
 
 @Composable
-private fun offTagColor(): Color = POCOTheme.colors.let { if (it.isDark) it.bgSurfaceSunken else Color(0xFFDDE1E5) }
+private fun offTagColor(): Color = POCOTheme.colors.let {
+    if (it.isDark) it.bgSurfaceSunken else Color(0xFFDDE1E5)
+}
 
 /** 오늘 · 어제 · N일 전 */
 private fun Long.relativeDay(): String {
@@ -964,7 +1051,10 @@ private fun Long.relativeDay(): String {
 /** 휴식 카드 꼬리표: 왜 이 간격으로 쉬는지 한 줄 */
 private fun Pet.restReason(): String {
     val types = temperatureStandard.types
-    val heatRisk = PetType.BRACHYCEPHALIC in types || PetType.DOUBLE_COAT in types || PetTrait.HEAT_SENSITIVE in traits
+    val heatRisk =
+        PetType.BRACHYCEPHALIC in types ||
+            PetType.DOUBLE_COAT in types ||
+            PetTrait.HEAT_SENSITIVE in traits
     return when {
         heatRisk -> "더위에 약해 자주\n쉬어 가요"
         PetTrait.MOTION_SICK in traits -> "멀미가 있어 자주\n쉬어 가요"
@@ -1096,10 +1186,16 @@ internal fun HomeScreenUnlinkedPreview() {
     POCOTheme(darkTheme = false) {
         HomeScreen(
             previewState().copy(
-                isVehicleLinked = false, isParked = null, seatTemperature = null, isAllWindowsClosed = null,
-                vehicleName = "그랜저", lastTrip = previewTrip(), weekTripCounts = listOf(1, 0, 2, 0, 1, 3, 0)
+                isVehicleLinked = false,
+                isParked = null,
+                seatTemperature = null,
+                isAllWindowsClosed = null,
+                vehicleName = "그랜저",
+                lastTrip = previewTrip(),
+                weekTripCounts = listOf(1, 0, 2, 0, 1, 3, 0)
             ),
-            {}, {}
+            {},
+            {}
         )
     }
 }

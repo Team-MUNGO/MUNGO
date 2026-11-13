@@ -12,24 +12,30 @@ import com.example.poco.data.repository.RestRecommendationDue
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.resetMain
+import kotlinx.coroutines.test.setMain
+import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
-import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.test.resetMain
-import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.yield
 
-/** Mock test of the automatic REST_RECOMMENDATION path (#23, #26). Real Gemini/Maps are not called. */
+/** Mock test of the automatic REST_RECOMMENDATION path (#23,
+#26). Real Gemini/Maps are not called. */
 class RestRecommendationCoordinatorTest {
     private val state = MutableStateFlow(
-        DrivingSessionState(active = true, tripId = "trip-1", settings = DrivingSettings("멍고", PetSeat.PASSENGER, 20f, 25f, 300))
+        DrivingSessionState(
+            active = true,
+            tripId = "trip-1",
+            settings = DrivingSettings("멍고", PetSeat.PASSENGER, 20f, 25f, 300)
+        )
     )
     private val requests = mutableListOf<AssistRequest>()
     private val proposals = mutableListOf<PlaceProposal>()
     private var status: String? = null
-    private val place = AssistPlace("ChIJvSMioIapZDURijUJ9O6phq8", "덕평휴게소", 37.24, 127.39, null, null, true)
+    private val place =
+        AssistPlace("ChIJvSMioIapZDURijUJ9O6phq8", "덕평휴게소", 37.24, 127.39, null, null, true)
     private val assistant = object : AssistantRepository {
         override val configured = true
         override val connected = true
@@ -38,7 +44,18 @@ class RestRecommendationCoordinatorTest {
         override suspend fun connect(invitation: String) = Unit
         override suspend fun assist(request: AssistRequest): AssistResponse {
             requests += request
-            return AssistResponse(request.requestId, request.eventId, request.type, AssistStatus.OK, "덕평휴게소에서 쉬어요.", "덕평휴게소에서 쉬어요.", listOf(place), place.placeId, null, AssistSources("gemini", "google_maps"))
+            return AssistResponse(
+                request.requestId,
+                request.eventId,
+                request.type,
+                AssistStatus.OK,
+                "덕평휴게소에서 쉬어요.",
+                "덕평휴게소에서 쉬어요.",
+                listOf(
+                    place
+                ),
+                place.placeId, null, AssistSources("gemini", "google_maps")
+            )
         }
         override fun disconnect() = Unit
     }
@@ -67,10 +84,15 @@ class RestRecommendationCoordinatorTest {
         override fun cancelWaypoint() = Unit
     }
     private var locationAllowed = true
-    private val coordinator = RestRecommendationCoordinator(session, assistant, object : AssistantLocationSource {
-        override suspend fun current() = AssistantLocation(37.2, 127.3, 500)
-        override fun hasPermission() = locationAllowed
-    })
+    private val coordinator =
+        RestRecommendationCoordinator(
+            session,
+            assistant,
+            object : AssistantLocationSource {
+                override suspend fun current() = AssistantLocation(37.2, 127.3, 500)
+                override fun hasPermission() = locationAllowed
+            }
+        )
     private val due = RestRecommendationDue("trip-1", 1, "rest-trip-1-1", 19 * 60_000L)
 
     @Test fun withoutConsentNothingIsSent() = runBlocking {
@@ -100,9 +122,14 @@ class RestRecommendationCoordinatorTest {
     }
 
     @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-    @Test fun withoutLocationPermissionTheProposalWaitsAndResumesAfterGrant() = runBlocking {
+    @Test
+    fun withoutLocationPermissionTheProposalWaitsAndResumesAfterGrant() = runBlocking {
         kotlinx.coroutines.Dispatchers.setMain(kotlinx.coroutines.test.UnconfinedTestDispatcher())
-        try { permissionFlow() } finally { kotlinx.coroutines.Dispatchers.resetMain() }
+        try {
+            permissionFlow()
+        } finally {
+            kotlinx.coroutines.Dispatchers.resetMain()
+        }
     }
 
     private suspend fun permissionFlow() {

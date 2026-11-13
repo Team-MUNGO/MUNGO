@@ -50,7 +50,8 @@ class FirebaseAnonymousAuth @Inject constructor(@ApplicationContext context: Con
 
     suspend fun signIn(): AuthToken = mutex.withLock {
         if (!available) throw AssistantException("NOT_CONFIGURED", "AI 서버 연결이 아직 설정되지 않았어요.")
-        val saved = withContext(Dispatchers.IO) { runCatching { store.readText().trim() }.getOrNull() }
+        val saved =
+            withContext(Dispatchers.IO) { runCatching { store.readText().trim() }.getOrNull() }
         if (!saved.isNullOrEmpty()) {
             val refreshed = runCatching {
                 val body = FormBody.Builder().add("grant_type", "refresh_token")
@@ -59,7 +60,9 @@ class FirebaseAnonymousAuth @Inject constructor(@ApplicationContext context: Con
                     call("https://securetoken.googleapis.com/v1/token?key=$apiKey", body)
                 )
             }
-            refreshed.getOrNull()?.let { return@withLock persist(it.idToken, it.refreshToken, it.expiresIn) }
+            refreshed.getOrNull()?.let {
+                return@withLock persist(it.idToken, it.refreshToken, it.expiresIn)
+            }
             if (refreshed.exceptionOrNull() is NetworkFailure) throw networkError()
             // Revoked/invalid refresh token: fall through to a new anonymous account.
         }
@@ -79,7 +82,11 @@ class FirebaseAnonymousAuth @Inject constructor(@ApplicationContext context: Con
         persist(created.idToken, created.refreshToken, created.expiresIn)
     }
 
-    private suspend fun persist(idToken: String, refreshToken: String, expiresIn: String): AuthToken {
+    private suspend fun persist(
+        idToken: String,
+        refreshToken: String,
+        expiresIn: String
+    ): AuthToken {
         val seconds = expiresIn.toLongOrNull() ?: 0
         check(idToken.count { it == '.' } == 2 && refreshToken.isNotEmpty() && seconds > 120)
         withContext(Dispatchers.IO) { store.writeText(refreshToken) }
@@ -107,18 +114,17 @@ class FirebaseAnonymousAuth @Inject constructor(@ApplicationContext context: Con
                         if (it.isSuccessful && text.length < 20_000) {
                             continuation.resume(text)
                         } else {
-                            continuation.resumeWithException(IllegalStateException("auth ${it.code}"))
+                            continuation.resumeWithException(
+                                IllegalStateException("auth ${it.code}")
+                            )
                         }
                     }
                 }
             })
         }
 
-    @Serializable private data class SignUp(
-        val idToken: String,
-        val refreshToken: String,
-        val expiresIn: String
-    )
+    @Serializable
+    private data class SignUp(val idToken: String, val refreshToken: String, val expiresIn: String)
 
     @Serializable private data class Refresh(
         @SerialName("id_token") val idToken: String,

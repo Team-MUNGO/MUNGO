@@ -95,7 +95,11 @@ class VehicleLinkRepository @Inject constructor(
         }.onFailure { Timber.w(it, "AAOS 차량 정보 조회 실패") }.getOrNull()
         val vinMaker = runCatching {
             sdk.get().ensureVehicle()
-            makerFromVin(awaitPleos<String?> { ok, fail -> vehicle.getCarInfo().getVINInfo(ok, fail) })
+            makerFromVin(
+                awaitPleos<String?> { ok, fail ->
+                    vehicle.getCarInfo().getVINInfo(ok, fail)
+                }
+            )
         }.onFailure { Timber.w(it, "VIN 조회 실패") }.getOrNull()
         VehicleIdentity(
             model = aaos?.first,
@@ -110,7 +114,10 @@ class VehicleLinkRepository @Inject constructor(
     }
 }
 
-private fun String?.cleaned() = this?.trim()?.takeIf { it.isNotEmpty() && !it.equals("unknown", true) }
+private fun String?.cleaned() = this?.trim()?.takeIf {
+    it.isNotEmpty() &&
+        !it.equals("unknown", true)
+}
 
 /** World manufacturer identifier (VIN chars 1-3). Unknown codes and invalid VINs give null. */
 internal fun makerFromVin(vin: String?): String? {

@@ -11,11 +11,11 @@ import com.example.poco.domain.motion.InsightType
 import com.example.poco.domain.motion.MotionAnalysis
 import com.example.poco.domain.motion.MotionInsight
 import com.example.poco.domain.motion.MotionTripInput
+import com.example.poco.presentation.boarding.toCelsius
 import com.example.poco.presentation.design.MgIcons
 import com.example.poco.presentation.session.component.clockText
 import com.example.poco.presentation.session.component.intervalText
 import com.example.poco.presentation.session.component.seatShort
-import com.example.poco.presentation.boarding.toCelsius
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -25,8 +25,8 @@ import java.util.Locale
  * Everything on the trip screens is derived from the stored trip row and its event log only:
  * no place names, routes or amenities are invented when the record does not contain them.
  */
-fun tripDurationMs(trip: TripEntity): Long =
-    trip.endedAtEpoch?.let { it - trip.startedAtEpoch } ?: ((trip.drivingMs ?: 0) + (trip.restMs ?: 0))
+fun tripDurationMs(trip: TripEntity): Long = trip.endedAtEpoch?.let { it - trip.startedAtEpoch }
+    ?: ((trip.drivingMs ?: 0) + (trip.restMs ?: 0))
 
 fun tripTitle(trip: TripEntity): String = when {
     trip.origin != null && trip.destination != null -> "${trip.origin} → ${trip.destination}"
@@ -34,7 +34,8 @@ fun tripTitle(trip: TripEntity): String = when {
     else -> "${clockText(trip.startedAtEpoch)} 출발 · ${trip.petName}와 이동"
 }
 
-fun dateText(epoch: Long, pattern: String = "M월 d일 (E)"): String = SimpleDateFormat(pattern, Locale.KOREAN).format(Date(epoch))
+fun dateText(epoch: Long, pattern: String = "M월 d일 (E)"): String =
+    SimpleDateFormat(pattern, Locale.KOREAN).format(Date(epoch))
 
 fun pastComfortLabel(score: Int) = when {
     score >= 85 -> "편안했어요"
@@ -42,14 +43,18 @@ fun pastComfortLabel(score: Int) = when {
     else -> "힘들었어요"
 }
 
-fun seatLabel(trip: TripEntity) = PetSeat.entries.firstOrNull { it.name == trip.seat }?.let(::seatShort) ?: "확인 불가"
+fun seatLabel(trip: TripEntity) =
+    PetSeat.entries.firstOrNull { it.name == trip.seat }?.let(::seatShort) ?: "확인 불가"
 
 fun turnCount(trip: TripEntity) = (trip.sharpTurnCount ?: 0) + (trip.repeatedTurnCount ?: 0)
 
 /** The completed trip that started just before [trip], for "지난번보다" comparisons. */
-fun previousTrip(trips: List<TripEntity>, trip: TripEntity): TripEntity? =
-    trips.filter { it.id != trip.id && it.finalScore != null && it.startedAtEpoch < trip.startedAtEpoch }
-        .maxByOrNull { it.startedAtEpoch }
+fun previousTrip(trips: List<TripEntity>, trip: TripEntity): TripEntity? = trips.filter {
+    it.id != trip.id &&
+        it.finalScore != null &&
+        it.startedAtEpoch < trip.startedAtEpoch
+}
+    .maxByOrNull { it.startedAtEpoch }
 
 fun scoreDeltaText(trip: TripEntity, previous: TripEntity?): String? {
     val now = trip.finalScore ?: return null
@@ -104,7 +109,21 @@ fun timelineItems(trip: TripEntity, events: List<TripEventEntity>): List<Timelin
     fun flushCalm() {
         val start = calmStart ?: return
         val minutes = ((calmEnd - start) / 60_000).coerceAtLeast(1)
-        out += TimelineItem(start, ItemKind.BONUS, MgIcons.Calm, "평온 유지 ${minutes}분", "평온하게 달려 점수가 회복됐어요", calmGain, "CALM", calmAfter, scoreBefore = calmAfter?.minus(calmGain), snapshot = calmSnapshot)
+        out +=
+            TimelineItem(
+                start,
+                ItemKind.BONUS,
+                MgIcons.Calm,
+                "평온 유지 ${minutes}분",
+                "평온하게 달려 점수가 회복됐어요",
+                calmGain,
+                "CALM",
+                calmAfter,
+                scoreBefore = calmAfter?.minus(
+                    calmGain
+                ),
+                snapshot = calmSnapshot
+            )
         calmStart = null
         calmGain = 0
     }
@@ -119,10 +138,28 @@ fun timelineItems(trip: TripEntity, events: List<TripEventEntity>): List<Timelin
                 val start = restStart ?: continue
                 val minutes = ((e.atEpoch - start.atEpoch) / 60_000).coerceAtLeast(1)
                 out += TimelineItem(
-                    start.atEpoch, if (restGain > 0) ItemKind.BONUS else ItemKind.ALERT, MgIcons.Cup,
-                    if (e.type == TripEventType.REST_COMPLETED) "휴식 ${minutes}분" else "짧은 정차 ${minutes}분",
+                    start.atEpoch,
+                    if (restGain >
+                        0
+                    ) {
+                        ItemKind.BONUS
+                    } else {
+                        ItemKind.ALERT
+                    },
+                    MgIcons.Cup,
+                    if (e.type ==
+                        TripEventType.REST_COMPLETED
+                    ) {
+                        "휴식 ${minutes}분"
+                    } else {
+                        "짧은 정차 ${minutes}분"
+                    },
                     if (start.detail == "WAYPOINT_ARRIVAL") "경유지 도착 후 휴식" else "직접 시작한 휴식",
-                    restGain, "REST", e.scoreAfter, scoreBefore = start.scoreBefore, snapshot = start
+                    restGain,
+                    "REST",
+                    e.scoreAfter,
+                    scoreBefore = start.scoreBefore,
+                    snapshot = start
                 )
                 restStart = null
             }
@@ -131,7 +168,10 @@ fun timelineItems(trip: TripEntity, events: List<TripEventEntity>): List<Timelin
                 if (restStart != null) {
                     restGain += delta
                 } else {
-                    if (calmStart == null) { calmStart = e.atEpoch; calmSnapshot = e }
+                    if (calmStart == null) {
+                        calmStart = e.atEpoch
+                        calmSnapshot = e
+                    }
                     calmEnd = e.atEpoch
                     calmGain += delta
                     calmAfter = e.scoreAfter
@@ -142,24 +182,63 @@ fun timelineItems(trip: TripEntity, events: List<TripEventEntity>): List<Timelin
                 val (title, icon) = penaltyInfo(e.detail)
                 val delta = e.scoreDelta ?: 0
                 val last = out.lastOrNull()
-                if (e.detail == "SPEED_BUMP" && last != null && last.type == "SPEED_BUMP" && e.atEpoch - last.at <= 120_000) {
-                    val count = (Regex("(\\d+)회").find(last.title)?.groupValues?.get(1)?.toInt() ?: 1) + 1
-                    out[out.lastIndex] = last.copy(title = "과속방지턱 ${count}회", delta = last.delta + delta, scoreAfter = e.scoreAfter, detail = scoreDetail(last.scoreBefore ?: last.scoreAfter?.minus(last.delta), e.scoreAfter))
+                if (e.detail == "SPEED_BUMP" &&
+                    last != null &&
+                    last.type == "SPEED_BUMP" &&
+                    e.atEpoch - last.at <= 120_000
+                ) {
+                    val count =
+                        (Regex("(\\d+)회").find(last.title)?.groupValues?.get(1)?.toInt() ?: 1) + 1
+                    out[out.lastIndex] =
+                        last.copy(
+                            title = "과속방지턱 ${count}회",
+                            delta = last.delta + delta,
+                            scoreAfter = e.scoreAfter,
+                            detail = scoreDetail(
+                                last.scoreBefore ?: last.scoreAfter?.minus(last.delta),
+                                e.scoreAfter
+                            )
+                        )
                 } else {
-                    out += TimelineItem(e.atEpoch, ItemKind.PENALTY, icon, title, scoreDetail(e.scoreAfter?.minus(delta), e.scoreAfter), delta, e.detail ?: "", e.scoreAfter, scoreBefore = e.scoreBefore ?: e.scoreAfter?.minus(delta), snapshot = e)
+                    out +=
+                        TimelineItem(
+                            e.atEpoch, ItemKind.PENALTY, icon, title,
+                            scoreDetail(
+                                e.scoreAfter?.minus(delta),
+                                e.scoreAfter
+                            ),
+                            delta,
+                            e.detail ?: "", e.scoreAfter,
+                            scoreBefore =
+                            e.scoreBefore ?: e.scoreAfter?.minus(delta),
+                            snapshot = e
+                        )
                 }
             }
             TripEventType.WINDOW_WARNING -> {
                 flushCalm()
-                out += TimelineItem(e.atEpoch, ItemKind.ALERT, MgIcons.Window, "창문 ${e.detail ?: ""}% 열림", "${seatLabel(trip)}에서 창문 알림", 0, "WINDOW", null, snapshot = e)
+                out +=
+                    TimelineItem(
+                        e.atEpoch, ItemKind.ALERT, MgIcons.Window, "창문 ${e.detail ?: ""}% 열림",
+                        "${seatLabel(
+                            trip
+                        )}에서 창문 알림",
+                        0, "WINDOW", null, snapshot = e
+                    )
             }
             TripEventType.TEMPERATURE_OUT_OF_RANGE -> {
                 flushCalm()
-                val (status, value) = (e.detail ?: "").split(":").let { it.getOrNull(0) to it.getOrNull(1) }
+                val (status, value) = (e.detail ?: "").split(":").let {
+                    it.getOrNull(0) to
+                        it.getOrNull(1)
+                }
                 out += TimelineItem(
                     e.atEpoch, ItemKind.ALERT, MgIcons.Sun,
                     if (status == "HOT") "실내 온도 높음" else "실내 온도 낮음",
-                    value?.let { "실내 ${it}°C · 기준 범위 밖" } ?: "기준 범위 밖", 0, "TEMPERATURE", null, snapshot = e
+                    value?.let {
+                        "실내 $it°C · 기준 범위 밖"
+                    } ?: "기준 범위 밖",
+                    0, "TEMPERATURE", null, snapshot = e
                 )
             }
         }
@@ -185,9 +264,12 @@ fun tipFor(type: String): String = when (type) {
 }
 
 /** Measured cabin temperature closest before [at] (within 5 minutes), never interpolated. */
-fun temperatureAt(events: List<TripEventEntity>, at: Long): String? =
-    events.filter { it.type == TripEventType.TEMPERATURE_SAMPLE && it.atEpoch <= at && at - it.atEpoch <= 5 * 60_000 }
-        .maxByOrNull { it.atEpoch }?.detail?.let { "$it°C" }
+fun temperatureAt(events: List<TripEventEntity>, at: Long): String? = events.filter {
+    it.type == TripEventType.TEMPERATURE_SAMPLE &&
+        it.atEpoch <= at &&
+        at - it.atEpoch <= 5 * 60_000
+}
+    .maxByOrNull { it.atEpoch }?.detail?.let { "$it°C" }
 
 /** "현댕이의 오늘 한 줄": a deterministic sentence from the stored counts. */
 fun oneLine(trip: TripEntity, events: List<TripEventEntity>): String {
@@ -214,8 +296,14 @@ fun TripEntity.toMotionInput() = MotionTripInput(
     record = MotionRecord.decode(motionSicknessSigns)
 )
 
-/** Same analysis for the motion screen, the interval screen and the detail tip, so they never disagree. */
-fun motionAnalysis(trips: List<TripEntity>, trip: TripEntity, restIntervalMinutes: Int): MotionAnalysis =
+/** Same analysis for the motion screen,
+the interval screen and the detail tip,
+so they never disagree. */
+fun motionAnalysis(
+    trips: List<TripEntity>,
+    trip: TripEntity,
+    restIntervalMinutes: Int
+): MotionAnalysis =
     MotionAnalysis.of(trips.map { it.toMotionInput() }, trip.toMotionInput(), restIntervalMinutes)
 
 /** "시간당 1.5회" — one decimal, trailing ".0" dropped. */
@@ -228,11 +316,15 @@ fun rateText(rate: Double): String {
 fun insightTip(insight: MotionInsight): Tip = when (insight.type) {
     InsightType.CAUTION_SIGN -> {
         val label = insight.sign?.label ?: "주의 징후"
-        Tip("이번 이동에서 ${label}${subjectParticle(label)} 관찰됐어요. 반려견의 상태를 확인해 주세요.", "증상이 계속되면 수의사와 상담해 주세요.")
+        Tip(
+            "이번 이동에서 ${label}${subjectParticle(label)} 관찰됐어요. 반려견의 상태를 확인해 주세요.",
+            "증상이 계속되면 수의사와 상담해 주세요."
+        )
     }
     InsightType.LONG_TRIP_INCREASE -> Tip(
         "긴 이동에서 불편 징후가 더 자주 관찰됐어요.",
-        "최근 짧은 이동과 비교했을 때 시간당 징후 발생률이 높았어요." + rates(insight.baselineRate, insight.targetRate, "짧은 이동", "긴 이동")
+        "최근 짧은 이동과 비교했을 때 시간당 징후 발생률이 높았어요." +
+            rates(insight.baselineRate, insight.targetRate, "짧은 이동", "긴 이동")
     )
     InsightType.RECENT_INCREASE -> Tip(
         "이번 이동에서 불편 징후가 평소보다 자주 관찰됐어요.",
@@ -244,16 +336,33 @@ fun insightTip(insight: MotionInsight): Tip = when (insight.type) {
     )
     InsightType.REPEATED_SIGN -> {
         val label = insight.sign?.label ?: "같은 징후"
-        Tip("최근 이동에서 ${label}${subjectParticle(label)} 반복적으로 관찰됐어요.", "최근 ${insight.repeatedOf}번 중 ${insight.repeatedIn}번 이동에서 기록됐어요.")
+        Tip(
+            "최근 이동에서 ${label}${subjectParticle(label)} 반복적으로 관찰됐어요.",
+            "최근 ${insight.repeatedOf}번 중 ${insight.repeatedIn}번 이동에서 기록됐어요."
+        )
     }
-    InsightType.NOT_ENOUGH_DATA -> Tip("이동 기록을 더 모으면 변화를 비교할 수 있어요.", "15분 이상 이동하고 징후를 기록하면 비교에 쓰여요.")
+    InsightType.NOT_ENOUGH_DATA -> Tip(
+        "이동 기록을 더 모으면 변화를 비교할 수 있어요.",
+        "15분 이상 이동하고 징후를 기록하면 비교에 쓰여요."
+    )
     InsightType.NO_CHANGE -> Tip("최근 이동에서 뚜렷한 징후 변화는 관찰되지 않았어요.", "이동 시간을 고려한 시간당 발생률로 비교했어요.")
 }
 
 private fun rates(base: Double?, target: Double?, baseLabel: String, targetLabel: String): String =
-    if (base == null || target == null) "" else "\n$baseLabel ${rateText(base)} · $targetLabel ${rateText(target)}"
+    if (base == null ||
+        target == null
+    ) {
+        ""
+    } else {
+        "\n$baseLabel ${rateText(base)} · $targetLabel ${rateText(target)}"
+    }
 
-fun detailTip(trip: TripEntity, previous: TripEntity?, currentInterval: Int, analysis: MotionAnalysis? = null): Tip {
+fun detailTip(
+    trip: TripEntity,
+    previous: TripEntity?,
+    currentInterval: Int,
+    analysis: MotionAnalysis? = null
+): Tip {
     val now = MotionRecord.decode(trip.motionSicknessSigns)
     val before = previous?.let { MotionRecord.decode(it.motionSicknessSigns) }
     if (now != null && before != null && now.total > before.total) {
@@ -262,7 +371,8 @@ fun detailTip(trip: TripEntity, previous: TripEntity?, currentInterval: Int, ana
         val rec = analysis?.recommendedMinutes
         return Tip(
             "${sign.label}${subjectParticle(sign.label)} 지난번보다 늘었어요.",
-            rec?.let { "긴 이동에서 징후가 더 잦았어요. 다음엔 ${intervalText(it)}마다 쉬어 가 보세요." } ?: "이동 중 반려견 상태를 조금 더 살펴 주세요."
+            rec?.let { "긴 이동에서 징후가 더 잦았어요. 다음엔 ${intervalText(it)}마다 쉬어 가 보세요." }
+                ?: "이동 중 반려견 상태를 조금 더 살펴 주세요."
         )
     }
     val brakes = trip.rapidBrakingCount ?: 0
@@ -273,8 +383,14 @@ fun detailTip(trip: TripEntity, previous: TripEntity?, currentInterval: Int, ana
     }
 }
 
-/** Analysis window mapped back to stored trips, oldest first, ending with [trip] ("최근 N번 이동 비교"). */
-fun windowTrips(trips: List<TripEntity>, trip: TripEntity, analysis: MotionAnalysis?): List<Pair<TripEntity, MotionRecord?>> {
+/** Analysis window mapped back to stored trips,
+oldest first,
+ending with [trip] ("최근 N번 이동 비교"). */
+fun windowTrips(
+    trips: List<TripEntity>,
+    trip: TripEntity,
+    analysis: MotionAnalysis?
+): List<Pair<TripEntity, MotionRecord?>> {
     val byId = trips.associateBy { it.id } + (trip.id to trip)
     val ids = analysis?.window?.map { it.id } ?: listOf(trip.id)
     return ids.mapNotNull { byId[it] }.map { it to MotionRecord.decode(it.motionSicknessSigns) }
@@ -282,26 +398,34 @@ fun windowTrips(trips: List<TripEntity>, trip: TripEntity, analysis: MotionAnaly
 
 enum class Period(val label: String) { WEEK("이번 주"), MONTH("이번 달"), ALL("전체") }
 
-private fun startOfWeek(now: Long, weeksAgo: Int = 0): Long = Calendar.getInstance(Locale.KOREA).apply {
-    timeInMillis = now
-    firstDayOfWeek = Calendar.MONDAY
-    set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
-    if (timeInMillis > now) add(Calendar.WEEK_OF_YEAR, -1)
-    set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
-    add(Calendar.WEEK_OF_YEAR, -weeksAgo)
-}.timeInMillis
+private fun startOfWeek(now: Long, weeksAgo: Int = 0): Long =
+    Calendar.getInstance(Locale.KOREA).apply {
+        timeInMillis = now
+        firstDayOfWeek = Calendar.MONDAY
+        set(Calendar.DAY_OF_WEEK, Calendar.MONDAY)
+        if (timeInMillis > now) add(Calendar.WEEK_OF_YEAR, -1)
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+        add(Calendar.WEEK_OF_YEAR, -weeksAgo)
+    }.timeInMillis
 
 private fun startOfMonth(now: Long): Long = Calendar.getInstance(Locale.KOREA).apply {
     timeInMillis = now
     set(Calendar.DAY_OF_MONTH, 1)
-    set(Calendar.HOUR_OF_DAY, 0); set(Calendar.MINUTE, 0); set(Calendar.SECOND, 0); set(Calendar.MILLISECOND, 0)
+    set(Calendar.HOUR_OF_DAY, 0)
+    set(Calendar.MINUTE, 0)
+    set(Calendar.SECOND, 0)
+    set(Calendar.MILLISECOND, 0)
 }.timeInMillis
 
-fun filterTrips(trips: List<TripEntity>, period: Period, now: Long): List<TripEntity> = when (period) {
-    Period.WEEK -> trips.filter { it.startedAtEpoch >= startOfWeek(now) }
-    Period.MONTH -> trips.filter { it.startedAtEpoch >= startOfMonth(now) }
-    Period.ALL -> trips
-}
+fun filterTrips(trips: List<TripEntity>, period: Period, now: Long): List<TripEntity> =
+    when (period) {
+        Period.WEEK -> trips.filter { it.startedAtEpoch >= startOfWeek(now) }
+        Period.MONTH -> trips.filter { it.startedAtEpoch >= startOfMonth(now) }
+        Period.ALL -> trips
+    }
 
 /** Section headers in the list: 이번 주, 지난주, then month names. */
 fun sectionOf(trip: TripEntity, now: Long): String = when {
@@ -313,7 +437,8 @@ fun sectionOf(trip: TripEntity, now: Long): String = when {
 /** Snapshot values belong to this event, not to the vehicle's current state. */
 fun eventCabinText(item: TimelineItem, events: List<TripEventEntity>): String {
     val snapshot = item.snapshot
-    val temp = snapshot?.temperatureC?.let { "${it.toCelsius()}°C" } ?: temperatureAt(events, item.at)
+    val temp =
+        snapshot?.temperatureC?.let { "${it.toCelsius()}°C" } ?: temperatureAt(events, item.at)
     val window = snapshot?.windowPercent?.let {
         when {
             it <= 0.0 -> "창문 닫힘"

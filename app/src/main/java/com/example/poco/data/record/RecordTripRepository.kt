@@ -1,10 +1,10 @@
 package com.example.poco.data.record
 
+import com.example.poco.core.util.suspendRunCatching
 import com.example.poco.data.model.EventStat
 import com.example.poco.data.model.TripStats
 import com.example.poco.data.model.TripSummary
 import com.example.poco.data.repository.TripRepository
-import com.example.poco.core.util.suspendRunCatching
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlinx.coroutines.flow.Flow
@@ -42,7 +42,10 @@ class RecordTripRepository @Inject constructor(
     override fun observeTripStats(): Flow<TripStats> = scored.map { trips ->
         TripStats(
             count = trips.size,
-            averageScore = trips.takeIf { it.isNotEmpty() }?.let { l -> l.sumOf { it.finalScore!! } / l.size },
+            averageScore = trips.takeIf { it.isNotEmpty() }?.let { l ->
+                l.sumOf { it.finalScore!! } /
+                    l.size
+            },
             lastStartedAtMillis = trips.maxOfOrNull { it.startedAtEpoch }
         )
     }
@@ -61,7 +64,9 @@ class RecordTripRepository @Inject constructor(
 
     /** Kept for the old driving screen: stores the summary as a completed record. */
     override suspend fun saveTrip(trip: TripSummary): Result<Long> = suspendRunCatching {
-        dao.insertTrip(trip.toRecord("summary-${trip.startedAtMillis}", petName = "반려견", seat = "UNKNOWN"))
+        dao.insertTrip(
+            trip.toRecord("summary-${trip.startedAtMillis}", petName = "반려견", seat = "UNKNOWN")
+        )
         trip.startedAtMillis
     }
 }

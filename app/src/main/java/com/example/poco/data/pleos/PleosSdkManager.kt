@@ -7,6 +7,8 @@ import ai.pleos.playground.stt.listener.OnInitializeListener as SttInitializeLis
 import ai.pleos.playground.tts.TextToSpeech
 import ai.pleos.playground.tts.listener.OnInitializeListener as TtsInitializeListener
 import ai.pleos.playground.vehicle.Vehicle
+import com.example.poco.data.vehicle.VehicleLinkGate
+import com.example.poco.data.vehicle.VehicleUnlinkedException
 import javax.inject.Inject
 import javax.inject.Singleton
 import kotlin.coroutines.resume
@@ -14,8 +16,6 @@ import kotlin.coroutines.resumeWithException
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import com.example.poco.data.vehicle.VehicleLinkGate
-import com.example.poco.data.vehicle.VehicleUnlinkedException
 import timber.log.Timber
 
 /**
@@ -114,26 +114,47 @@ class PleosSdkManager @Inject constructor(
         isSttInitialized = true
         Timber.d("STT initialized")
     }
+
     /** 차량 연동 해지: 연결된 SDK를 모두 끊는다 (차량 · 음성 출력 · 음성 인식 · 위치 · 내비). 하나가 실패해도 나머지는 계속 끊는다 */
     suspend fun releaseAll() {
         vehicleMutex.withLock {
-            if (isVehicleInitialized) runCatching { vehicle.release() }.onFailure { Timber.w(it, "Vehicle release 실패") }
+            if (isVehicleInitialized) {
+                runCatching {
+                    vehicle.release()
+                }.onFailure { Timber.w(it, "Vehicle release 실패") }
+            }
             isVehicleInitialized = false
         }
         ttsMutex.withLock {
-            if (isTtsInitialized) runCatching { textToSpeech.release() }.onFailure { Timber.w(it, "TTS release 실패") }
+            if (isTtsInitialized) {
+                runCatching {
+                    textToSpeech.release()
+                }.onFailure { Timber.w(it, "TTS release 실패") }
+            }
             isTtsInitialized = false
         }
         sttMutex.withLock {
-            if (isSttInitialized) runCatching { speechToText.release() }.onFailure { Timber.w(it, "STT release 실패") }
+            if (isSttInitialized) {
+                runCatching {
+                    speechToText.release()
+                }.onFailure { Timber.w(it, "STT release 실패") }
+            }
             isSttInitialized = false
         }
         locationMutex.withLock {
-            if (isLocationInitialized) runCatching { fusedLocation.release() }.onFailure { Timber.w(it, "위치 release 실패") }
+            if (isLocationInitialized) {
+                runCatching {
+                    fusedLocation.release()
+                }.onFailure { Timber.w(it, "위치 release 실패") }
+            }
             isLocationInitialized = false
         }
         naviMutex.withLock {
-            if (isNaviInitialized) runCatching { naviHelper.release() }.onFailure { Timber.w(it, "NaviHelper release 실패") }
+            if (isNaviInitialized) {
+                runCatching {
+                    naviHelper.release()
+                }.onFailure { Timber.w(it, "NaviHelper release 실패") }
+            }
             isNaviInitialized = false
         }
         Timber.d("차량 연동 해지: SDK 연결을 모두 끊었어요")

@@ -18,7 +18,9 @@ import kotlinx.coroutines.flow.map
  */
 @Singleton
 class PetDrivingProfile @Inject constructor(private val pets: PetRepository) {
-    val profile: Flow<DrivingSettings?> = pets.observePets().map { it.firstOrNull()?.toDrivingSettings() }
+    val profile: Flow<DrivingSettings?> = pets.observePets().map {
+        it.firstOrNull()?.toDrivingSettings()
+    }
 
     suspend fun load(): DrivingSettings? = profile.first()
 }

@@ -10,6 +10,7 @@ data class BumpApproach(val id: String, val remainingMeters: Int)
 sealed interface NaviRouteUpdate {
     /** Actual waypoints reported by the navigation app (polled readback). */
     data class Waypoints(val list: List<NaviWaypoint>) : NaviRouteUpdate
+
     /** NaviHelper onWayPointArrived; [first] is true for WaypointIndex.FIRST. */
     data class Arrived(val name: String, val first: Boolean) : NaviRouteUpdate
     data object RouteEnded : NaviRouteUpdate

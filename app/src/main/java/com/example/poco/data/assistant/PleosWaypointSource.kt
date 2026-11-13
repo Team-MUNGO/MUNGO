@@ -99,10 +99,21 @@ class PleosWaypointSource @Inject constructor(@ApplicationContext private val co
                     var confirmed: NaviWaypoint? = null
                     while (confirmed == null) {
                         confirmed = points.receive().firstOrNull {
-                            distanceMeters(place.latitude, place.longitude, it.latitude, it.longitude) <=
+                            distanceMeters(
+                                place.latitude,
+                                place.longitude,
+                                it.latitude,
+                                it.longitude
+                            ) <=
                                 MATCH_METERS
                         }?.let {
-                            NaviWaypoint(it.name, it.latitude, it.longitude, it.remainTime, it.remainDistance)
+                            NaviWaypoint(
+                                it.name,
+                                it.latitude,
+                                it.longitude,
+                                it.remainTime,
+                                it.remainDistance
+                            )
                         }
                     }
                     confirmed
@@ -136,7 +147,9 @@ class PleosWaypointSource @Inject constructor(@ApplicationContext private val co
                         if (continuation.isActive) continuation.resume(Unit)
                     }, onFailed = {
                         if (continuation.isActive) {
-                            continuation.resumeWithException(IllegalStateException("내비게이션에 연결하지 못했어요."))
+                            continuation.resumeWithException(
+                                IllegalStateException("내비게이션에 연결하지 못했어요.")
+                            )
                         }
                     })
                 }
@@ -150,9 +163,17 @@ class PleosWaypointSource @Inject constructor(@ApplicationContext private val co
                 }
                 try {
                     while (points.receive().any {
-                            distanceMeters(place.latitude, place.longitude, it.latitude, it.longitude) <= MATCH_METERS
+                            distanceMeters(
+                                place.latitude,
+                                place.longitude,
+                                it.latitude,
+                                it.longitude
+                            ) <=
+                                MATCH_METERS
                         }
-                    ) Unit
+                    ) {
+                        Unit
+                    }
                 } finally {
                     poller.cancel()
                 }

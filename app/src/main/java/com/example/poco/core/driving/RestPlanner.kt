@@ -44,8 +44,11 @@ sealed interface RestEvent {
     data class IntervalChanged(val from: Int, val to: Int, val at: Long) : RestEvent
     data class Started(val at: Long, val source: RestStartSource) : RestEvent
     data class ReadyToDepart(val at: Long) : RestEvent
+
     /** A rest only completes on an actual departure after at least [ComfortScoreConfig.validRestMs]. */
-    data class Completed(val startedAt: Long, val departedAt: Long, val durationMs: Long) : RestEvent
+    data class Completed(val startedAt: Long, val departedAt: Long, val durationMs: Long) :
+        RestEvent
+
     /** Too-short stop (signal, brief P): no rest is counted and the rest timer is not reset. */
     data class Cancelled(val startedAt: Long, val departedAt: Long) : RestEvent
     data class RecommendationDue(val cycle: Int, val remainingMs: Long) : RestEvent
@@ -56,14 +59,16 @@ sealed interface RestEvent {
  * re-departure after a completed rest. Parking alone never starts or completes a rest.
  * Times use the session's monotonic clock; recorders convert to epoch.
  */
-class RestPlanner(
-    start: Long,
-    intervalMinutes: Int,
-    private val validRestMs: Long = 180_000
-) {
+class RestPlanner(start: Long, intervalMinutes: Int, private val validRestMs: Long = 180_000) {
     var snapshot = RestSnapshot(
-        RestIntervalPolicy.clamp(intervalMinutes), start, 1, RestPhase.DRIVING,
-        null, 0, 0, null
+        RestIntervalPolicy.clamp(intervalMinutes),
+        start,
+        1,
+        RestPhase.DRIVING,
+        null,
+        0,
+        0,
+        null
     )
         private set
     private var requestedCycle = 0
@@ -90,7 +95,8 @@ class RestPlanner(
         return RestEvent.ReadyToDepart(now)
     }
 
-    /** Called on confirmed movement (drive gear with moving speed), never on P->D alone at 0 km/h. */
+    /** Called on confirmed movement (drive gear with moving speed),
+     never on P->D alone at 0 km/h. */
     fun onDeparture(now: Long): RestEvent? {
         val started = snapshot.restStartedAt ?: return null
         if (snapshot.phase == RestPhase.DRIVING) return null

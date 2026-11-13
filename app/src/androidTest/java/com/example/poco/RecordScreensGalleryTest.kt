@@ -3,23 +3,23 @@ package com.example.poco
 import android.graphics.Bitmap
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.mutableStateOf
-import androidx.compose.ui.unit.dp
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.test.captureToImage
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.unit.dp
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.poco.core.theme.POCOTheme
 import com.example.poco.data.assistant.AssistRequest
 import com.example.poco.data.assistant.AssistResponse
 import com.example.poco.data.assistant.TripSummaryRequest
 import com.example.poco.data.record.MotionRecord
-import com.example.poco.data.repository.AssistantRepository
 import com.example.poco.data.record.TripEntity
 import com.example.poco.data.record.TripEventEntity
 import com.example.poco.data.record.TripEventType
 import com.example.poco.data.record.TripHistoryRepository
+import com.example.poco.data.repository.AssistantRepository
 import com.example.poco.data.settings.UserSettingsRepository
 import com.example.poco.presentation.record.AppliedInterval
 import com.example.poco.presentation.record.MotionSicknessRoute
@@ -46,12 +46,17 @@ class RecordScreensGalleryTest {
 
     private val m = 60_000L
     private val now = System.currentTimeMillis()
-    private fun trip(id: String, start: Long, minutes: Long, score: Int, signs: String?) = TripEntity(
-        id = id, petName = "현댕이", petWeightTenths = 123, petSize = "SMALL", seat = "PASSENGER",
-        startedAtEpoch = start, endedAtEpoch = start + minutes * m, status = "COMPLETED",
-        startRestIntervalMinutes = 120, finalScore = score, restCount = 1, restMs = 16 * m,
-        rapidBrakingCount = 1, sharpTurnCount = 1, speedBumpCount = 2, windowWarningCount = 1, motionSicknessSigns = signs
-    )
+    private fun trip(id: String, start: Long, minutes: Long, score: Int, signs: String?) =
+        TripEntity(
+            id = id, petName = "현댕이", petWeightTenths = 123, petSize = "SMALL", seat = "PASSENGER",
+            startedAtEpoch = start, endedAtEpoch = start + minutes * m, status = "COMPLETED",
+            startRestIntervalMinutes = 120, finalScore = score, restCount = 1, restMs = 16 * m,
+            rapidBrakingCount = 1,
+            sharpTurnCount = 1,
+            speedBumpCount = 2,
+            windowWarningCount = 1,
+            motionSicknessSigns = signs
+        )
 
     private val trips = MutableStateFlow(
         listOf(
@@ -61,11 +66,23 @@ class RecordScreensGalleryTest {
         )
     )
     private val start = now - 160 * m
-    private fun e(min: Long, type: String, delta: Int? = null, after: Int? = null, detail: String? = null) =
-        TripEventEntity(tripId = "c", atEpoch = start + min * m, type = type, scoreDelta = delta, scoreAfter = after, detail = detail,
+    private fun e(
+        min: Long,
+        type: String,
+        delta: Int? = null,
+        after: Int? = null,
+        detail: String? = null
+    ) = TripEventEntity(
+        tripId = "c",
+        atEpoch = start + min * m,
+        type = type,
+        scoreDelta = delta,
+        scoreAfter = after,
+        detail = detail,
         scoreBefore = if (after != null && delta != null) after - delta else null,
         latitude = 37.0, longitude = 127.0, locationAtEpoch = now,
-        temperatureC = 23f, windowPercent = 0.0, seat = "PASSENGER", guidanceText = "천천히 가요.")
+        temperatureC = 23f, windowPercent = 0.0, seat = "PASSENGER", guidanceText = "천천히 가요."
+    )
 
     private val events = listOf(
         e(10, TripEventType.SCORE_PENALTY, -4, 96, "SHARP_TURN"),
@@ -84,7 +101,16 @@ class RecordScreensGalleryTest {
         override fun trip(id: String) = trips.map { list -> list.firstOrNull { it.id == id } }
         override fun events(id: String) = flowOf(if (id == "c") events else emptyList())
         override suspend fun setMotionSickness(id: String, record: MotionRecord) {
-            trips.value = trips.value.map { if (it.id == id) it.copy(motionSicknessSigns = record.encode()) else it }
+            trips.value =
+                trips.value.map {
+                    if (it.id ==
+                        id
+                    ) {
+                        it.copy(motionSicknessSigns = record.encode())
+                    } else {
+                        it
+                    }
+                }
         }
         override suspend fun setOneLine(id: String, text: String) {
             trips.value = trips.value.map { if (it.id == id) it.copy(aiOneLine = text) else it }
@@ -93,8 +119,14 @@ class RecordScreensGalleryTest {
     private val settings = object : UserSettingsRepository {
         override val restIntervalMinutes = MutableStateFlow(120)
         override val voiceGuidanceEnabled = MutableStateFlow(true)
-        override suspend fun setRestIntervalMinutes(minutes: Int) { restIntervalMinutes.value = minutes }
-        override suspend fun setVoiceGuidanceEnabled(enabled: Boolean) { voiceGuidanceEnabled.value = enabled }
+        override suspend fun setRestIntervalMinutes(minutes: Int) {
+            restIntervalMinutes.value =
+                minutes
+        }
+        override suspend fun setVoiceGuidanceEnabled(enabled: Boolean) {
+            voiceGuidanceEnabled.value =
+                enabled
+        }
     }
 
     /** "오늘 한 줄" AI 응답 흉내 (네트워크 없이) */
@@ -122,7 +154,8 @@ class RecordScreensGalleryTest {
                     "detail" -> TripDetailRoute("c", {}, {}, {}, detail)
                     "events" -> TripEventsRoute("c", {}, detail)
                     "motion" -> MotionSicknessRoute("c", {}, {}, null, {}, {}, detail)
-                    "motion-applied" -> MotionSicknessRoute("c", {}, {}, AppliedInterval(120, 90), {}, {}, detail)
+                    "motion-applied" -> MotionSicknessRoute("c", {
+                    }, {}, AppliedInterval(120, 90), {}, {}, detail)
                 }
             }
         }
@@ -137,7 +170,13 @@ class RecordScreensGalleryTest {
         expected.forEach { (name, text) ->
             compose.runOnIdle { screen.value = name }
             compose.waitForIdle()
-            assertTrue(name, compose.onAllNodesWithText(text, substring = true).fetchSemanticsNodes().isNotEmpty())
+            assertTrue(
+                name,
+                compose.onAllNodesWithText(
+                    text,
+                    substring = true
+                ).fetchSemanticsNodes().isNotEmpty()
+            )
             capture("record-$name.png")
         }
     }
@@ -163,6 +202,8 @@ class RecordScreensGalleryTest {
     private fun capture(name: String) {
         val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        File(context.filesDir, name).outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+        File(context.filesDir, name).outputStream().use {
+            bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+        }
     }
 }

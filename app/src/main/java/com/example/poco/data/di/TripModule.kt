@@ -43,8 +43,11 @@ abstract class TripBindings {
 @InstallIn(SingletonComponent::class)
 object TripModule {
     @Provides @Singleton
-    fun database(@ApplicationContext context: Context): TripDatabase =
-        Room.databaseBuilder(context, TripDatabase::class.java, "poco_trips.db").addMigrations(TRIP_MIGRATION_1_2, TRIP_MIGRATION_2_3).build()
+    fun database(@ApplicationContext context: Context): TripDatabase = Room.databaseBuilder(
+        context,
+        TripDatabase::class.java,
+        "poco_trips.db"
+    ).addMigrations(TRIP_MIGRATION_1_2, TRIP_MIGRATION_2_3).build()
 
     @Provides
     fun dao(db: TripDatabase): TripDao = db.trips()
@@ -53,7 +56,9 @@ object TripModule {
     @Provides @Singleton
     fun origin(): DataOrigin = DataOrigin {
         listOf(Build.PRODUCT, Build.DEVICE, Build.FINGERPRINT).any {
-            it.contains("avd", true) || it.contains("emulator", true) || it.contains("generic", true) ||
+            it.contains("avd", true) ||
+                it.contains("emulator", true) ||
+                it.contains("generic", true) ||
                 it.startsWith("sdk", true)
         }
     }

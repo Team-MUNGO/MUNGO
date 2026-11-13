@@ -93,12 +93,18 @@ class AssistantViewModel @Inject constructor(
                 navi.observeEvents().collect { event ->
                     when (event) {
                         is NaviEvent.Destination -> route = RouteSnapshot(
-                            event.name, event.remainTimeSec, System.currentTimeMillis()
+                            event.name,
+                            event.remainTimeSec,
+                            System.currentTimeMillis()
                         )
                         is NaviEvent.RouteStarted -> route = RouteSnapshot(
-                            event.name, event.durationSec, System.currentTimeMillis()
+                            event.name,
+                            event.durationSec,
+                            System.currentTimeMillis()
                         )
-                        NaviEvent.RouteEnded, NaviEvent.RouteCancelled, is NaviEvent.Arrived -> route = null
+                        NaviEvent.RouteEnded, NaviEvent.RouteCancelled, is NaviEvent.Arrived ->
+                            route =
+                                null
                         else -> Unit
                     }
                 }
@@ -115,7 +121,9 @@ class AssistantViewModel @Inject constructor(
                     // Window safety outranks every AI interaction.
                     work?.cancel()
                     pendingSearch = null
-                    mutableState.update { it.copy(phase = AssistantPhase.IDLE, needsLocationPermission = false) }
+                    mutableState.update {
+                        it.copy(phase = AssistantPhase.IDLE, needsLocationPermission = false)
+                    }
                 }
                 wasActive = vehicle.active
             }
@@ -141,7 +149,10 @@ class AssistantViewModel @Inject constructor(
     fun ask() {
         val vehicle = session.state.value
         if (!vehicle.active || vehicle.windowWarning || vehicle.ttsSpeaking) return
-        if (!assistant.configured || !assistant.consented || (!assistant.connected && !assistant.anonymousAuth)) {
+        if (!assistant.configured ||
+            !assistant.consented ||
+            (!assistant.connected && !assistant.anonymousAuth)
+        ) {
             mutableState.update {
                 snapshotState(it).copy(
                     error = when {
@@ -154,7 +165,9 @@ class AssistantViewModel @Inject constructor(
             return
         }
         launchWork(AssistantPhase.LISTENING) {
-            val question = stt.recognize { partial -> mutableState.update { it.copy(question = partial) } }
+            val question = stt.recognize { partial ->
+                mutableState.update { it.copy(question = partial) }
+            }
             mutableState.update { it.copy(question = question, phase = AssistantPhase.THINKING) }
             val response = request(question, null, null)
             if (response.status == AssistStatus.LOCATION_REQUIRED) {
@@ -219,7 +232,12 @@ class AssistantViewModel @Inject constructor(
         } else {
             mutableState.update { it.copy(answerText = response.displayText) }
             session.announce(
-                Guidance(response.requestId, GuidancePriority.AI_ANSWER, response.displayText, response.ttsText)
+                Guidance(
+                    response.requestId,
+                    GuidancePriority.AI_ANSWER,
+                    response.displayText,
+                    response.ttsText
+                )
             )
         }
     }
@@ -231,7 +249,8 @@ class AssistantViewModel @Inject constructor(
             previous?.cancelAndJoin()
             mutableState.update {
                 it.copy(
-                    phase = phase, error = null,
+                    phase = phase,
+                    error = null,
                     question = if (phase == AssistantPhase.LISTENING) "" else it.question,
                     answerText = if (phase == AssistantPhase.LISTENING) null else it.answerText
                 )
@@ -243,7 +262,9 @@ class AssistantViewModel @Inject constructor(
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                mutableState.update { snapshotState(it).copy(error = e.message ?: "잠시 후 다시 시도해 주세요.") }
+                mutableState.update {
+                    snapshotState(it).copy(error = e.message ?: "잠시 후 다시 시도해 주세요.")
+                }
             } finally {
                 mutableState.update { it.copy(phase = AssistantPhase.IDLE) }
             }
@@ -253,7 +274,9 @@ class AssistantViewModel @Inject constructor(
     fun cancel() {
         work?.cancel()
         pendingSearch = null
-        mutableState.update { it.copy(phase = AssistantPhase.IDLE, needsLocationPermission = false) }
+        mutableState.update {
+            it.copy(phase = AssistantPhase.IDLE, needsLocationPermission = false)
+        }
     }
 
     /** Only the Maps-verified recommended place can be sent to NaviHelper. */
@@ -285,7 +308,10 @@ class AssistantViewModel @Inject constructor(
         ): AssistContext {
             val temp = s.temperature.valueOrNull()
             // 내비 값은 받은 뒤 흐른 시간만큼 빼서 보낸다. 5분 넘게 갱신이 없으면 오래된 값이라 보내지 않는다
-            val liveRoute = route?.takeIf { now - it.receivedAt in 0..ROUTE_STALE_MS && it.remainSec >= 0 }
+            val liveRoute = route?.takeIf {
+                now - it.receivedAt in 0..ROUTE_STALE_MS &&
+                    it.remainSec >= 0
+            }
             return AssistContext(
                 comfortScore = s.comfort.score,
                 elapsedMinutes = s.elapsedMs / 60_000,
@@ -299,7 +325,9 @@ class AssistantViewModel @Inject constructor(
                 petSize = s.settings?.petSize?.name,
                 petWeightKg = s.settings?.weightTenths?.let { it / 10.0 },
                 petName = s.settings?.petName?.trim()?.takeIf { it.isNotEmpty() }?.take(20),
-                routeDestination = liveRoute?.destination?.trim()?.takeIf { it.isNotEmpty() }?.take(100),
+                routeDestination = liveRoute?.destination?.trim()?.takeIf {
+                    it.isNotEmpty()
+                }?.take(100),
                 routeRemainingMinutes = liveRoute?.let {
                     (it.remainSec - (now - it.receivedAt) / 1000).coerceAtLeast(0) / 60
                 }

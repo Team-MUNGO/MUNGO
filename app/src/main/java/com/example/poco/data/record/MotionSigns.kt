@@ -34,7 +34,9 @@ data class MotionRecord(val counts: Map<MotionSign, Int> = emptyMap(), val fine:
     fun markFine() = MotionRecord(emptyMap(), fine = !fine)
 
     fun encode(): String? = when {
-        counts.isNotEmpty() -> MotionSign.entries.filter { count(it) > 0 }.joinToString(",") { "${it.name}:${count(it)}" }
+        counts.isNotEmpty() -> MotionSign.entries.filter {
+            count(it) > 0
+        }.joinToString(",") { "${it.name}:${count(it)}" }
         fine -> FINE
         else -> null
     }
@@ -47,7 +49,8 @@ data class MotionRecord(val counts: Map<MotionSign, Int> = emptyMap(), val fine:
             if (raw == FINE) return MotionRecord(fine = true)
             val counts = raw.split(",").mapNotNull { part ->
                 val (name, n) = part.split(":").let { it[0] to it.getOrNull(1) }
-                val sign = MotionSign.entries.firstOrNull { it.name == name } ?: return@mapNotNull null
+                val sign =
+                    MotionSign.entries.firstOrNull { it.name == name } ?: return@mapNotNull null
                 sign to (n?.toIntOrNull() ?: 1).coerceAtLeast(1)
             }.toMap()
             return MotionRecord(counts)

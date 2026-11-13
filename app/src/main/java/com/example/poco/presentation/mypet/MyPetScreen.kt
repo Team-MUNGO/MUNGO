@@ -49,14 +49,13 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.example.poco.core.designsystem.clearFocusOnTap
 import com.example.poco.core.designsystem.MungoIcon
 import com.example.poco.core.designsystem.MungoIconView
 import com.example.poco.core.designsystem.PetPhoto
+import com.example.poco.core.designsystem.clearFocusOnTap
 import com.example.poco.core.designsystem.component.pressable
 import com.example.poco.core.designsystem.hasFullPetImage
 import com.example.poco.core.theme.MungoRadius
-import com.example.poco.presentation.design.Mg
 import com.example.poco.core.theme.POCOTheme
 import com.example.poco.core.util.toMonthDay
 import com.example.poco.data.model.MotionSensitivity
@@ -66,6 +65,7 @@ import com.example.poco.data.model.PetTrait
 import com.example.poco.data.model.TripStats
 import com.example.poco.presentation.common.MungoNavRail
 import com.example.poco.presentation.common.RailTab
+import com.example.poco.presentation.design.Mg
 import com.example.poco.presentation.petprofile.PetDeleteDialog
 import com.example.poco.presentation.petprofile.PetForm
 import com.example.poco.presentation.petprofile.PetPhotoPickerDialog

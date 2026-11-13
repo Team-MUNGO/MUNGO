@@ -173,7 +173,13 @@ class NaviDataSourceImpl @Inject constructor(
                 trySend(
                     NaviRouteUpdate.Waypoints(
                         waypointInfoList.map {
-                            NaviWaypoint(it.name, it.latitude, it.longitude, it.remainTime, it.remainDistance)
+                            NaviWaypoint(
+                                it.name,
+                                it.latitude,
+                                it.longitude,
+                                it.remainTime,
+                                it.remainDistance
+                            )
                         }
                     )
                 )

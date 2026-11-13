@@ -64,10 +64,20 @@ class IntegratedRulesTest {
         }
         // Sharp turn: 90° within 2 s at 30 km/h.
         clock.time = 1_000
-        listOf(0.0, 30.0, 60.0, 90.0).forEachIndexed { i, deg -> apply(detector.onHeading(1_000L + i * 500, deg, 30.0)) }
+        listOf(0.0, 30.0, 60.0, 90.0).forEachIndexed { i, deg ->
+            apply(
+                detector.onHeading(
+                    1_000L + i * 500,
+                    deg,
+                    30.0
+                )
+            )
+        }
         assertEquals(96, score.state.score)
         // Three bump passages: 35 (-1), 45 (-2), 35 (-1) = -4.
-        listOf(35.0, 45.0, 35.0).forEach { detector.speedBump(true, it)?.let { e -> score.penalize(e) } }
+        listOf(35.0, 45.0, 35.0).forEach {
+            detector.speedBump(true, it)?.let { e -> score.penalize(e) }
+        }
         assertEquals(92, score.state.score)
         // Strong braking: 60 -> 48 km/h in 1 s (12 km/h/s) settles after the 1 s merge window.
         clock.time = 10_000
@@ -78,9 +88,15 @@ class IntegratedRulesTest {
         // Three mild curves (30° each, below the sharp-turn range) within 60 s -> repeated turns -5.
         var t = 20_000L
         repeat(3) {
-            listOf(0.0, 10.0, 20.0, 30.0).forEach { deg -> apply(detector.onHeading(t, deg, 30.0)); t += 1_000 }
-            apply(detector.onHeading(t, 30.0, 30.0)); t += 1_000
-            apply(detector.flush(t)); t += 5_000
+            listOf(0.0, 10.0, 20.0, 30.0).forEach { deg ->
+                apply(detector.onHeading(t, deg, 30.0))
+                t +=
+                    1_000
+            }
+            apply(detector.onHeading(t, 30.0, 30.0))
+            t += 1_000
+            apply(detector.flush(t))
+            t += 5_000
         }
         clock.time = t
         assertEquals(81, score.state.score)
@@ -101,8 +117,10 @@ class IntegratedRulesTest {
         // 3 min cooldown + 9 min calm driving = +3.
         run(12 * 60_000L + 2_000, resting = false, stable = true)
         assertEquals(88, score.state.score)
-        assertEquals(listOf(-4, -1, -2, -1, -6, -5, 1, 1, 1, 1, 1, 1, 1, 1, 1, -5, 1, 1, 1),
-            score.drainChanges().map { it.delta })
+        assertEquals(
+            listOf(-4, -1, -2, -1, -6, -5, 1, 1, 1, 1, 1, 1, 1, 1, 1, -5, 1, 1, 1),
+            score.drainChanges().map { it.delta }
+        )
     }
 
     @Test fun guidanceLedgerPriorityVoiceAndDuplicates() {
@@ -114,12 +132,18 @@ class IntegratedRulesTest {
         assertEquals(GuidanceDecision(true, true, true), ledger.post(win, voiceEnabled = true))
         ledger.startedSpeaking(win)
         val proposal = Guidance("p", GuidancePriority.REST_PROPOSAL, "제안")
-        assertEquals(GuidanceDecision(true, false, false), ledger.post(proposal, voiceEnabled = true))
+        assertEquals(
+            GuidanceDecision(true, false, false),
+            ledger.post(proposal, voiceEnabled = true)
+        )
         assertEquals(GuidanceDecision(false, false, false), ledger.post(win, voiceEnabled = true))
         assertEquals("w1", ledger.top()?.id)
         ledger.remove("w1")
         assertEquals("p", ledger.top()?.id)
-        assertEquals(GuidanceDecision(true, false, false), ledger.post(Guidance("x", GuidancePriority.INFO, "i"), voiceEnabled = false))
+        assertEquals(
+            GuidanceDecision(true, false, false),
+            ledger.post(Guidance("x", GuidancePriority.INFO, "i"), voiceEnabled = false)
+        )
     }
 
     @Test fun etaUnitInferenceAndWaypointTracking() {
@@ -130,13 +154,21 @@ class IntegratedRulesTest {
         val tracker = WaypointTracker(place)
         assertNull(tracker.onWaypoints(listOf(NaviWaypoint("덕평", 37.2405, 127.39, 900, 15_000))))
         assertEquals("15분", tracker.etaMinutesText())
-        assertTrue(tracker.onWaypoints(listOf(NaviWaypoint("덕평", 37.24, 127.39, 290, 4_000))) is WaypointSignal.FiveMinutes)
+        assertTrue(
+            tracker.onWaypoints(
+                listOf(NaviWaypoint("덕평", 37.24, 127.39, 290, 4_000))
+            ) is WaypointSignal.FiveMinutes
+        )
         assertNull(tracker.onWaypoints(listOf(NaviWaypoint("덕평", 37.24, 127.39, 200, 3_000))))
         assertNull(tracker.onGear(parked = true)) // P without arrival
         assertTrue(tracker.onArrived(parked = true) is WaypointSignal.ArrivedAndParked)
         assertNull(tracker.onGear(parked = true))
         val cancelled = WaypointTracker(place)
-        assertTrue(cancelled.onWaypoints(listOf(NaviWaypoint("다른곳", 36.0, 127.0, 10, 10))) is WaypointSignal.Cancelled)
+        assertTrue(
+            cancelled.onWaypoints(
+                listOf(NaviWaypoint("다른곳", 36.0, 127.0, 10, 10))
+            ) is WaypointSignal.Cancelled
+        )
     }
 
     @Test fun bumpPassageOnlyOnceAfterNearApproach() {
@@ -151,12 +183,21 @@ class IntegratedRulesTest {
 
     /** #16: summary/list/detail all derive counts from the same stored events. */
     @Test fun recordCountsComeFromEventsOnly() {
-        fun e(type: String, detail: String? = null, after: Int? = null) = TripEventEntity(tripId = "t", atEpoch = 0, type = type, detail = detail, scoreAfter = after)
+        fun e(type: String, detail: String? = null, after: Int? = null) = TripEventEntity(
+            tripId = "t",
+            atEpoch = 0,
+            type = type,
+            detail = detail,
+            scoreAfter = after
+        )
         val counts = countEvents(
             listOf(
-                e(TripEventType.SCORE_PENALTY, "RAPID_BRAKING", 94), e(TripEventType.SCORE_PENALTY, "SHARP_TURN", 90),
-                e(TripEventType.SCORE_RECOVERY, after = 91), e(TripEventType.WINDOW_WARNING, "40"),
-                e(TripEventType.TEMPERATURE_OUT_OF_RANGE, "HOT:27.0"), e(TripEventType.TEMPERATURE_SAMPLE, "27.0")
+                e(TripEventType.SCORE_PENALTY, "RAPID_BRAKING", 94),
+                e(TripEventType.SCORE_PENALTY, "SHARP_TURN", 90),
+                e(TripEventType.SCORE_RECOVERY, after = 91),
+                e(TripEventType.WINDOW_WARNING, "40"),
+                e(TripEventType.TEMPERATURE_OUT_OF_RANGE, "HOT:27.0"),
+                e(TripEventType.TEMPERATURE_SAMPLE, "27.0")
             )
         )
         assertEquals(1, counts.rapidBraking)

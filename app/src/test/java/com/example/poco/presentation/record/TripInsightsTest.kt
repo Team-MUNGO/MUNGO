@@ -13,14 +13,32 @@ import org.junit.Test
 
 class TripInsightsTest {
     private val m = 60_000L
-    private fun trip(id: String, start: Long, minutes: Long, signs: String? = null, score: Int = 88) = TripEntity(
+    private fun trip(
+        id: String,
+        start: Long,
+        minutes: Long,
+        signs: String? = null,
+        score: Int = 88
+    ) = TripEntity(
         id = id, petName = "현댕이", petWeightTenths = null, petSize = null, seat = "PASSENGER",
         startedAtEpoch = start, endedAtEpoch = start + minutes * m, status = "COMPLETED",
         startRestIntervalMinutes = 120, finalScore = score, motionSicknessSigns = signs
     )
 
-    private fun e(at: Long, type: String, delta: Int? = null, after: Int? = null, detail: String? = null) =
-        TripEventEntity(tripId = "t", atEpoch = at, type = type, scoreDelta = delta, scoreAfter = after, detail = detail)
+    private fun e(
+        at: Long,
+        type: String,
+        delta: Int? = null,
+        after: Int? = null,
+        detail: String? = null
+    ) = TripEventEntity(
+        tripId = "t",
+        atEpoch = at,
+        type = type,
+        scoreDelta = delta,
+        scoreAfter = after,
+        detail = detail
+    )
 
     @Test fun motionRecordRoundTripAndLegacyValues() {
         val r = MotionRecord().withCount(MotionSign.YAWN, 3).toggle(MotionSign.DROOL)
@@ -55,7 +73,12 @@ class TripInsightsTest {
                 e(80 * m, TripEventType.SCORE_PENALTY, -5, 92, "RAPID_BRAKING")
             )
         )
-        assertEquals(listOf("급회전", "과속방지턱 2회", "창문 50% 열림", "휴식 16분", "평온 유지 3분", "급정거"), items.map { it.title })
+        assertEquals(
+            listOf("급회전", "과속방지턱 2회", "창문 50% 열림", "휴식 16분", "평온 유지 3분", "급정거"),
+            items.map {
+                it.title
+            }
+        )
         assertEquals(listOf(-4, -3, 0, 2, 2, -5), items.map { it.delta })
         assertEquals(ItemKind.ALERT, items[2].kind)
         assertEquals("경유지 도착 후 휴식", items[3].detail)
@@ -72,7 +95,12 @@ class TripInsightsTest {
         )
         val now = trips.last()
         val analysis = motionAnalysis(trips, now, 120)
-        assertEquals(listOf("a", "b", "c", "d"), windowTrips(trips, now, analysis).map { it.first.id })
+        assertEquals(
+            listOf("a", "b", "c", "d"),
+            windowTrips(trips, now, analysis).map {
+                it.first.id
+            }
+        )
         assertEquals("긴 이동에서 불편 징후가 더 자주 관찰됐어요.", insightTip(analysis.insight).title)
         assertEquals(90, analysis.recommendedMinutes)
         // A plain count increase on the detail screen never shortens the interval by itself.
@@ -103,24 +131,48 @@ class TripInsightsTest {
         assertEquals("가", subjectParticle("과속방지턱 2회"))
         assertEquals("이", subjectParticle("휴식 16분"))
     }
+
     @Test fun restBandsUseRecordedTimesAndRecoverCompletedDuration() {
-        assertEquals(listOf(40 * m to 56 * m), restBands(listOf(
-            e(56 * m, TripEventType.REST_COMPLETED, detail = "${16 * m}"),
-            e(40 * m, TripEventType.REST_STARTED)
-        )))
-        assertEquals(listOf(40 * m to 56 * m), restBands(listOf(
-            e(56 * m, TripEventType.REST_COMPLETED, detail = "${16 * m}")
-        )))
-        assertTrue(restBands(listOf(e(56 * m, TripEventType.REST_COMPLETED, detail = "invalid"))).isEmpty())
+        assertEquals(
+            listOf(40 * m to 56 * m),
+            restBands(
+                listOf(
+                    e(56 * m, TripEventType.REST_COMPLETED, detail = "${16 * m}"),
+                    e(40 * m, TripEventType.REST_STARTED)
+                )
+            )
+        )
+        assertEquals(
+            listOf(40 * m to 56 * m),
+            restBands(
+                listOf(
+                    e(56 * m, TripEventType.REST_COMPLETED, detail = "${16 * m}")
+                )
+            )
+        )
+        assertTrue(
+            restBands(listOf(e(56 * m, TripEventType.REST_COMPLETED, detail = "invalid"))).isEmpty()
+        )
         assertTrue(restBands(listOf(e(56 * m, TripEventType.REST_CANCELLED))).isEmpty())
     }
 
     @Test fun eventDetailUsesEventSnapshotAndPreservesGroupedBeforeScore() {
         val first = e(10 * m, TripEventType.SCORE_PENALTY, -2, 98, "SPEED_BUMP").copy(
-            scoreBefore = 100, latitude = 37.0, longitude = 127.0,
-            temperatureC = 23f, windowPercent = 0.0, seat = "PASSENGER", guidanceText = "안내 기록"
+            scoreBefore = 100,
+            latitude = 37.0,
+            longitude = 127.0,
+            temperatureC = 23f,
+            windowPercent = 0.0,
+            seat = "PASSENGER",
+            guidanceText = "안내 기록"
         )
-        val second = e(11 * m, TripEventType.SCORE_PENALTY, -3, 95, "SPEED_BUMP").copy(scoreBefore = 98)
+        val second = e(
+            11 * m,
+            TripEventType.SCORE_PENALTY,
+            -3,
+            95,
+            "SPEED_BUMP"
+        ).copy(scoreBefore = 98)
         val item = timelineItems(trip("t", 0, 60), listOf(first, second)).single()
         assertEquals(100, item.scoreBefore)
         assertEquals(95, item.scoreAfter)
@@ -130,5 +182,4 @@ class TripInsightsTest {
         assertEquals("37.00000, 127.00000", eventLocationText(item))
         assertNull(eventLocationText(item.copy(snapshot = null)))
     }
-
 }

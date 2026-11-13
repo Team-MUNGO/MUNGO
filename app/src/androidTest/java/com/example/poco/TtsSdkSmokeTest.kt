@@ -23,7 +23,9 @@ class TtsSdkSmokeTest {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val events = Collections.synchronizedList(mutableListOf<String>())
         // Optional -e ttsMode SERVER|HYBRID to probe non on-device engines.
-        val mode = Mode.valueOf(InstrumentationRegistry.getArguments().getString("ttsMode") ?: "ON_DEVICE")
+        val mode = Mode.valueOf(
+            InstrumentationRegistry.getArguments().getString("ttsMode") ?: "ON_DEVICE"
+        )
         val tts = TextToSpeech(context, mode)
         val manager = PleosSdkManager(
             Vehicle(context),

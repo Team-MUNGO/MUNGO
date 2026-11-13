@@ -11,12 +11,26 @@ class TripSummaryMapperTest {
     private val m = 60_000L
     private val trip = TripEntity(
         id = "trip-1", petName = "현댕이", petWeightTenths = 50, petSize = "SMALL", seat = "PASSENGER",
-        startedAtEpoch = 0, endedAtEpoch = 154 * m, status = "COMPLETED", startRestIntervalMinutes = 120,
-        finalScore = 88, minScore = 80, restCount = 1, restMs = 16 * m, rapidBrakingCount = 1, sharpTurnCount = 1,
+        startedAtEpoch = 0,
+        endedAtEpoch = 154 * m,
+        status = "COMPLETED",
+        startRestIntervalMinutes = 120,
+        finalScore = 88,
+        minScore = 80,
+        restCount = 1,
+        restMs = 16 * m,
+        rapidBrakingCount = 1,
+        sharpTurnCount = 1,
         repeatedTurnCount = 2, speedBumpCount = 2, motionSicknessSigns = "YAWN:3,DROOL:1"
     )
     private fun e(min: Long, type: String, delta: Int? = null, detail: String? = null) =
-        TripEventEntity(tripId = "trip-1", atEpoch = min * m, type = type, scoreDelta = delta, detail = detail)
+        TripEventEntity(
+            tripId = "trip-1",
+            atEpoch = min * m,
+            type = type,
+            scoreDelta = delta,
+            detail = detail
+        )
 
     @Test fun mapsRecordWithoutLocationOrClockTimes() {
         val request = trip.toSummaryRequest(
@@ -46,7 +60,20 @@ class TripSummaryMapperTest {
     }
 
     @Test fun trimsToFortyEventsKeepingBiggestDrops() {
-        val many = (1..60L).map { e(it, TripEventType.SCORE_PENALTY, if (it == 59L) -9 else -1, "SPEED_BUMP") }
+        val many = (1..60L).map {
+            e(
+                it,
+                TripEventType.SCORE_PENALTY,
+                if (it ==
+                    59L
+                ) {
+                    -9
+                } else {
+                    -1
+                },
+                "SPEED_BUMP"
+            )
+        }
         val events = trip.toSummaryRequest(many, null)!!.trip.events
         assertEquals(40, events.size)
         assertEquals(true, events.any { it.scoreDelta == -9 })

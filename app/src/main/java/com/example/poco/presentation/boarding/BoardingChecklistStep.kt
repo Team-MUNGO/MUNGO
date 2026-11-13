@@ -23,15 +23,14 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import com.example.poco.presentation.design.Mg
 import com.example.poco.core.designsystem.MungoIcon
 import com.example.poco.core.designsystem.MungoIconView
 import com.example.poco.core.designsystem.component.pressable
 import com.example.poco.core.theme.MungoRadius
 import com.example.poco.core.theme.POCOTheme
 import com.example.poco.core.util.ege
+import com.example.poco.presentation.design.Mg
 import com.example.poco.presentation.petprofile.label
 import kotlin.math.roundToInt
 
@@ -99,7 +98,8 @@ internal fun Checklist(uiState: BoardingUiState, actions: BoardingActions) {
             .padding(horizontal = 48.dp),
         verticalArrangement = Arrangement.Center
     ) {
-        Column(verticalArrangement = Arrangement.spacedBy(19.dp)) { // Figma 488:7706: 139 높이 · 19 간격
+        Column(verticalArrangement = Arrangement.spacedBy(19.dp)) {
+            // Figma 488:7706: 139 높이 · 19 간격
             CheckItem.entries.forEach { item ->
                 CheckRow(
                     item = item,

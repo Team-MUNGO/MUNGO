@@ -1,19 +1,20 @@
 package com.example.poco
 
 import android.app.Application
-import dagger.hilt.android.HiltAndroidApp
 import com.example.poco.data.assistant.RestRecommendationCoordinator
 import com.example.poco.data.record.LegacyTripImporter
+import dagger.hilt.android.HiltAndroidApp
+import javax.inject.Inject
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import javax.inject.Inject
 import timber.log.Timber
 
 @HiltAndroidApp
 class PocoApplication : Application() {
     @Inject lateinit var restRecommendations: RestRecommendationCoordinator
+
     @Inject lateinit var legacyTrips: LegacyTripImporter
 
     override fun onCreate() {

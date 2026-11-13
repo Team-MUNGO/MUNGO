@@ -24,7 +24,8 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import timber.log.Timber
 
-/** 알림 toggles. Rest/window come from the pet profiles (온보딩 3/3에서 고른 값), arrival summary is app-wide. */
+/** 알림 toggles. Rest/window come from the pet profiles (온보딩 3/3에서 고른 값),
+arrival summary is app-wide. */
 data class AlertSettings(
     val restSuggestion: Boolean = true,
     val windowAlert: Boolean = true,
@@ -42,7 +43,11 @@ class SettingsViewModel @Inject constructor(
     private val session: DrivingSessionRepository,
     private val link: VehicleLinkRepository
 ) : ViewModel() {
-    private val petList = pets.observePets().stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+    private val petList = pets.observePets().stateIn(
+        viewModelScope,
+        SharingStarted.Eagerly,
+        emptyList()
+    )
 
     private val _alerts = MutableStateFlow(AlertSettings())
     val alerts: StateFlow<AlertSettings> = _alerts.asStateFlow()
@@ -77,11 +82,21 @@ class SettingsViewModel @Inject constructor(
                 )
             }.collect { _alerts.value = it }
         }
-        viewModelScope.launch { link.state.map { it.linked }.collect { if (it) loadIdentity() else _identity.value = null } }
+        viewModelScope.launch {
+            link.state.map { it.linked }.collect {
+                if (it) {
+                    loadIdentity()
+                } else {
+                    _identity.value =
+                        null
+                }
+            }
+        }
     }
 
     /** Same switch for every registered pet, so the app-wide setting matches what driving uses. */
-    fun setRestSuggestion(enabled: Boolean) = updatePets { it.copy(restSuggestionEnabled = enabled) }
+    fun setRestSuggestion(enabled: Boolean) =
+        updatePets { it.copy(restSuggestionEnabled = enabled) }
     fun setWindowAlert(enabled: Boolean) = updatePets { it.copy(windowAlertEnabled = enabled) }
     fun setArrivalSummary(enabled: Boolean) {
         viewModelScope.launch { settings.setArrivalSummaryEnabled(enabled) }
@@ -98,7 +113,10 @@ class SettingsViewModel @Inject constructor(
 
     private fun loadIdentity() {
         viewModelScope.launch {
-            _identity.value = runCatching { link.identity() }.onFailure { Timber.w(it, "차량 정보 조회 실패") }.getOrNull()
+            _identity.value =
+                runCatching {
+                    link.identity()
+                }.onFailure { Timber.w(it, "차량 정보 조회 실패") }.getOrNull()
         }
     }
 

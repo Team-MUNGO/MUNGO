@@ -9,25 +9,35 @@ import com.example.poco.data.record.MotionSign
 object MotionAnalysisPolicy {
     /** 현재 이동을 포함해 비교하는 최대 이동 수. */
     const val WINDOW_SIZE = 4
+
     /** 이보다 짧은 이동은 비교 분석에서 제외한다. */
     const val MIN_ANALYZABLE_MINUTES = 15.0
+
     /** 이 시간을 넘으면 장시간 이동으로 본다. */
     const val LONG_TRIP_MINUTES = 60.0
+
     /** 증가로 판단하는 최소 증가율 (30%). */
     const val INCREASE_RATIO = 0.30
+
     /** 증가로 판단하는 최소 시간당 발생률 차이. 기준 평균이 0이면 이 차이만으로 판단한다. */
     const val MIN_RATE_DIFF_PER_HOUR = 0.5
+
     /** 장시간·단시간 그룹 비교에 필요한 그룹별 최소 이동 수. */
     const val MIN_TRIPS_PER_GROUP = 2
+
     /** 최근 징후 증가 비교에 쓰는 이전 이동 수. */
     const val PREVIOUS_TRIPS_FOR_INCREASE = 3
+
     /** 감소 추세·반복 징후를 볼 최근 이동 수. */
     const val RECENT_TREND_TRIPS = 3
+
     /** 반복 징후로 보는 서로 다른 이동 수. */
     const val REPEAT_MIN_TRIPS = 2
+
     /** 휴식 간격 단축 단위와 최소 간격 (분). */
     const val REST_STEP_MINUTES = 30
     const val REST_MIN_MINUTES = 30
+
     /** 휴식 간격 조정 대신 상태 확인을 안내하는 주의 징후. */
     val CAUTION_SIGNS: Set<MotionSign> = setOf(MotionSign.VOMIT)
 }
@@ -74,7 +84,8 @@ object TripAnalyzer {
     fun analyze(input: MotionTripInput): AnalyzedTrip {
         val total = input.record?.total
         val rate = total?.let { ratePerHour(it, input.durationMinutes) }
-        val comparable = input.record != null && rate != null &&
+        val comparable = input.record != null &&
+            rate != null &&
             input.durationMinutes >= MotionAnalysisPolicy.MIN_ANALYZABLE_MINUTES
         return AnalyzedTrip(input, total, rate, comparable)
     }
@@ -133,32 +144,54 @@ object InsightRuleEngine {
         recentIncrease(comparable)?.let { return it }
         decreasing(comparable)?.let { return it }
         repeatedSign(comparable)?.let { return it }
-        return if (comparable.size < MotionAnalysisPolicy.RECENT_TREND_TRIPS) MotionInsight(InsightType.NOT_ENOUGH_DATA)
-        else MotionInsight(InsightType.NO_CHANGE)
+        return if (comparable.size <
+            MotionAnalysisPolicy.RECENT_TREND_TRIPS
+        ) {
+            MotionInsight(InsightType.NOT_ENOUGH_DATA)
+        } else {
+            MotionInsight(InsightType.NO_CHANGE)
+        }
     }
 
     /** 우선순위 1: 이번 이동에서 구토 등 주의 징후. 이동 시간과 관계없이 확인을 안내한다. */
     private fun cautionSign(current: AnalyzedTrip): MotionInsight? {
         val record = current.input.record ?: return null
-        val sign = MotionSign.entries.firstOrNull { it in MotionAnalysisPolicy.CAUTION_SIGNS && record.count(it) > 0 } ?: return null
+        val sign =
+            MotionSign.entries.firstOrNull {
+                it in MotionAnalysisPolicy.CAUTION_SIGNS &&
+                    record.count(it) > 0
+            }
+                ?: return null
         return MotionInsight(InsightType.CAUTION_SIGN, sign = sign)
     }
 
     /** 우선순위 2: 60분 초과·이하 그룹이 각각 2회 이상이고 긴 이동 평균 발생률이 의미 있게 높을 때. */
     private fun longTripIncrease(comparable: List<AnalyzedTrip>): MotionInsight? {
         val (long, short) = comparable.partition { it.isLong }
-        if (long.size < MotionAnalysisPolicy.MIN_TRIPS_PER_GROUP || short.size < MotionAnalysisPolicy.MIN_TRIPS_PER_GROUP) return null
+        if (long.size < MotionAnalysisPolicy.MIN_TRIPS_PER_GROUP ||
+            short.size < MotionAnalysisPolicy.MIN_TRIPS_PER_GROUP
+        ) {
+            return null
+        }
         val longAvg = long.mapNotNull { it.ratePerHour }.average()
         val shortAvg = short.mapNotNull { it.ratePerHour }.average()
         if (!isMeaningfulIncrease(shortAvg, longAvg)) return null
-        return MotionInsight(InsightType.LONG_TRIP_INCREASE, baselineRate = shortAvg, targetRate = longAvg)
+        return MotionInsight(
+            InsightType.LONG_TRIP_INCREASE,
+            baselineRate = shortAvg,
+            targetRate = longAvg
+        )
     }
 
     /** 우선순위 3: 이전 3회 평균 대비 이번 이동 발생률이 의미 있게 늘었을 때. */
     private fun recentIncrease(comparable: List<AnalyzedTrip>): MotionInsight? {
         val previous = comparable.dropLast(1)
         if (previous.size < MotionAnalysisPolicy.PREVIOUS_TRIPS_FOR_INCREASE) return null
-        val baseline = previous.takeLast(MotionAnalysisPolicy.PREVIOUS_TRIPS_FOR_INCREASE).mapNotNull { it.ratePerHour }.average()
+        val baseline = previous.takeLast(
+            MotionAnalysisPolicy.PREVIOUS_TRIPS_FOR_INCREASE
+        ).mapNotNull {
+            it.ratePerHour
+        }.average()
         val now = comparable.last().ratePerHour ?: return null
         if (!isMeaningfulIncrease(baseline, now)) return null
         return MotionInsight(InsightType.RECENT_INCREASE, baselineRate = baseline, targetRate = now)
@@ -166,7 +199,9 @@ object InsightRuleEngine {
 
     /** 우선순위 4: 최근 3회 발생률이 연속으로 감소. */
     private fun decreasing(comparable: List<AnalyzedTrip>): MotionInsight? {
-        val recent = comparable.takeLast(MotionAnalysisPolicy.RECENT_TREND_TRIPS).mapNotNull { it.ratePerHour }
+        val recent = comparable.takeLast(MotionAnalysisPolicy.RECENT_TREND_TRIPS).mapNotNull {
+            it.ratePerHour
+        }
         if (recent.size < MotionAnalysisPolicy.RECENT_TREND_TRIPS) return null
         if (!recent.zipWithNext().all { (a, b) -> b < a }) return null
         return MotionInsight(InsightType.DECREASING, trend = recent)
@@ -174,13 +209,26 @@ object InsightRuleEngine {
 
     /** 우선순위 5: 최근 3회 중 같은 징후가 서로 다른 2회 이상의 이동에서 기록됨. */
     private fun repeatedSign(comparable: List<AnalyzedTrip>): MotionInsight? {
-        val recent = comparable.takeLast(MotionAnalysisPolicy.RECENT_TREND_TRIPS).mapNotNull { it.input.record }
+        val recent = comparable.takeLast(MotionAnalysisPolicy.RECENT_TREND_TRIPS).mapNotNull {
+            it.input.record
+        }
         val best = MotionSign.entries
-            .map { sign -> Triple(sign, recent.count { it.count(sign) > 0 }, recent.sumOf { it.count(sign) }) }
+            .map { sign ->
+                Triple(sign, recent.count { it.count(sign) > 0 }, recent.sumOf { it.count(sign) })
+            }
             .filter { it.second >= MotionAnalysisPolicy.REPEAT_MIN_TRIPS }
-            .sortedWith(compareByDescending<Triple<MotionSign, Int, Int>> { it.second }.thenByDescending { it.third })
+            .sortedWith(
+                compareByDescending<Triple<MotionSign, Int, Int>> {
+                    it.second
+                }.thenByDescending { it.third }
+            )
             .firstOrNull() ?: return null
-        return MotionInsight(InsightType.REPEATED_SIGN, sign = best.first, repeatedIn = best.second, repeatedOf = recent.size)
+        return MotionInsight(
+            InsightType.REPEATED_SIGN,
+            sign = best.first,
+            repeatedIn = best.second,
+            repeatedOf = recent.size
+        )
     }
 }
 
@@ -188,14 +236,19 @@ object InsightRuleEngine {
 enum class KeepReason {
     /** 주의 징후: 상태 확인 · 필요시 수의사 상담. */
     CHECK_PET,
+
     /** 최근 징후 증가: 이동 중 상태를 더 주의 깊게 관찰. */
     OBSERVE_CLOSELY,
+
     /** 특정 징후 반복: 해당 징후가 반복되는지 관찰. */
     OBSERVE_SIGN,
+
     /** 징후 감소 · 변화 없음. */
     STABLE,
+
     /** 비교할 기록 부족. */
     NOT_ENOUGH_DATA,
+
     /** 단축 조건은 충족했지만 이미 최소 간격(30분). */
     AT_MINIMUM
 }
@@ -204,28 +257,50 @@ sealed interface RestRecommendation {
     val currentMinutes: Int
 
     /** 보호자가 수락해야만 설정에 반영된다. 자동 적용하지 않는다. */
-    data class Shorten(override val currentMinutes: Int, val recommendedMinutes: Int) : RestRecommendation
+    data class Shorten(override val currentMinutes: Int, val recommendedMinutes: Int) :
+        RestRecommendation
     data class Keep(override val currentMinutes: Int, val reason: KeepReason) : RestRecommendation
 }
 
 /** 인사이트와 현재 휴식 간격(사용자 설정값)으로 다음 이동 제안을 계산한다. */
 object RecommendationEngine {
     /** 추천 휴식 간격 = max(현재 휴식 간격 - 30분, 30분). */
-    fun shortened(currentMinutes: Int): Int =
-        maxOf(currentMinutes - MotionAnalysisPolicy.REST_STEP_MINUTES, MotionAnalysisPolicy.REST_MIN_MINUTES)
+    fun shortened(currentMinutes: Int): Int = maxOf(
+        currentMinutes - MotionAnalysisPolicy.REST_STEP_MINUTES,
+        MotionAnalysisPolicy.REST_MIN_MINUTES
+    )
 
-    fun recommend(insight: MotionInsight, currentMinutes: Int): RestRecommendation = when (insight.type) {
-        InsightType.LONG_TRIP_INCREASE -> {
-            val next = shortened(currentMinutes)
-            if (next < currentMinutes) RestRecommendation.Shorten(currentMinutes, next)
-            else RestRecommendation.Keep(currentMinutes, KeepReason.AT_MINIMUM)
+    fun recommend(insight: MotionInsight, currentMinutes: Int): RestRecommendation =
+        when (insight.type) {
+            InsightType.LONG_TRIP_INCREASE -> {
+                val next = shortened(currentMinutes)
+                if (next < currentMinutes) {
+                    RestRecommendation.Shorten(currentMinutes, next)
+                } else {
+                    RestRecommendation.Keep(currentMinutes, KeepReason.AT_MINIMUM)
+                }
+            }
+            InsightType.CAUTION_SIGN -> RestRecommendation.Keep(
+                currentMinutes,
+                KeepReason.CHECK_PET
+            )
+            InsightType.RECENT_INCREASE -> RestRecommendation.Keep(
+                currentMinutes,
+                KeepReason.OBSERVE_CLOSELY
+            )
+            InsightType.REPEATED_SIGN -> RestRecommendation.Keep(
+                currentMinutes,
+                KeepReason.OBSERVE_SIGN
+            )
+            InsightType.DECREASING, InsightType.NO_CHANGE -> RestRecommendation.Keep(
+                currentMinutes,
+                KeepReason.STABLE
+            )
+            InsightType.NOT_ENOUGH_DATA -> RestRecommendation.Keep(
+                currentMinutes,
+                KeepReason.NOT_ENOUGH_DATA
+            )
         }
-        InsightType.CAUTION_SIGN -> RestRecommendation.Keep(currentMinutes, KeepReason.CHECK_PET)
-        InsightType.RECENT_INCREASE -> RestRecommendation.Keep(currentMinutes, KeepReason.OBSERVE_CLOSELY)
-        InsightType.REPEATED_SIGN -> RestRecommendation.Keep(currentMinutes, KeepReason.OBSERVE_SIGN)
-        InsightType.DECREASING, InsightType.NO_CHANGE -> RestRecommendation.Keep(currentMinutes, KeepReason.STABLE)
-        InsightType.NOT_ENOUGH_DATA -> RestRecommendation.Keep(currentMinutes, KeepReason.NOT_ENOUGH_DATA)
-    }
 }
 
 /** 인사이트와 추천이 같은 분석 결과에서 나오도록 묶어서 전달한다. */
@@ -234,13 +309,22 @@ data class MotionAnalysis(
     val insight: MotionInsight,
     val recommendation: RestRecommendation
 ) {
-    val recommendedMinutes: Int? get() = (recommendation as? RestRecommendation.Shorten)?.recommendedMinutes
+    val recommendedMinutes: Int?
+        get() = (recommendation as? RestRecommendation.Shorten)?.recommendedMinutes
 
     companion object {
-        fun of(all: List<MotionTripInput>, current: MotionTripInput, restIntervalMinutes: Int): MotionAnalysis {
+        fun of(
+            all: List<MotionTripInput>,
+            current: MotionTripInput,
+            restIntervalMinutes: Int
+        ): MotionAnalysis {
             val window = TripAnalyzer.window(all, current)
             val insight = InsightRuleEngine.evaluate(window)
-            return MotionAnalysis(window, insight, RecommendationEngine.recommend(insight, restIntervalMinutes))
+            return MotionAnalysis(
+                window,
+                insight,
+                RecommendationEngine.recommend(insight, restIntervalMinutes)
+            )
         }
     }
 }

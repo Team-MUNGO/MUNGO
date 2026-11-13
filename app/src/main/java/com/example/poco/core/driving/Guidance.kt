@@ -18,7 +18,11 @@ data class Guidance(
 )
 
 /** Decision for one posted guidance; pure so the policy is unit-testable. */
-data class GuidanceDecision(val accepted: Boolean, val speak: Boolean, val interruptCurrent: Boolean)
+data class GuidanceDecision(
+    val accepted: Boolean,
+    val speak: Boolean,
+    val interruptCurrent: Boolean
+)
 
 /**
  * Event-ID ledger. A guidance ID is handled once per session: recomposition, screen switches and
@@ -36,7 +40,8 @@ class GuidanceLedger {
         if (!handled.add(guidance.id)) return GuidanceDecision(false, false, false)
         active[guidance.id] = guidance
         val current = speaking
-        val canSpeak = voiceEnabled && !guidance.ttsText.isNullOrBlank() &&
+        val canSpeak = voiceEnabled &&
+            !guidance.ttsText.isNullOrBlank() &&
             (current == null || guidance.priority.rank < current.priority.rank)
         return GuidanceDecision(true, canSpeak, canSpeak && current != null)
     }

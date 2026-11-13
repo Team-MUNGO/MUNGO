@@ -85,7 +85,9 @@ class AssistantException(val code: String, message: String) : IllegalStateExcept
 /** Defensive client-side check: nothing unverified can reach the UI or NaviHelper. */
 fun AssistResponse.validate(request: AssistRequest): AssistResponse {
     require(requestId == request.requestId && type == request.type && eventId == request.eventId)
-    require(status in setOf(AssistStatus.OK, AssistStatus.NO_RESULTS, AssistStatus.LOCATION_REQUIRED))
+    require(
+        status in setOf(AssistStatus.OK, AssistStatus.NO_RESULTS, AssistStatus.LOCATION_REQUIRED)
+    )
     require(displayText.isNotBlank() && displayText.length <= 300 && ttsText.length <= 300)
     require(places.size <= 5 && places.map { it.placeId }.distinct().size == places.size)
     places.forEach {
@@ -96,7 +98,11 @@ fun AssistResponse.validate(request: AssistRequest): AssistResponse {
     }
     require(places.isEmpty() || sources.places == "google_maps")
     require(recommendedPlaceId == null || places.any { it.placeId == recommendedPlaceId })
-    require(status != AssistStatus.LOCATION_REQUIRED || !searchQuery.isNullOrBlank() || type == AssistType.REST_RECOMMENDATION)
+    require(
+        status != AssistStatus.LOCATION_REQUIRED ||
+            !searchQuery.isNullOrBlank() ||
+            type == AssistType.REST_RECOMMENDATION
+    )
     return this
 }
 
@@ -116,7 +122,8 @@ data class TripSummaryCounts(
     val temperatureAlert: Int
 )
 
-/** [minute] = minutes since departure (clock times are never sent, so the AI cannot invent them). */
+/** [minute] = minutes since departure (clock times are never sent,
+so the AI cannot invent them). */
 @Serializable
 data class TripSummaryEvent(val minute: Int, val kind: String, val scoreDelta: Int? = null)
 

@@ -84,7 +84,9 @@ class RestRecommendationCoordinator @Inject constructor(
             val response = assistant.assist(request)
             if (session.state.value.tripId != due.tripId) return
             when (response.status) {
-                AssistStatus.OK -> session.showProposal(PlaceProposal(due.eventId, response, automatic = true))
+                AssistStatus.OK -> session.showProposal(
+                    PlaceProposal(due.eventId, response, automatic = true)
+                )
                 else -> session.setAiRestStatus(response.displayText)
             }
         } catch (e: CancellationException) {
@@ -105,12 +107,17 @@ class RestRecommendationCoordinator @Inject constructor(
     }
 
     companion object {
-        /** Minimal data for a rest recommendation: pet size, rest timing, score, temperature status. */
+        /** Minimal data for a rest recommendation: pet size,
+         rest timing,
+         score,
+         temperature status. */
         fun restContext(s: DrivingSessionState, due: RestRecommendationDue) = AssistContext(
             comfortScore = s.comfort.score,
             minutesToRest = due.remainingMs / 60_000,
             restIntervalMinutes = s.rest.intervalMinutes,
-            temperatureStatus = s.settings?.let { temperatureStatus(s.temperature.valueOrNull(), it).name },
+            temperatureStatus = s.settings?.let {
+                temperatureStatus(s.temperature.valueOrNull(), it).name
+            },
             petSize = s.settings?.petSize?.name,
             petName = s.settings?.petName?.trim()?.takeIf { it.isNotEmpty() }?.take(20)
         )

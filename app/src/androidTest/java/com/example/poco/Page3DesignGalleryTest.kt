@@ -9,24 +9,24 @@ import androidx.compose.ui.test.onRoot
 import androidx.test.platform.app.InstrumentationRegistry
 import com.example.poco.core.designsystem.FitWideWindow
 import com.example.poco.core.theme.POCOTheme
+import com.example.poco.data.vehicle.VehicleIdentity
+import com.example.poco.data.vehicle.VehicleLinkState
+import com.example.poco.presentation.boarding.ChecklistPreview
+import com.example.poco.presentation.boarding.CompanionsPreview
+import com.example.poco.presentation.boarding.SeatPreview
 import com.example.poco.presentation.home.HomeScreenPreview
 import com.example.poco.presentation.mypet.MyPetDetailPreview
 import com.example.poco.presentation.mypet.MyPetEditPreview
-import com.example.poco.presentation.onboarding.BasicPreview
-import com.example.poco.presentation.onboarding.TraitsPreview
 import com.example.poco.presentation.onboarding.AlertsPreview
+import com.example.poco.presentation.onboarding.BasicPreview
 import com.example.poco.presentation.onboarding.CompletePreview
-import com.example.poco.presentation.boarding.CompanionsPreview
-import com.example.poco.presentation.boarding.SeatPreview
-import com.example.poco.presentation.boarding.ChecklistPreview
-import com.example.poco.presentation.record.AlertsPage
+import com.example.poco.presentation.onboarding.TraitsPreview
 import com.example.poco.presentation.record.AlertSettings
-import com.example.poco.presentation.record.VehiclePage
-import com.example.poco.data.vehicle.VehicleLinkState
-import com.example.poco.data.vehicle.VehicleIdentity
+import com.example.poco.presentation.record.AlertsPage
 import com.example.poco.presentation.record.AppInfoPage
 import com.example.poco.presentation.record.SettingsPage
 import com.example.poco.presentation.record.SettingsScreen
+import com.example.poco.presentation.record.VehiclePage
 import java.io.File
 import org.junit.Rule
 import org.junit.Test
@@ -40,9 +40,27 @@ class Page3DesignGalleryTest {
         compose.setContent {
             POCOTheme(darkTheme = false) {
                 when (screen.value) {
-                    "settings-alerts" -> SettingsScreen(SettingsPage.ALERTS, {}, {}) { AlertsPage(AlertSettings(hasPet = true), {}, {}, {}, {}) }
-                    "settings-vehicle" -> SettingsScreen(SettingsPage.VEHICLE, {}, {}) { VehiclePage(VehicleLinkState(), VehicleIdentity("그랜저", "현대", System.currentTimeMillis()), true, {}, {}, {}) }
-                    "app-info" -> SettingsScreen(SettingsPage.APP_INFO, {}, {}) { AppInfoPage("1.0.0", true) }
+                    "settings-alerts" -> SettingsScreen(SettingsPage.ALERTS, {
+                    }, {}) { AlertsPage(AlertSettings(hasPet = true), {}, {}, {}, {}) }
+                    "settings-vehicle" -> SettingsScreen(SettingsPage.VEHICLE, {
+                    }, {
+                    }) {
+                        VehiclePage(
+                            VehicleLinkState(),
+                            VehicleIdentity(
+                                "그랜저",
+                                "현대",
+                                System.currentTimeMillis()
+                            ),
+                            true,
+                            {
+                            },
+                            {},
+                            {}
+                        )
+                    }
+                    "app-info" -> SettingsScreen(SettingsPage.APP_INFO, {
+                    }, {}) { AppInfoPage("1.0.0", true) }
                     else -> FitWideWindow(minWidth = androidx.compose.ui.unit.Dp(1700f)) {
                         when (screen.value) {
                             "home" -> HomeScreenPreview()
@@ -60,12 +78,28 @@ class Page3DesignGalleryTest {
                 }
             }
         }
-        for (name in listOf("home", "pet", "pet-edit", "basic", "traits", "alerts", "complete", "app-info", "settings-alerts", "settings-vehicle", "boarding-pets", "boarding-seat", "boarding-checklist")) {
+        for (name in listOf(
+            "home",
+            "pet",
+            "pet-edit",
+            "basic",
+            "traits",
+            "alerts",
+            "complete",
+            "app-info",
+            "settings-alerts",
+            "settings-vehicle",
+            "boarding-pets",
+            "boarding-seat",
+            "boarding-checklist"
+        )) {
             compose.runOnIdle { screen.value = name }
             compose.waitForIdle()
             val bitmap = compose.onRoot().captureToImage().asAndroidBitmap()
             val context = InstrumentationRegistry.getInstrumentation().targetContext
-            File(context.filesDir, "page3-$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
+            File(context.filesDir, "page3-$name.png").outputStream().use {
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, it)
+            }
         }
     }
 }

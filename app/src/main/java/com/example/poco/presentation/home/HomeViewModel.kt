@@ -95,11 +95,17 @@ class HomeViewModel @Inject constructor(
             var wasLinked = vehicleLink.isLinked
             linked.collect { isLinked ->
                 _uiState.update {
-                    if (isLinked) it.copy(isVehicleLinked = true)
-                    else it.copy(
-                        isVehicleLinked = false, isParked = null, seatTemperature = null,
-                        isAllWindowsClosed = null, shouldStartDriving = false
-                    )
+                    if (isLinked) {
+                        it.copy(isVehicleLinked = true)
+                    } else {
+                        it.copy(
+                            isVehicleLinked = false,
+                            isParked = null,
+                            seatTemperature = null,
+                            isAllWindowsClosed = null,
+                            shouldStartDriving = false
+                        )
+                    }
                 }
                 if (isLinked && !wasLinked) {
                     _uiState.value.pet?.let { loadSeatTemperature(it) }

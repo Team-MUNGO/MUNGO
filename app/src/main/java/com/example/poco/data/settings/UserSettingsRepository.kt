@@ -27,7 +27,9 @@ interface UserSettingsRepository {
     suspend fun setArrivalSummaryEnabled(enabled: Boolean) {}
 }
 
-private val Context.userSettings: DataStore<Preferences> by preferencesDataStore("poco_user_settings")
+private val Context.userSettings: DataStore<Preferences> by preferencesDataStore(
+    "poco_user_settings"
+)
 
 @Singleton
 class DataStoreUserSettingsRepository @Inject constructor(

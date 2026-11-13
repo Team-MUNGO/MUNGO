@@ -24,7 +24,9 @@ fun FitWideWindow(minWidth: Dp = 1600.dp, content: @Composable () -> Unit) {
         } else {
             val density = LocalDensity.current
             val scale = (maxWidth / minWidth).coerceIn(0.3f, 1f)
-            CompositionLocalProvider(LocalDensity provides Density(density.density * scale, density.fontScale)) {
+            CompositionLocalProvider(
+                LocalDensity provides Density(density.density * scale, density.fontScale)
+            ) {
                 Box(Modifier.fillMaxSize()) { content() }
             }
         }

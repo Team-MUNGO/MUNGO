@@ -109,7 +109,9 @@ class WaypointTracker(val place: VerifiedPlace, private val matchMeters: Double 
         return WaypointSignal.ArrivedAndParked(place.placeId, place.name)
     }
 
-    fun etaMinutesText(): String? = etaSeconds?.let { (it / 60.0).roundToInt().coerceAtLeast(1) }?.let { "${it}분" }
+    fun etaMinutesText(): String? = etaSeconds?.let {
+        (it / 60.0).roundToInt().coerceAtLeast(1)
+    }?.let { "${it}분" }
 }
 
 /**
@@ -124,7 +126,10 @@ class BumpPassageTracker(private val nearMeters: Int = 30) {
         val ids = points.map { it.first }.toSet()
         val done = near.filter { it !in ids && passed.add(it) }
         near.removeAll(done.toSet())
-        points.filter { it.second in 0..nearMeters && it.first !in passed }.forEach { near += it.first }
+        points.filter { it.second in 0..nearMeters && it.first !in passed }.forEach {
+            near +=
+                it.first
+        }
         return done
     }
 }

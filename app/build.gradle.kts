@@ -40,7 +40,9 @@ android {
             .find(localText)?.groupValues?.get(1) ?: ""
         val firebaseApiKey: String = providers.gradleProperty("POCO_FIREBASE_API_KEY")
             .orElse(localApiKey).get()
-        require(firebaseApiKey.isEmpty() || firebaseApiKey.matches(Regex("AIza[0-9A-Za-z_-]{35}"))) {
+        require(
+            firebaseApiKey.isEmpty() || firebaseApiKey.matches(Regex("AIza[0-9A-Za-z_-]{35}"))
+        ) {
             "POCO_FIREBASE_API_KEY must be a Firebase Web API key"
         }
         buildConfigField("String", "FIREBASE_API_KEY", "\"$firebaseApiKey\"")

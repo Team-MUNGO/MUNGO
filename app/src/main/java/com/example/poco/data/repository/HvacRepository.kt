@@ -1,9 +1,9 @@
 package com.example.poco.data.repository
 
-import com.example.poco.data.model.PetSeat
-import kotlinx.coroutines.flow.Flow
 import com.example.poco.core.driving.PetSeat as SessionSeat
 import com.example.poco.core.driving.Reading
+import com.example.poco.data.model.PetSeat
+import kotlinx.coroutines.flow.Flow
 
 interface HvacRepository {
     /** 반려동물 자리의 설정 온도(℃). 그 자리 공조가 없으면 가까운 존 온도로 대신한다 */

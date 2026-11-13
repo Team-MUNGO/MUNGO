@@ -29,6 +29,7 @@ data class RestUiState(
 sealed interface WaypointUiState {
     data object None : WaypointUiState
     data class Adding(val name: String) : WaypointUiState
+
     /** [etaText] only when Navi reported a remaining time whose unit could be verified. */
     data class Added(
         val name: String,
@@ -75,6 +76,7 @@ data class DrivingSessionState(
     val aiRestStatus: String? = null,
     /** Set when a session ends so the summary screen can open the stored record. */
     val lastEndedTripId: String? = null,
-    /** Emulator/VHAL simulation, labeled on screen and in records (never shown as a real vehicle). */
+    /** Emulator/VHAL simulation,
+     labeled on screen and in records (never shown as a real vehicle). */
     val simulatedSource: Boolean = false
 )

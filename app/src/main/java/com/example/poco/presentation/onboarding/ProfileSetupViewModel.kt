@@ -29,8 +29,7 @@ import timber.log.Timber
 class ProfileSetupViewModel @Inject constructor(
     private val petRepository: PetRepository,
     private val onboardingRepository: OnboardingRepository
-) :
-    ViewModel() {
+) : ViewModel() {
     private val _uiState = MutableStateFlow(ProfileSetupUiState())
     val uiState = _uiState.asStateFlow()
 

@@ -1,8 +1,8 @@
 package com.example.poco.data.repository
 
+import com.example.poco.data.assistant.AssistRequest
 import com.example.poco.data.assistant.AssistResponse
 import com.example.poco.data.assistant.TripSummaryRequest
-import com.example.poco.data.assistant.AssistRequest
 
 interface AssistantRepository {
     val configured: Boolean

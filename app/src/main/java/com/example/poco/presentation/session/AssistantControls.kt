@@ -1,26 +1,20 @@
 package com.example.poco.presentation.session
 
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Checkbox
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -39,7 +33,6 @@ import com.example.poco.R
 import com.example.poco.core.theme.POCOTheme
 import com.example.poco.presentation.session.component.DrivingInk
 import com.example.poco.presentation.session.component.DrivingMuted
-import com.example.poco.presentation.session.component.DrivingOrange
 
 @Composable
 internal fun AssistantControls(
@@ -56,13 +49,21 @@ internal fun AssistantControls(
             Text(it, style = POCOTheme.typography.body3, color = DrivingMuted, maxLines = 2)
         }
         if (state.question.isNotBlank() && state.phase != AssistantPhase.IDLE) {
-            Text("“${state.question}”", maxLines = 2, style = POCOTheme.typography.body2, color = DrivingInk)
+            Text(
+                "“${state.question}”",
+                maxLines = 2,
+                style = POCOTheme.typography.body2,
+                color = DrivingInk
+            )
         }
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(
                 onClick = if (state.phase == AssistantPhase.IDLE) onAsk else onCancel,
                 enabled = active && !blocked,
-                colors = ButtonDefaults.buttonColors(containerColor = Color.White, contentColor = DrivingInk),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White,
+                    contentColor = DrivingInk
+                ),
                 modifier = Modifier.heightIn(min = 56.dp)
             ) {
                 Image(painterResource(R.drawable.driving_mic), null, Modifier.size(20.dp))
@@ -76,7 +77,10 @@ internal fun AssistantControls(
                     }
                 )
             }
-            TextButton(onClick = onSetup, colors = ButtonDefaults.textButtonColors(contentColor = DrivingInk)) {
+            TextButton(
+                onClick = onSetup,
+                colors = ButtonDefaults.textButtonColors(contentColor = DrivingInk)
+            ) {
                 Text(if (state.connected || state.consented) "AI 연결 설정" else "AI 연결")
             }
         }
@@ -141,7 +145,11 @@ internal fun AssistantConnectionDialog(
                     )
                 }
                 state.error?.let { Text(it) }
-                if (state.connected || (state.anonymousAuth && state.consented)) Text("AI 서버에 연결되었어요. 연결 정보는 앱 실행 중에만 유지돼요.")
+                if (state.connected ||
+                    (state.anonymousAuth && state.consented)
+                ) {
+                    Text("AI 서버에 연결되었어요. 연결 정보는 앱 실행 중에만 유지돼요.")
+                }
             }
         },
         confirmButton = {

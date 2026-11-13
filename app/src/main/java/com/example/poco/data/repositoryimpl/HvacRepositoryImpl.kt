@@ -2,8 +2,9 @@ package com.example.poco.data.repositoryimpl
 
 import ai.pleos.playground.vehicle.api.model.area.SeatArea
 import ai.pleos.playground.vehicle.constant.area.SeatValue
-import com.example.poco.core.util.suspendRunCatching
+import com.example.poco.core.driving.PetSeat as SessionSeat
 import com.example.poco.core.driving.Reading
+import com.example.poco.core.util.suspendRunCatching
 import com.example.poco.data.model.PetSeat
 import com.example.poco.data.pleos.datasource.HvacDataSource
 import com.example.poco.data.repository.HvacRepository
@@ -12,7 +13,6 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.emitAll
 import timber.log.Timber
-import com.example.poco.core.driving.PetSeat as SessionSeat
 
 class HvacRepositoryImpl @Inject constructor(private val hvacDataSource: HvacDataSource) :
     HvacRepository {

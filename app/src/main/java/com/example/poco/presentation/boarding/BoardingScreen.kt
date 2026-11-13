@@ -30,16 +30,16 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -49,12 +49,12 @@ import com.example.poco.core.designsystem.PetPhoto
 import com.example.poco.core.designsystem.component.pressable
 import com.example.poco.core.designsystem.hasFullPetImage
 import com.example.poco.core.theme.MungoRadius
-import com.example.poco.presentation.design.Mg
 import com.example.poco.core.theme.POCOTheme
 import com.example.poco.core.util.irang
 import com.example.poco.data.model.MotionSensitivity
 import com.example.poco.data.model.Pet
 import com.example.poco.data.model.PetSeat
+import com.example.poco.presentation.design.Mg
 
 /*
  * 탑승 준비 (mungo 시안 · 1700×1184). 정차 중에만 진행
@@ -681,7 +681,14 @@ internal fun ReadyOnlyPreview() {
     POCOTheme(darkTheme = false) {
         // 품종 그림이 있는 펫으로 (그림 없는 품종은 작은 기본 마크)
         val state = previewState(BoardingStep.READY)
-        BoardingScreen(state.copy(pets = state.pets.map { it.copy(breed = "몰티즈") }), BoardingActions())
+        BoardingScreen(
+            state.copy(
+                pets = state.pets.map {
+                    it.copy(breed = "몰티즈")
+                }
+            ),
+            BoardingActions()
+        )
     }
 }
 

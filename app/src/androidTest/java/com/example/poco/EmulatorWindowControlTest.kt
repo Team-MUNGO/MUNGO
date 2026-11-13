@@ -57,16 +57,22 @@ class EmulatorWindowControlTest {
             },
             object : HvacRepository {
                 override fun observeInteriorTemperature(seat: PetSeat) = emptyFlow<Reading<Float>>()
-                override suspend fun getSeatTemperature(seat: com.example.poco.data.model.PetSeat) = Result.success<Float?>(null)
-                override fun observeSeatTemperature(seat: com.example.poco.data.model.PetSeat) = emptyFlow<Float>()
-                override suspend fun setSeatTemperature(seat: com.example.poco.data.model.PetSeat, celsius: Float) = Result.success<Float?>(null)
+                override suspend fun getSeatTemperature(seat: com.example.poco.data.model.PetSeat) =
+                    Result.success<Float?>(null)
+                override fun observeSeatTemperature(seat: com.example.poco.data.model.PetSeat) =
+                    emptyFlow<Float>()
+                override suspend fun setSeatTemperature(
+                    seat: com.example.poco.data.model.PetSeat,
+                    celsius: Float
+                ) = Result.success<Float?>(null)
             },
             windows,
             object : NaviRepository {
                 override fun observeEvents() = emptyFlow<com.example.poco.data.model.NaviEvent>()
                 override suspend fun openNavigation(keyword: String?) = Result.success(Unit)
                 override fun observeBumps() = emptyFlow<Reading<List<BumpApproach>>>()
-                override fun observeRoute() = emptyFlow<com.example.poco.data.pleos.datasource.NaviRouteUpdate>()
+                override fun observeRoute() =
+                    emptyFlow<com.example.poco.data.pleos.datasource.NaviRouteUpdate>()
             },
             object : TtsRepository {
                 override suspend fun speak(text: String) = Result.success(Unit)
@@ -83,11 +89,20 @@ class EmulatorWindowControlTest {
             object : com.example.poco.data.record.TripRecordSink {
                 override fun begin(trip: com.example.poco.data.record.TripEntity) = Unit
                 override fun event(event: com.example.poco.data.record.TripEventEntity) = Unit
-                override suspend fun complete(tripId: String, endedAt: Long, finalScore: Int, drivingMs: Long, restMs: Long, restCount: Int) = true
+                override suspend fun complete(
+                    tripId: String,
+                    endedAt: Long,
+                    finalScore: Int,
+                    drivingMs: Long,
+                    restMs: Long,
+                    restCount: Int
+                ) = true
             },
             object : com.example.poco.data.assistant.AssistantWaypointSource {
-                override suspend fun add(place: com.example.poco.core.driving.VerifiedPlace) = error("not used")
-                override suspend fun remove(place: com.example.poco.core.driving.VerifiedPlace) = error("not used")
+                override suspend fun add(place: com.example.poco.core.driving.VerifiedPlace) =
+                    error("not used")
+                override suspend fun remove(place: com.example.poco.core.driving.VerifiedPlace) =
+                    error("not used")
             },
             object : com.example.poco.data.assistant.LocationStream {
                 override fun observe() = emptyFlow<com.example.poco.data.assistant.LocationFix>()
@@ -96,8 +111,10 @@ class EmulatorWindowControlTest {
             object : com.example.poco.data.repository.VehicleMotionRepository {
                 override fun observeSpeedKmh() = kotlinx.coroutines.flow.emptyFlow<Float>()
                 override fun observeSteeringAngle() = kotlinx.coroutines.flow.emptyFlow<Float>()
-                override fun observeBrakePedalPressed() = kotlinx.coroutines.flow.emptyFlow<Boolean>()
-                override fun observeLocation() = kotlinx.coroutines.flow.emptyFlow<com.example.poco.data.model.VehicleLocation>()
+                override fun observeBrakePedalPressed() =
+                    kotlinx.coroutines.flow.emptyFlow<Boolean>()
+                override fun observeLocation() =
+                    kotlinx.coroutines.flow.emptyFlow<com.example.poco.data.model.VehicleLocation>()
             }
         )
         var initial: Int? = null

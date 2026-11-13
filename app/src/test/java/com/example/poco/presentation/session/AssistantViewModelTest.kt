@@ -16,9 +16,13 @@ import com.example.poco.data.assistant.AssistType
 import com.example.poco.data.assistant.AssistantLocation
 import com.example.poco.data.assistant.AssistantLocationSource
 import com.example.poco.data.model.DrivingSessionState
+import com.example.poco.data.model.NaviEvent
 import com.example.poco.data.model.PlaceProposal
+import com.example.poco.data.pleos.datasource.BumpApproach
+import com.example.poco.data.pleos.datasource.NaviRouteUpdate
 import com.example.poco.data.repository.AssistantRepository
 import com.example.poco.data.repository.DrivingSessionRepository
+import com.example.poco.data.repository.NaviRepository
 import com.example.poco.data.repository.RestRecommendationDue
 import com.example.poco.data.repository.SttRepository
 import kotlinx.coroutines.Dispatchers
@@ -29,8 +33,6 @@ import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.setMain
-import com.example.poco.data.model.NaviEvent
-import com.example.poco.data.repository.NaviRepository
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -61,10 +63,17 @@ class AssistantViewModelTest {
     private var reply: (AssistRequest) -> AssistResponse = { answer(it) }
     private lateinit var vm: AssistantViewModel
 
-    private fun answer(r: AssistRequest) =
-        AssistResponse(r.requestId, r.eventId, r.type, AssistStatus.OK, "현재 온도는 확인할 수 없어요.", "현재 온도는 확인할 수 없어요.")
+    private fun answer(r: AssistRequest) = AssistResponse(
+        r.requestId,
+        r.eventId,
+        r.type,
+        AssistStatus.OK,
+        "현재 온도는 확인할 수 없어요.",
+        "현재 온도는 확인할 수 없어요."
+    )
 
-    private val place = AssistPlace("ChIJvSMioIapZDURijUJ9O6phq8", "덕평휴게소", 37.24, 127.39, null, null, true)
+    private val place =
+        AssistPlace("ChIJvSMioIapZDURijUJ9O6phq8", "덕평휴게소", 37.24, 127.39, null, null, true)
 
     private val remote = object : AssistantRepository {
         override var configured = true
@@ -139,12 +148,16 @@ class AssistantViewModelTest {
             object : NaviRepository {
                 override fun observeEvents() = navi
                 override suspend fun openNavigation(keyword: String?) = Result.success(Unit)
-                override fun observeBumps() = kotlinx.coroutines.flow.emptyFlow<com.example.poco.core.driving.Reading<List<com.example.poco.data.pleos.datasource.BumpApproach>>>()
-                override fun observeRoute() = kotlinx.coroutines.flow.emptyFlow<com.example.poco.data.pleos.datasource.NaviRouteUpdate>()
+                override fun observeBumps() = emptyFlow<Reading<List<BumpApproach>>>()
+                override fun observeRoute() = emptyFlow<NaviRouteUpdate>()
             },
-            com.example.poco.data.assistant.RestRecommendationCoordinator(session, remote, object : AssistantLocationSource {
-                override suspend fun current() = AssistantLocation(37.0, 127.0, 0)
-            })
+            com.example.poco.data.assistant.RestRecommendationCoordinator(
+                session,
+                remote,
+                object : AssistantLocationSource {
+                    override suspend fun current() = AssistantLocation(37.0, 127.0, 0)
+                }
+            )
         )
         scheduler.runCurrent()
     }
@@ -198,9 +211,23 @@ class AssistantViewModelTest {
     @Test fun placeIntentRequestsLocationThenSendsOnlyThenAndShowsVerifiedPlaces() {
         reply = { r ->
             if (r.location == null) {
-                AssistResponse(r.requestId, null, r.type, AssistStatus.LOCATION_REQUIRED, "위치가 필요해요.", "위치가 필요해요.", searchQuery = "반려견 동반 휴게소")
+                AssistResponse(
+                    r.requestId,
+                    null,
+                    r.type,
+                    AssistStatus.LOCATION_REQUIRED,
+                    "위치가 필요해요.",
+                    "위치가 필요해요.",
+                    searchQuery = "반려견 동반 휴게소"
+                )
             } else {
-                AssistResponse(r.requestId, null, r.type, AssistStatus.OK, "덕평휴게소가 좋아요.", "덕평휴게소가 좋아요.", listOf(place), place.placeId, "반려견 동반 휴게소", AssistSources("gemini", "google_maps"))
+                AssistResponse(
+                    r.requestId, null, r.type, AssistStatus.OK, "덕평휴게소가 좋아요.", "덕평휴게소가 좋아요.",
+                    listOf(
+                        place
+                    ),
+                    place.placeId, "반려견 동반 휴게소", AssistSources("gemini", "google_maps")
+                )
             }
         }
         vm.consent()
@@ -225,7 +252,14 @@ class AssistantViewModelTest {
 
     /** #27: only Maps-verified coordinates reach the waypoint call. */
     @Test fun addWaypointUsesVerifiedPlaceOnly() {
-        val unverified = AssistResponse("a", null, AssistType.USER_QUESTION, AssistStatus.OK, "t", "t", listOf(place.copy(canAddWaypoint = false)), place.placeId, null, AssistSources("gemini", "google_maps"))
+        val unverified =
+            AssistResponse(
+                "a", null, AssistType.USER_QUESTION, AssistStatus.OK, "t", "t",
+                listOf(
+                    place.copy(canAddWaypoint = false)
+                ),
+                place.placeId, null, AssistSources("gemini", "google_maps")
+            )
         vehicle.value = vehicle.value.copy(proposal = PlaceProposal("a", unverified, false))
         vm.addWaypoint()
         assertTrue(waypoints.isEmpty())

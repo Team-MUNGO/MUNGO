@@ -23,9 +23,9 @@ import com.example.poco.core.designsystem.MungoIcon
 import com.example.poco.core.designsystem.MungoIconView
 import com.example.poco.core.designsystem.MungoPaw
 import com.example.poco.core.designsystem.component.pressable
-import com.example.poco.presentation.design.Mg
 import com.example.poco.core.theme.MungoRadius
 import com.example.poco.core.theme.POCOTheme
+import com.example.poco.presentation.design.Mg
 
 /** 왼쪽 메뉴 레일 탭 */
 enum class RailTab { HOME, RECORDS, MY_PET, SETTINGS }
@@ -118,7 +118,12 @@ private fun RailItem(
     ) {
         MungoIconView(icon, tint = content, size = 36.dp)
         Spacer(Modifier.height(8.dp))
-        Text(text = label, style = if (selected) Mg.semi(23, 30) else Mg.regular(23, 30), color = content, maxLines = 1)
+        Text(
+            text = label,
+            style = if (selected) Mg.semi(23, 30) else Mg.regular(23, 30),
+            color = content,
+            maxLines = 1
+        )
     }
 }
 

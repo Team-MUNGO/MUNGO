@@ -23,7 +23,17 @@ class VehicleLinkTest {
 
     /** 설정 > 알림 toggles are stored on the pet and reach the driving session. */
     @Test fun alertTogglesReachTheSession() {
-        val pet = Pet(name = "현댕이", breed = "시츄", ageYears = 3, weightKg = 6f, seat = PetSeat.PASSENGER, motionSensitivity = com.example.poco.data.model.MotionSensitivity.NORMAL, windowAlertEnabled = false, restSuggestionEnabled = false)
+        val pet =
+            Pet(
+                name = "현댕이",
+                breed = "시츄",
+                ageYears = 3,
+                weightKg = 6f,
+                seat = PetSeat.PASSENGER,
+                motionSensitivity = com.example.poco.data.model.MotionSensitivity.NORMAL,
+                windowAlertEnabled = false,
+                restSuggestionEnabled = false
+            )
         val s = pet.toDrivingSettings()!!
         assertFalse(s.windowAlerts)
         assertFalse(s.restSuggestions)

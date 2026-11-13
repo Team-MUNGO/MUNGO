@@ -12,11 +12,21 @@ class MotionAnalysisTest {
     private val day = 24 * 60 * 60_000L
     private var seq = 0
 
-    private fun t(minutes: Double, record: MotionRecord?, at: Long = (seq++) * day, id: String = "t$seq") =
-        MotionTripInput(id, at, minutes, record)
+    private fun t(
+        minutes: Double,
+        record: MotionRecord?,
+        at: Long = (seq++) * day,
+        id: String = "t$seq"
+    ) = MotionTripInput(id, at, minutes, record)
 
     private fun signs(vararg pairs: Pair<MotionSign, Int>) = MotionRecord(pairs.toMap())
-    private fun yawn(n: Int) = if (n == 0) MotionRecord(fine = true) else signs(MotionSign.YAWN to n)
+    private fun yawn(n: Int) = if (n ==
+        0
+    ) {
+        MotionRecord(fine = true)
+    } else {
+        signs(MotionSign.YAWN to n)
+    }
 
     private fun analyze(trips: List<MotionTripInput>, interval: Int = 120) =
         MotionAnalysis.of(trips, trips.last(), interval)
@@ -44,14 +54,28 @@ class MotionAnalysisTest {
         val d = t(45.0, yawn(1))
         val current = t(60.0, yawn(1))
         val later = t(30.0, yawn(5))
-        val window = TripAnalyzer.window(listOf(later, a, tooShort, unrecorded, b, c, d, current), current)
+        val window = TripAnalyzer.window(
+            listOf(later, a, tooShort, unrecorded, b, c, d, current),
+            current
+        )
         assertEquals(listOf(b.id, c.id, d.id, current.id), window.map { it.id })
         assertFalse(TripAnalyzer.analyze(tooShort).comparable)
         assertNull(TripAnalyzer.analyze(unrecorded).totalSigns) // not entered is never 0 signs
     }
 
     @Test fun cautionSignWinsAndDoesNotShortenInterval() {
-        val trips = listOf(t(30.0, yawn(0)), t(40.0, yawn(0)), t(90.0, yawn(4)), t(120.0, signs(MotionSign.VOMIT to 1, MotionSign.YAWN to 5)))
+        val trips = listOf(
+            t(30.0, yawn(0)),
+            t(40.0, yawn(0)),
+            t(90.0, yawn(4)),
+            t(
+                120.0,
+                signs(
+                    MotionSign.VOMIT to 1,
+                    MotionSign.YAWN to 5
+                )
+            )
+        )
         val r = analyze(trips)
         assertEquals(InsightType.CAUTION_SIGN, r.insight.type)
         assertEquals(MotionSign.VOMIT, r.insight.sign)
@@ -65,8 +89,11 @@ class MotionAnalysisTest {
         assertEquals(0.75, r.insight.baselineRate!!, 1e-9)
         assertEquals(2.5, r.insight.targetRate!!, 1e-9)
         assertEquals(RestRecommendation.Shorten(120, 90), r.recommendation)
-        assertEquals(RestRecommendation.Shorten(150, 120), analyze(trips, 150).recommendation) // user's own setting
-        assertEquals(RestRecommendation.Keep(30, KeepReason.AT_MINIMUM), analyze(trips, 30).recommendation)
+        assertEquals(RestRecommendation.Shorten(150, 120), analyze(trips, 150).recommendation)
+        assertEquals(
+            RestRecommendation.Keep(30, KeepReason.AT_MINIMUM),
+            analyze(trips, 30).recommendation
+        )
     }
 
     @Test fun longTripPatternNeedsTwoTripsPerGroup() {
@@ -90,7 +117,16 @@ class MotionAnalysisTest {
     }
 
     @Test fun decreasingTrend() {
-        val trips = listOf(t(60.0, yawn(3)), t(60.0, signs(MotionSign.DROOL to 2)), t(60.0, signs(MotionSign.PANT to 1)))
+        val trips = listOf(
+            t(60.0, yawn(3)),
+            t(60.0, signs(MotionSign.DROOL to 2)),
+            t(
+                60.0,
+                signs(
+                    MotionSign.PANT to 1
+                )
+            )
+        )
         val r = analyze(trips)
         assertEquals(InsightType.DECREASING, r.insight.type)
         assertEquals(listOf(3.0, 2.0, 1.0), r.insight.trend)
@@ -98,7 +134,8 @@ class MotionAnalysisTest {
     }
 
     @Test fun repeatedSignAcrossDifferentTrips() {
-        val trips = listOf(t(60.0, yawn(1)), t(60.0, signs(MotionSign.DROOL to 1)), t(60.0, yawn(1)))
+        val trips =
+            listOf(t(60.0, yawn(1)), t(60.0, signs(MotionSign.DROOL to 1)), t(60.0, yawn(1)))
         val r = analyze(trips)
         assertEquals(InsightType.REPEATED_SIGN, r.insight.type)
         assertEquals(MotionSign.YAWN, r.insight.sign)
@@ -108,8 +145,14 @@ class MotionAnalysisTest {
 
     @Test fun notEnoughDataOrNoChange() {
         assertEquals(InsightType.NOT_ENOUGH_DATA, analyze(listOf(t(60.0, yawn(1)))).insight.type)
-        assertEquals(InsightType.NOT_ENOUGH_DATA, analyze(listOf(t(60.0, yawn(0)), t(60.0, yawn(0)), t(10.0, yawn(0)))).insight.type)
-        assertEquals(InsightType.NOT_ENOUGH_DATA, analyze(listOf(t(60.0, yawn(0)), t(60.0, yawn(0)), t(60.0, null))).insight.type)
+        assertEquals(
+            InsightType.NOT_ENOUGH_DATA,
+            analyze(listOf(t(60.0, yawn(0)), t(60.0, yawn(0)), t(10.0, yawn(0)))).insight.type
+        )
+        assertEquals(
+            InsightType.NOT_ENOUGH_DATA,
+            analyze(listOf(t(60.0, yawn(0)), t(60.0, yawn(0)), t(60.0, null))).insight.type
+        )
         val flat = analyze(listOf(t(60.0, yawn(0)), t(60.0, yawn(0)), t(60.0, yawn(0))))
         assertEquals(InsightType.NO_CHANGE, flat.insight.type)
         assertEquals(RestRecommendation.Keep(120, KeepReason.STABLE), flat.recommendation)

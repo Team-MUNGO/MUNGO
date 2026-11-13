@@ -8,7 +8,10 @@ import com.example.poco.data.record.TripEventType
 private const val MAX_EVENTS = 40
 
 /** Builds the /summary payload from the stored record. Returns null while the trip is not finished. */
-fun TripEntity.toSummaryRequest(events: List<TripEventEntity>, previous: TripEntity?): TripSummaryRequest? {
+fun TripEntity.toSummaryRequest(
+    events: List<TripEventEntity>,
+    previous: TripEntity?
+): TripSummaryRequest? {
     val score = finalScore ?: return null
     val end = endedAtEpoch ?: return null
     val minute = { at: Long -> ((at - startedAtEpoch) / 60_000L).toInt().coerceIn(0, 2880) }
@@ -31,7 +34,11 @@ fun TripEntity.toSummaryRequest(events: List<TripEventEntity>, previous: TripEnt
         TripSummaryEvent(minute(e.atEpoch), kind, e.scoreDelta?.coerceIn(-100, 100))
     }
     // Keep the biggest drops and every rest first when trimming, then restore time order.
-    val kept = mapped.sortedWith(compareBy({ it.kind != "REST" }, { it.scoreDelta ?: 0 })).take(MAX_EVENTS)
+    val kept = mapped.sortedWith(
+        compareBy({
+            it.kind != "REST"
+        }, { it.scoreDelta ?: 0 })
+    ).take(MAX_EVENTS)
         .sortedBy { it.minute }
     val record = MotionRecord.decode(motionSicknessSigns)
     val signs = buildList {
@@ -39,7 +46,9 @@ fun TripEntity.toSummaryRequest(events: List<TripEventEntity>, previous: TripEnt
         record?.counts?.filterValues { it > 0 }?.keys?.forEach { add(it.name) }
     }
     return TripSummaryRequest(
-        requestId = id.filter { it.isLetterOrDigit() || it == '-' || it == '_' }.take(64).ifEmpty { "trip" },
+        requestId = id.filter {
+            it.isLetterOrDigit() || it == '-' || it == '_'
+        }.take(64).ifEmpty { "trip" },
         trip = TripSummaryInput(
             petName = petName.trim().take(20).ifEmpty { "반려견" },
             durationMinutes = minute(end),

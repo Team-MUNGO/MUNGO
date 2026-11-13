@@ -27,8 +27,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.example.poco.presentation.common.MungoNavRail
 import com.example.poco.presentation.common.RailTab as NavRailTab
@@ -41,8 +41,8 @@ import com.example.poco.presentation.design.MgIcons
 import com.example.poco.presentation.design.ValueText
 
 /** Record screens share the 1700 x 1184 Figma frame (465:48292…). */
-const val RecordRefWidth = 1700f
-const val RecordRefHeight = 1184f
+const val RECORD_REF_WIDTH = 1700f
+const val RECORD_REF_HEIGHT = 1184f
 
 enum class RailTab(val label: String, val icon: ImageVector) {
     HOME("홈", MgIcons.Home),
@@ -53,11 +53,20 @@ enum class RailTab(val label: String, val icon: ImageVector) {
 
 /** Left navigation rail (Figma 465:48292 "rail"): logo, four tabs, Gleo voice button. */
 @Composable
-fun RailScaffold(selected: RailTab, onNavigate: (RailTab) -> Unit, content: @Composable ColumnScope.() -> Unit) {
-    DesignCanvas(RecordRefWidth, RecordRefHeight) {
+fun RailScaffold(
+    selected: RailTab,
+    onNavigate: (RailTab) -> Unit,
+    content: @Composable ColumnScope.() -> Unit
+) {
+    DesignCanvas(RECORD_REF_WIDTH, RECORD_REF_HEIGHT) {
         Row(Modifier.fillMaxSize()) {
             RecordRail(selected, onNavigate)
-            Column(Modifier.weight(1f).fillMaxHeight().padding(start = 43.dp, end = 43.dp, top = 48.dp, bottom = 40.dp), content = content)
+            Column(
+                Modifier.weight(
+                    1f
+                ).fillMaxHeight().padding(start = 43.dp, end = 43.dp, top = 48.dp, bottom = 40.dp),
+                content = content
+            )
         }
     }
 }
@@ -89,14 +98,18 @@ fun PageScaffold(
     action: (@Composable () -> Unit)? = null,
     content: @Composable ColumnScope.() -> Unit
 ) {
-    DesignCanvas(RecordRefWidth, RecordRefHeight) {
+    DesignCanvas(RECORD_REF_WIDTH, RECORD_REF_HEIGHT) {
         Column(Modifier.fillMaxSize()) {
             Row(
-                Modifier.fillMaxWidth().height(118.dp).background(Color.White).padding(horizontal = 43.dp),
+                Modifier.fillMaxWidth().height(
+                    118.dp
+                ).background(Color.White).padding(horizontal = 43.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Box(
-                    Modifier.size(70.dp).clip(CircleShape).background(Mg.Chip).clickable(onClick = onBack),
+                    Modifier.size(
+                        70.dp
+                    ).clip(CircleShape).background(Mg.Chip).clickable(onClick = onBack),
                     contentAlignment = Alignment.Center
                 ) { MgIcon(MgIcons.ChevronLeft, Mg.Ink, 28.dp) }
                 Spacer(Modifier.width(26.dp))
@@ -107,7 +120,12 @@ fun PageScaffold(
                 action?.invoke()
             }
             Box(Modifier.fillMaxWidth().height(2.dp).background(Mg.Line))
-            Column(Modifier.weight(1f).fillMaxWidth().padding(start = 43.dp, end = 43.dp, top = 30.dp, bottom = 44.dp), content = content)
+            Column(
+                Modifier.weight(
+                    1f
+                ).fillMaxWidth().padding(start = 43.dp, end = 43.dp, top = 30.dp, bottom = 44.dp),
+                content = content
+            )
         }
     }
 }
@@ -117,14 +135,18 @@ fun HeaderChip(text: String) {
     Text(
         text,
         Modifier.background(Mg.Chip, CircleShape).padding(horizontal = 21.dp, vertical = 9.dp),
-        style = Mg.bold(23, 30), color = Mg.Ink, maxLines = 1
+        style = Mg.bold(23, 30),
+        color = Mg.Ink,
+        maxLines = 1
     )
 }
 
 @Composable
 fun HeaderAction(text: String, icon: ImageVector, onClick: () -> Unit) {
     Row(
-        Modifier.height(64.dp).clip(CircleShape).background(Color.White).border(2.dp, Mg.Line, CircleShape)
+        Modifier.height(
+            64.dp
+        ).clip(CircleShape).background(Color.White).border(2.dp, Mg.Line, CircleShape)
             .clickable(onClick = onClick).padding(horizontal = 30.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(14.dp)
@@ -158,20 +180,55 @@ fun StatTile(
         else -> Mg.bold(42, 53)
     }
     MgCard(modifier, padding = padding) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 12.dp)) {
-            MgIcon(icon, Mg.OrangeText, if (large) 24.dp else if (compact) 18.dp else 20.dp)
-            Text(label, style = Mg.Body, color = Mg.Muted, maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis)
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 12.dp)
+        ) {
+            MgIcon(
+                icon,
+                Mg.OrangeText,
+                if (large) {
+                    24.dp
+                } else if (compact) {
+                    18.dp
+                } else {
+                    20.dp
+                }
+            )
+            Text(
+                label,
+                style = Mg.Body,
+                color = Mg.Muted,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Ellipsis
+            )
         }
         Spacer(Modifier.weight(1f))
         // Figma 465:48292 큰 통계 칸: 숫자 B56 · 단위 R28
-        ValueText(value, unit, valueStyle, if (highlight) Mg.OrangeText else Mg.Ink, Mg.Ink, if (large) Mg.regular(28, 36) else Mg.Unit)
+        ValueText(
+            value,
+            unit,
+            valueStyle,
+            if (highlight) Mg.OrangeText else Mg.Ink,
+            Mg.Ink,
+            if (large) Mg.regular(28, 36) else Mg.Unit
+        )
     }
 }
 
 @Composable
 fun ChevronTitle(title: String, onClick: (() -> Unit)?) {
     Row(
-        Modifier.fillMaxWidth().then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier),
+        Modifier.fillMaxWidth().then(
+            if (onClick !=
+                null
+            ) {
+                Modifier.clickable(onClick = onClick)
+            } else {
+                Modifier
+            }
+        ),
         verticalAlignment = Alignment.CenterVertically
     ) {
         Text(title, Modifier.weight(1f), style = Mg.bold(28, 36), color = Mg.Ink)
@@ -180,13 +237,33 @@ fun ChevronTitle(title: String, onClick: (() -> Unit)?) {
 }
 
 @Composable
-fun BulbCard(title: String, body: String, modifier: Modifier, color: Color = Mg.Card, bodyStyle: TextStyle = Mg.Body, bodyColor: Color = Mg.Muted) {
+fun BulbCard(
+    title: String,
+    body: String,
+    modifier: Modifier,
+    color: Color = Mg.Card,
+    bodyStyle: TextStyle = Mg.Body,
+    bodyColor: Color = Mg.Muted
+) {
     Row(
-        modifier.background(color, RoundedCornerShape(Mg.Radius)).padding(horizontal = 40.dp, vertical = 22.dp),
+        modifier.background(
+            color,
+            RoundedCornerShape(Mg.Radius)
+        ).padding(horizontal = 40.dp, vertical = 22.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(28.dp)
     ) {
-        IconBadge(MgIcons.Bulb, size = 64.dp, background = if (color == Mg.Card) Mg.IconBg else Color.White)
+        IconBadge(
+            MgIcons.Bulb,
+            size = 64.dp,
+            background = if (color ==
+                Mg.Card
+            ) {
+                Mg.IconBg
+            } else {
+                Color.White
+            }
+        )
         Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
             // Figma 465:48545 · 465:48802: 제목 B27
             Text(title, style = Mg.bold(27, 35), color = Mg.Ink)

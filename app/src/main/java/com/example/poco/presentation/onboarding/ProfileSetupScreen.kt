@@ -69,9 +69,9 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.poco.core.designsystem.MungoIcon
-import com.example.poco.core.designsystem.clearFocusOnTap
 import com.example.poco.core.designsystem.MungoIconView
 import com.example.poco.core.designsystem.PetPhoto
+import com.example.poco.core.designsystem.clearFocusOnTap
 import com.example.poco.core.designsystem.component.PocoButton
 import com.example.poco.core.designsystem.component.PocoButtonSize
 import com.example.poco.core.designsystem.component.PocoButtonStyle
@@ -79,7 +79,6 @@ import com.example.poco.core.designsystem.component.PocoToggle
 import com.example.poco.core.theme.MungoLayout
 import com.example.poco.core.theme.MungoRadius
 import com.example.poco.core.theme.MungoSize
-import com.example.poco.presentation.design.Mg
 import com.example.poco.core.theme.POCOTheme
 import com.example.poco.core.theme.PocoSpacing
 import com.example.poco.core.util.eunNeun
@@ -88,6 +87,7 @@ import com.example.poco.data.model.PetSize
 import com.example.poco.data.model.PetSpecies
 import com.example.poco.data.model.PetTrait
 import com.example.poco.domain.driving.PocoStandard
+import com.example.poco.presentation.design.Mg
 import com.example.poco.presentation.petprofile.PetForm
 import com.example.poco.presentation.petprofile.PetPhotoPickerDialog
 import com.example.poco.presentation.petprofile.label
@@ -224,8 +224,13 @@ private fun ProfileSetupScreen(
                         .fillMaxHeight()
                         // Figma: 기본 정보(488:7387)는 x 685 ~ 1605, 성향 · 알림(488:8778 · 8873)은 x 635 ~ 1657
                         .then(
-                            if (uiState.step == ProfileStep.BASIC) Modifier.padding(start = 101.dp, end = 71.dp)
-                            else Modifier.padding(start = 51.dp, end = 19.dp)
+                            if (uiState.step ==
+                                ProfileStep.BASIC
+                            ) {
+                                Modifier.padding(start = 101.dp, end = 71.dp)
+                            } else {
+                                Modifier.padding(start = 51.dp, end = 19.dp)
+                            }
                         ),
                     contentAlignment = Alignment.Center
                 ) {
@@ -644,7 +649,13 @@ internal fun rememberNumberWidth(text: String, style: TextStyle): Dp {
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
     return remember(text, style, density) {
-        val px = measurer.measure(text, style, maxLines = 1, softWrap = false, density = density).size.width
+        val px = measurer.measure(
+            text,
+            style,
+            maxLines = 1,
+            softWrap = false,
+            density = density
+        ).size.width
         with(density) { px.toDp() } + NUMBER_CURSOR_ROOM
     }
 }

@@ -22,8 +22,12 @@ import org.junit.Test
 
 class UnifiedTripStoreTest {
     private val pet = Pet(
-        name = "현댕이", breed = "시츄", ageYears = 3, weightKg = 6.3f,
-        seat = PetSeat.REAR_RIGHT, motionSensitivity = MotionSensitivity.NORMAL
+        name = "현댕이",
+        breed = "시츄",
+        ageYears = 3,
+        weightKg = 6.3f,
+        seat = PetSeat.REAR_RIGHT,
+        motionSensitivity = MotionSensitivity.NORMAL
     )
 
     /** The driving session watches the 마이펫 pet: name, seat, weight and the POCO comfort range. */
@@ -35,7 +39,7 @@ class UnifiedTripStoreTest {
         assertEquals(pet.temperatureStandard.comfort.start, s.minTemperatureC)
         assertEquals(pet.temperatureStandard.comfort.endInclusive, s.maxTemperatureC)
         assertNull(pet.copy(weightKg = null).toDrivingSettings()!!.weightTenths)
-        assertNull(pet.copy(name = " ").toDrivingSettings()) // invalid profile never starts a session
+        assertNull(pet.copy(name = " ").toDrivingSettings())
     }
 
     private class FakeDao : TripDao {
@@ -45,16 +49,31 @@ class UnifiedTripStoreTest {
             trips.value = trips.value + (trip.id to trip)
             return 1L
         }
-        override fun observeFinishedTrips(): Flow<List<TripEntity>> =
-            trips.map { m -> m.values.filter { it.status != "IN_PROGRESS" }.sortedByDescending { it.startedAtEpoch } }
+        override fun observeFinishedTrips(): Flow<List<TripEntity>> = trips.map { m ->
+            m.values.filter {
+                it.status != "IN_PROGRESS"
+            }.sortedByDescending { it.startedAtEpoch }
+        }
         override suspend fun insertEvent(event: TripEventEntity) = 0L
         override suspend fun events(tripId: String) = emptyList<TripEventEntity>()
         override fun observeEvents(tripId: String) = flowOf(emptyList<TripEventEntity>())
         override suspend fun trip(id: String) = trips.value[id]
         override fun observeTrip(id: String) = trips.map { it[id] }
         override suspend fun complete(
-            id: String, endedAt: Long, finalScore: Int, minScore: Int, drivingMs: Long, restMs: Long,
-            restCount: Int, accel: Int, brake: Int, sharp: Int, repeated: Int, bumps: Int, windows: Int, temps: Int
+            id: String,
+            endedAt: Long,
+            finalScore: Int,
+            minScore: Int,
+            drivingMs: Long,
+            restMs: Long,
+            restCount: Int,
+            accel: Int,
+            brake: Int,
+            sharp: Int,
+            repeated: Int,
+            bumps: Int,
+            windows: Int,
+            temps: Int
         ) = 0
         override suspend fun markInterrupted(keep: String) = 0
         override suspend fun setMotionSickness(id: String, signs: String?) = Unit
@@ -63,8 +82,16 @@ class UnifiedTripStoreTest {
 
     private fun summary(id: Long, start: Long, score: Int) = TripSummary(
         id = id, startedAtMillis = start, endedAtMillis = start + 30 * 60_000, distanceKm = 0f,
-        comfortScore = score, hardBrake = EventStat(2, -6), hardAccel = EventStat(), sharpTurn = EventStat(1, -3),
-        calmRecovery = EventStat(), temperatureAlert = EventStat(), windowAlertCount = 1, calmMinutes = 5,
+        comfortScore = score,
+        hardBrake = EventStat(
+            2,
+            -6
+        ),
+        hardAccel = EventStat(), sharpTurn = EventStat(1, -3),
+        calmRecovery = EventStat(),
+        temperatureAlert = EventStat(),
+        windowAlertCount = 1,
+        calmMinutes = 5,
         timeline = emptyList()
     )
 
@@ -108,15 +135,25 @@ class UnifiedTripStoreTest {
         val (dao, repo) = stores(emptyList())
         dao.insertTrip(
             TripEntity(
-                id = "s1", petName = "현댕이", petWeightTenths = 63, petSize = "SMALL", seat = "REAR_RIGHT",
+                id = "s1",
+                petName = "현댕이",
+                petWeightTenths = 63,
+                petSize = "SMALL",
+                seat = "REAR_RIGHT",
                 startedAtEpoch = 5_000_000, endedAtEpoch = 6_000_000, status = "COMPLETED",
                 startRestIntervalMinutes = 120, finalScore = 88
             )
         )
         dao.insertTrip(
             TripEntity(
-                id = "s2", petName = "현댕이", petWeightTenths = 63, petSize = "SMALL", seat = "REAR_RIGHT",
-                startedAtEpoch = 7_000_000, status = "INTERRUPTED", startRestIntervalMinutes = 120
+                id = "s2",
+                petName = "현댕이",
+                petWeightTenths = 63,
+                petSize = "SMALL",
+                seat = "REAR_RIGHT",
+                startedAtEpoch = 7_000_000,
+                status = "INTERRUPTED",
+                startRestIntervalMinutes = 120
             )
         )
         assertEquals(88, repo.getLatestScore().getOrThrow())

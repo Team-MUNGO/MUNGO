@@ -4,34 +4,35 @@ import com.example.poco.core.driving.ComfortScoreConfig
 import com.example.poco.core.driving.DrivingClock
 import com.example.poco.core.driving.DrivingGear
 import com.example.poco.core.driving.DrivingSettings
+import com.example.poco.core.driving.NaviWaypoint
 import com.example.poco.core.driving.PetSeat
 import com.example.poco.core.driving.Reading
 import com.example.poco.core.driving.SpeedSample
+import com.example.poco.core.driving.VerifiedPlace
 import com.example.poco.core.driving.WindowCloseStatus
 import com.example.poco.core.driving.valueOrNull
+import com.example.poco.data.assistant.AssistantWaypointSource
+import com.example.poco.data.assistant.LocationFix
+import com.example.poco.data.assistant.LocationStream
 import com.example.poco.data.automotive.VehicleUpdate
 import com.example.poco.data.model.CarWindow
+import com.example.poco.data.model.WaypointUiState
 import com.example.poco.data.model.WindowPositionRange
 import com.example.poco.data.pleos.datasource.BumpApproach
+import com.example.poco.data.pleos.datasource.NaviRouteUpdate
 import com.example.poco.data.repository.HvacRepository
 import com.example.poco.data.repository.NaviRepository
 import com.example.poco.data.repository.TtsRepository
 import com.example.poco.data.repository.VehicleRepository
 import com.example.poco.data.repository.WindowRepository
-import com.example.poco.core.driving.NaviWaypoint
-import com.example.poco.core.driving.VerifiedPlace
-import com.example.poco.data.assistant.AssistantWaypointSource
-import com.example.poco.data.assistant.LocationFix
-import com.example.poco.data.assistant.LocationStream
-import com.example.poco.data.pleos.datasource.NaviRouteUpdate
 import com.example.poco.data.settings.UserSettingsRepository
-import kotlinx.coroutines.flow.emptyFlow
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.TestCoroutineScheduler
 import kotlinx.coroutines.test.resetMain
@@ -83,9 +84,14 @@ class DrivingSessionRepositoryTest {
             object : HvacRepository {
                 override fun observeInteriorTemperature(seat: PetSeat) =
                     flowOf<Reading<Float>>(Reading.Unavailable("온도 없음"))
-                override suspend fun getSeatTemperature(seat: com.example.poco.data.model.PetSeat) = Result.success<Float?>(null)
-                override fun observeSeatTemperature(seat: com.example.poco.data.model.PetSeat) = kotlinx.coroutines.flow.emptyFlow<Float>()
-                override suspend fun setSeatTemperature(seat: com.example.poco.data.model.PetSeat, celsius: Float) = Result.success<Float?>(null)
+                override suspend fun getSeatTemperature(seat: com.example.poco.data.model.PetSeat) =
+                    Result.success<Float?>(null)
+                override fun observeSeatTemperature(seat: com.example.poco.data.model.PetSeat) =
+                    kotlinx.coroutines.flow.emptyFlow<Float>()
+                override suspend fun setSeatTemperature(
+                    seat: com.example.poco.data.model.PetSeat,
+                    celsius: Float
+                ) = Result.success<Float?>(null)
             },
             object : WindowRepository {
                 override suspend fun getSupportedWindows() = Result.success(
@@ -109,7 +115,8 @@ class DrivingSessionRepositoryTest {
                 override fun observeWindowPosition(window: CarWindow) = positions
             },
             object : NaviRepository {
-                override fun observeEvents() = kotlinx.coroutines.flow.emptyFlow<com.example.poco.data.model.NaviEvent>()
+                override fun observeEvents() =
+                    kotlinx.coroutines.flow.emptyFlow<com.example.poco.data.model.NaviEvent>()
                 override suspend fun openNavigation(keyword: String?) = Result.success(Unit)
                 override fun observeBumps() = bumps
                 override fun observeRoute() = route
@@ -122,7 +129,11 @@ class DrivingSessionRepositoryTest {
                     if (ttsFails) error("TTS unavailable")
                     if (hangTts) {
                         onSpeaking(true)
-                        try { kotlinx.coroutines.awaitCancellation() } finally { onSpeaking(false) }
+                        try {
+                            kotlinx.coroutines.awaitCancellation()
+                        } finally {
+                            onSpeaking(false)
+                        }
                     }
                 }
             },
@@ -143,7 +154,13 @@ class DrivingSessionRepositoryTest {
                 override suspend fun add(place: VerifiedPlace): NaviWaypoint {
                     waypointCalls++
                     waypointFailure?.let { throw IllegalStateException(it) }
-                    return NaviWaypoint(place.name, place.latitude + 0.0005, place.longitude, 900, 15_000)
+                    return NaviWaypoint(
+                        place.name,
+                        place.latitude + 0.0005,
+                        place.longitude,
+                        900,
+                        15_000
+                    )
                 }
                 override suspend fun remove(place: VerifiedPlace) {
                     removeCalls++
@@ -157,8 +174,10 @@ class DrivingSessionRepositoryTest {
             object : com.example.poco.data.repository.VehicleMotionRepository {
                 override fun observeSpeedKmh() = kotlinx.coroutines.flow.emptyFlow<Float>()
                 override fun observeSteeringAngle() = steering
-                override fun observeBrakePedalPressed() = kotlinx.coroutines.flow.emptyFlow<Boolean>()
-                override fun observeLocation() = kotlinx.coroutines.flow.emptyFlow<com.example.poco.data.model.VehicleLocation>()
+                override fun observeBrakePedalPressed() =
+                    kotlinx.coroutines.flow.emptyFlow<Boolean>()
+                override fun observeLocation() =
+                    kotlinx.coroutines.flow.emptyFlow<com.example.poco.data.model.VehicleLocation>()
             }
         )
     }
@@ -353,7 +372,12 @@ class DrivingSessionRepositoryTest {
     }
     private val dues = mutableListOf<com.example.poco.data.repository.RestRecommendationDue>()
     private fun startCollecting() {
-        kotlinx.coroutines.CoroutineScope(dispatcher).launch { session.restRecommendations.collect { dues += it } }
+        kotlinx.coroutines.CoroutineScope(dispatcher).launch {
+            session.restRecommendations.collect {
+                dues +=
+                    it
+            }
+        }
         scheduler.runCurrent()
     }
     private val place = VerifiedPlace("ChIJvSMioIapZDURijUJ9O6phq8", "덕평휴게소", 37.24, 127.39, null)
@@ -372,7 +396,13 @@ class DrivingSessionRepositoryTest {
         interval.value = 30
         advance(250)
         assertTrue(session.state.value.rest.restDue)
-        assertEquals(listOf("120->90", "90->30"), recorder.events.filter { it.type == "INTERVAL_CHANGED" }.map { it.detail })
+        assertEquals(
+            listOf("120->90", "90->30"),
+            recorder.events.filter {
+                it.type ==
+                    "INTERVAL_CHANGED"
+            }.map { it.detail }
+        )
         assertEquals(120, recorder.trips.single().startRestIntervalMinutes)
     }
 
@@ -412,10 +442,16 @@ class DrivingSessionRepositoryTest {
         scheduler.runCurrent()
         gear(DrivingGear.DRIVE)
         session.startRest()
-        assertEquals(com.example.poco.core.driving.RestPhase.DRIVING, session.state.value.rest.phase)
+        assertEquals(
+            com.example.poco.core.driving.RestPhase.DRIVING,
+            session.state.value.rest.phase
+        )
         gear(DrivingGear.PARK)
         advance(10 * 60_000L)
-        assertEquals(com.example.poco.core.driving.RestPhase.DRIVING, session.state.value.rest.phase)
+        assertEquals(
+            com.example.poco.core.driving.RestPhase.DRIVING,
+            session.state.value.rest.phase
+        )
         session.startRest()
         advance(60_000L)
         gear(DrivingGear.DRIVE)
@@ -432,7 +468,10 @@ class DrivingSessionRepositoryTest {
         val departed = scheduler.currentTime
         assertEquals(1, session.state.value.rest.restCount)
         advance(250)
-        assertEquals(120 * 60_000L - (scheduler.currentTime - departed), session.state.value.rest.remainingMs)
+        assertEquals(
+            120 * 60_000L - (scheduler.currentTime - departed),
+            session.state.value.rest.remainingMs
+        )
     }
 
     /** #8: score recovers only during a confirmed rest, never in plain P. */
@@ -462,7 +501,13 @@ class DrivingSessionRepositoryTest {
         advance(30 * 60_000L)
         assertEquals(90, session.state.value.comfort.score)
         assertEquals(2, recorder.events.count { it.type == "SCORE_RECOVERY" })
-        assertEquals(4, recorder.events.count { it.type == "SCORE_PENALTY" && it.detail == "RAPID_ACCELERATION" })
+        assertEquals(
+            4,
+            recorder.events.count {
+                it.type == "SCORE_PENALTY" &&
+                    it.detail == "RAPID_ACCELERATION"
+            }
+        )
     }
 
     /** #29/#12: voice OFF shows but never speaks (and never replays later); duplicate IDs are ignored. */
@@ -471,13 +516,25 @@ class DrivingSessionRepositoryTest {
         scheduler.runCurrent()
         voice.value = false
         scheduler.runCurrent()
-        session.announce(com.example.poco.core.driving.Guidance("a1", com.example.poco.core.driving.GuidancePriority.AI_ANSWER, "답변"))
+        session.announce(
+            com.example.poco.core.driving.Guidance(
+                "a1",
+                com.example.poco.core.driving.GuidancePriority.AI_ANSWER,
+                "답변"
+            )
+        )
         scheduler.runCurrent()
         assertEquals("답변", session.state.value.guidance?.displayText)
         assertEquals(0, spoken)
         voice.value = true
         scheduler.runCurrent()
-        session.announce(com.example.poco.core.driving.Guidance("a1", com.example.poco.core.driving.GuidancePriority.AI_ANSWER, "답변"))
+        session.announce(
+            com.example.poco.core.driving.Guidance(
+                "a1",
+                com.example.poco.core.driving.GuidancePriority.AI_ANSWER,
+                "답변"
+            )
+        )
         scheduler.runCurrent()
         assertEquals(0, spoken)
     }
@@ -487,13 +544,22 @@ class DrivingSessionRepositoryTest {
         hangTts = true
         session.start(settings)
         scheduler.runCurrent()
-        session.announce(com.example.poco.core.driving.Guidance("a1", com.example.poco.core.driving.GuidancePriority.AI_ANSWER, "답변"))
+        session.announce(
+            com.example.poco.core.driving.Guidance(
+                "a1",
+                com.example.poco.core.driving.GuidancePriority.AI_ANSWER,
+                "답변"
+            )
+        )
         scheduler.runCurrent()
         assertTrue(session.state.value.ttsSpeaking)
         positions.value = 100
         scheduler.runCurrent()
         assertEquals(2, spoken)
-        assertEquals(com.example.poco.core.driving.GuidancePriority.WINDOW_WARNING, session.state.value.guidance?.priority)
+        assertEquals(
+            com.example.poco.core.driving.GuidancePriority.WINDOW_WARNING,
+            session.state.value.guidance?.priority
+        )
     }
 
     /** #27/#28/#11: verified add -> success TTS; 5 min once; arrival needs Navi arrival AND P. */
@@ -504,11 +570,16 @@ class DrivingSessionRepositoryTest {
         session.addWaypoint(place)
         scheduler.runCurrent()
         assertEquals(1, waypointCalls)
-        assertEquals(com.example.poco.data.model.WaypointUiState.Added("덕평휴게소", "15분"), session.state.value.waypoint)
+        assertEquals(
+            WaypointUiState.Added("덕평휴게소", "15분"),
+            session.state.value.waypoint
+        )
         assertEquals("15분 뒤 덕평휴게소에 들를게요.", spokenTexts.last())
         val wp = NaviWaypoint("덕평", place.latitude, place.longitude, 280, 4_000)
         route.tryEmit(NaviRouteUpdate.Waypoints(listOf(wp)))
-        route.tryEmit(NaviRouteUpdate.Waypoints(listOf(wp.copy(remainTime = 250, remainMeters = 3_500))))
+        route.tryEmit(
+            NaviRouteUpdate.Waypoints(listOf(wp.copy(remainTime = 250, remainMeters = 3_500)))
+        )
         scheduler.runCurrent()
         assertEquals(1, spokenTexts.count { it.startsWith("5분 뒤") })
         gear(DrivingGear.PARK) // P before arrival: no arrival guidance
@@ -516,7 +587,10 @@ class DrivingSessionRepositoryTest {
         route.tryEmit(NaviRouteUpdate.Arrived("덕평", true))
         scheduler.runCurrent()
         assertEquals(1, spokenTexts.count { it.startsWith("도착했어요") })
-        assertEquals(com.example.poco.core.driving.RestPhase.RESTING, session.state.value.rest.phase)
+        assertEquals(
+            com.example.poco.core.driving.RestPhase.RESTING,
+            session.state.value.rest.phase
+        )
         gear(DrivingGear.PARK)
         assertEquals(1, spokenTexts.count { it.startsWith("도착했어요") })
     }
@@ -527,14 +601,18 @@ class DrivingSessionRepositoryTest {
         waypointFailure = "먼저 내비게이션에서 목적지를 설정해 주세요."
         session.addWaypoint(place)
         scheduler.runCurrent()
-        assertTrue(session.state.value.waypoint is com.example.poco.data.model.WaypointUiState.Failed)
+        assertTrue(
+            session.state.value.waypoint is WaypointUiState.Failed
+        )
         assertEquals(0, spoken)
         waypointFailure = null
         session.addWaypoint(place)
         scheduler.runCurrent()
         route.tryEmit(NaviRouteUpdate.Waypoints(emptyList()))
         scheduler.runCurrent()
-        assertTrue(session.state.value.waypoint is com.example.poco.data.model.WaypointUiState.Cancelled)
+        assertTrue(
+            session.state.value.waypoint is WaypointUiState.Cancelled
+        )
         assertEquals(1, recorder.events.count { it.type == "WAYPOINT_CANCELLED" })
     }
 
@@ -547,14 +625,17 @@ class DrivingSessionRepositoryTest {
         removeFailure = "내비게이션이 경유지 취소를 처리하지 못했어요."
         session.cancelWaypoint()
         scheduler.runCurrent()
-        val failed = session.state.value.waypoint as com.example.poco.data.model.WaypointUiState.Added
+        val failed = session.state.value.waypoint as WaypointUiState.Added
         assertEquals(removeFailure, failed.cancelError)
         assertEquals(0, recorder.events.count { it.type == "WAYPOINT_CANCELLED" })
         removeFailure = null
         session.cancelWaypoint()
         scheduler.runCurrent()
         assertEquals(2, removeCalls)
-        assertEquals(com.example.poco.data.model.WaypointUiState.Cancelled("덕평휴게소"), session.state.value.waypoint)
+        assertEquals(
+            WaypointUiState.Cancelled("덕평휴게소"),
+            session.state.value.waypoint
+        )
         assertEquals(1, recorder.events.count { it.type == "WAYPOINT_CANCELLED" })
         session.cancelWaypoint() // nothing left to cancel
         scheduler.runCurrent()
@@ -630,16 +711,31 @@ class DrivingSessionRepositoryTest {
     }
 
     class FakeRecorder : com.example.poco.data.record.TripRecordSink {
-        val trips = java.util.Collections.synchronizedList(mutableListOf<com.example.poco.data.record.TripEntity>())
-        val events = java.util.Collections.synchronizedList(mutableListOf<com.example.poco.data.record.TripEventEntity>())
+        val trips = java.util.Collections.synchronizedList(
+            mutableListOf<com.example.poco.data.record.TripEntity>()
+        )
+        val events = java.util.Collections.synchronizedList(
+            mutableListOf<com.example.poco.data.record.TripEventEntity>()
+        )
         val completions = java.util.Collections.synchronizedList(mutableListOf<String>())
         override fun begin(trip: com.example.poco.data.record.TripEntity) {
             trips += trip
         }
         override fun event(event: com.example.poco.data.record.TripEventEntity) {
-            if (event.dedupeKey == null || events.none { it.dedupeKey == event.dedupeKey }) events += event
+            if (event.dedupeKey == null ||
+                events.none { it.dedupeKey == event.dedupeKey }
+            ) {
+                events += event
+            }
         }
-        override suspend fun complete(tripId: String, endedAt: Long, finalScore: Int, drivingMs: Long, restMs: Long, restCount: Int): Boolean {
+        override suspend fun complete(
+            tripId: String,
+            endedAt: Long,
+            finalScore: Int,
+            drivingMs: Long,
+            restMs: Long,
+            restCount: Int
+        ): Boolean {
             if (tripId in completions) return false
             completions += tripId
             return true
