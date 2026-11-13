@@ -1,0 +1,257 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 6,
+    "identityHash": "e1b2d4fa2d29bb21566ec6f15dd843c7",
+    "entities": [
+      {
+        "tableName": "pets",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `breed` TEXT NOT NULL, `ageYears` INTEGER, `weightKg` REAL, `seat` TEXT NOT NULL, `motionSensitivity` TEXT NOT NULL, `voiceFrequency` TEXT NOT NULL, `windowAlertPercent` INTEGER NOT NULL DEFAULT 20, `photoPath` TEXT, `restraint` TEXT NOT NULL DEFAULT 'NONE', `species` TEXT NOT NULL DEFAULT 'DOG', `traits` TEXT NOT NULL DEFAULT '', `voiceGuideEnabled` INTEGER NOT NULL DEFAULT 1, `temperatureAlertEnabled` INTEGER NOT NULL DEFAULT 1, `windowAlertEnabled` INTEGER NOT NULL DEFAULT 1, `restSuggestionEnabled` INTEGER NOT NULL DEFAULT 1)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "breed",
+            "columnName": "breed",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ageYears",
+            "columnName": "ageYears",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "weightKg",
+            "columnName": "weightKg",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "seat",
+            "columnName": "seat",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "motionSensitivity",
+            "columnName": "motionSensitivity",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "voiceFrequency",
+            "columnName": "voiceFrequency",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "windowAlertPercent",
+            "columnName": "windowAlertPercent",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "20"
+          },
+          {
+            "fieldPath": "photoPath",
+            "columnName": "photoPath",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "restraint",
+            "columnName": "restraint",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'NONE'"
+          },
+          {
+            "fieldPath": "species",
+            "columnName": "species",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "'DOG'"
+          },
+          {
+            "fieldPath": "traits",
+            "columnName": "traits",
+            "affinity": "TEXT",
+            "notNull": true,
+            "defaultValue": "''"
+          },
+          {
+            "fieldPath": "voiceGuideEnabled",
+            "columnName": "voiceGuideEnabled",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "temperatureAlertEnabled",
+            "columnName": "temperatureAlertEnabled",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "windowAlertEnabled",
+            "columnName": "windowAlertEnabled",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "1"
+          },
+          {
+            "fieldPath": "restSuggestionEnabled",
+            "columnName": "restSuggestionEnabled",
+            "affinity": "INTEGER",
+            "notNull": true,
+            "defaultValue": "1"
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      },
+      {
+        "tableName": "trips",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `startedAtMillis` INTEGER NOT NULL, `endedAtMillis` INTEGER NOT NULL, `destination` TEXT, `distanceKm` REAL NOT NULL, `comfortScore` INTEGER NOT NULL, `hardBrakeCount` INTEGER NOT NULL, `hardBrakePoints` INTEGER NOT NULL, `hardAccelCount` INTEGER NOT NULL, `hardAccelPoints` INTEGER NOT NULL, `sharpTurnCount` INTEGER NOT NULL, `sharpTurnPoints` INTEGER NOT NULL, `calmRecoveryCount` INTEGER NOT NULL, `calmRecoveryPoints` INTEGER NOT NULL, `temperatureAlertCount` INTEGER NOT NULL, `temperatureAlertPoints` INTEGER NOT NULL, `windowAlertCount` INTEGER NOT NULL, `calmMinutes` INTEGER NOT NULL, `timeline` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "startedAtMillis",
+            "columnName": "startedAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "endedAtMillis",
+            "columnName": "endedAtMillis",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "destination",
+            "columnName": "destination",
+            "affinity": "TEXT"
+          },
+          {
+            "fieldPath": "distanceKm",
+            "columnName": "distanceKm",
+            "affinity": "REAL",
+            "notNull": true
+          },
+          {
+            "fieldPath": "comfortScore",
+            "columnName": "comfortScore",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hardBrakeCount",
+            "columnName": "hardBrakeCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hardBrakePoints",
+            "columnName": "hardBrakePoints",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hardAccelCount",
+            "columnName": "hardAccelCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "hardAccelPoints",
+            "columnName": "hardAccelPoints",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sharpTurnCount",
+            "columnName": "sharpTurnCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "sharpTurnPoints",
+            "columnName": "sharpTurnPoints",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "calmRecoveryCount",
+            "columnName": "calmRecoveryCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "calmRecoveryPoints",
+            "columnName": "calmRecoveryPoints",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "temperatureAlertCount",
+            "columnName": "temperatureAlertCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "temperatureAlertPoints",
+            "columnName": "temperatureAlertPoints",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "windowAlertCount",
+            "columnName": "windowAlertCount",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "calmMinutes",
+            "columnName": "calmMinutes",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "timeline",
+            "columnName": "timeline",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'e1b2d4fa2d29bb21566ec6f15dd843c7')"
+    ]
+  }
+}

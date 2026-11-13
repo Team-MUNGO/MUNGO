@@ -1,0 +1,71 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 1,
+    "identityHash": "ce65490ce674041577447c4920ae37c3",
+    "entities": [
+      {
+        "tableName": "pets",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, `breed` TEXT NOT NULL, `ageYears` INTEGER, `weightKg` REAL, `seat` TEXT NOT NULL, `motionSensitivity` TEXT NOT NULL, `voiceFrequency` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "breed",
+            "columnName": "breed",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ageYears",
+            "columnName": "ageYears",
+            "affinity": "INTEGER"
+          },
+          {
+            "fieldPath": "weightKg",
+            "columnName": "weightKg",
+            "affinity": "REAL"
+          },
+          {
+            "fieldPath": "seat",
+            "columnName": "seat",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "motionSensitivity",
+            "columnName": "motionSensitivity",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "voiceFrequency",
+            "columnName": "voiceFrequency",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        }
+      }
+    ],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'ce65490ce674041577447c4920ae37c3')"
+    ]
+  }
+}
