@@ -44,3 +44,9 @@ node_modules/
 .secret.local
 .firebase/
 __pycache__/
+
+# Release signing (keystore lives outside the repo)
+keystore.properties
+
+# Submitted release APK
+!apk/*.apk

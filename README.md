@@ -127,10 +127,11 @@ Pleos SDK는 콜백 방식이라 `data/pleos/datasource`에서 suspend 함수나
 
 | 받는 곳 | 위치 |
 |---|---|
+| 저장소 (제출본) | [`apk/mungo-release.apk`](apk/mungo-release.apk) (서명된 release 빌드) |
 | GitHub Release | https://github.com/Team-POCO-2026/POCO/releases |
-| 직접 빌드한 경우 | `app/build/outputs/apk/debug/app-debug.apk` |
+| 직접 빌드한 경우 | `app/build/outputs/apk/release/app-release.apk` (서명 설정 필요) · `app/build/outputs/apk/debug/app-debug.apk` |
 
-Release에 올린 APK에는 AI 서버 연결 정보가 들어 있어, 설치만 하면 AI 기능까지 바로 쓸 수 있습니다.
+제출용 APK에는 AI 서버 연결 정보가 들어 있어, 설치만 하면 AI 기능까지 바로 쓸 수 있습니다.
 
 <br>
 
@@ -138,11 +139,17 @@ Release에 올린 APK에는 AI 서버 연결 정보가 들어 있어, 설치만 
 
 ### 방법 A. APK로 바로 설치 (권장)
 
-1. [Release](https://github.com/Team-POCO-2026/POCO/releases)에서 `app-debug.apk`를 받습니다.
+1. 저장소의 [`apk/mungo-release.apk`](apk/mungo-release.apk)를 받습니다.
 2. Pleos Connect 에뮬레이터를 켠 뒤, 운전자 계정(user 10)에 설치합니다.
 
    ```bash
-   adb install -r --user 10 app-debug.apk
+   adb install -r --user 10 mungo-release.apk
+   ```
+
+   이전에 디버그 APK를 설치했다면 서명이 달라 설치가 거부됩니다. 먼저 지워 주세요.
+
+   ```bash
+   adb uninstall com.example.poco
    ```
 
 3. 화면 아래 독의 **mungo(발바닥) 아이콘**을 눌러 엽니다.
