@@ -26,6 +26,8 @@ mungo는 운전하는 동안 차량 데이터를 읽어 **반려견이 얼마나
 | ☕ **휴식 · AI 비서** | 쉴 때가 되면 반려견과 들를 만한 곳을 추천하고, 운전 중 궁금한 걸 말로 물어볼 수 있습니다 |
 | 📒 **이동 기록** | 주행마다 점수 변화와 있었던 일을 남기고, 도착 후 멀미 증상을 기록합니다 |
 
+<br>
+
 ## ✨ 핵심 기능
 
 ### 1. 반려견 프로필
@@ -71,6 +73,7 @@ mungo는 운전하는 동안 차량 데이터를 읽어 **반려견이 얼마나
 - 주행이 끝나면 점수, 감점 순간, 온도 변화, 흔들림 그래프를 요약해서 보여 줍니다.
 - 도착 후 하품·침 흘림 같은 멀미 징후를 체크하면, 일주일 단위로 모아 보고 다음 휴식 간격을 제안합니다.
 
+<br>
 
 ## 🗺 구조도
 
@@ -118,6 +121,8 @@ functions/        Firebase Cloud Functions (Gemini · Google Maps 호출)
 화면은 ViewModel만 알고, ViewModel은 repository를 통해 데이터를 가져옵니다.
 Pleos SDK는 콜백 방식이라 `data/pleos/datasource`에서 suspend 함수나 Flow로 바꿔 두었고, SDK 초기화는 `PleosSdkManager`가 처음 쓸 때 한 번 합니다.
 
+<br>
+
 ## 📦 APK
 
 | 받는 곳 | 위치 |
@@ -126,6 +131,8 @@ Pleos SDK는 콜백 방식이라 `data/pleos/datasource`에서 suspend 함수나
 | 직접 빌드한 경우 | `app/build/outputs/apk/debug/app-debug.apk` |
 
 Release에 올린 APK에는 AI 서버 연결 정보가 들어 있어, 설치만 하면 AI 기능까지 바로 쓸 수 있습니다.
+
+<br>
 
 ## 🚀 실행 방법
 
@@ -162,6 +169,8 @@ AI 기능까지 쓰려면 빌드 전에 `local.properties`에 Firebase Web API �
 
 **인트로 → 반려견 프로필 입력 → 홈(차량 정보·창문·위치·음성 권한 요청)** 순서로 진행됩니다.
 탑승 준비는 기어가 P일 때만 열리고, 주행을 시작하면 점수가 매겨집니다.
+
+<br>
 
 ## 🧪 테스트 환경 및 필요한 설정
 
@@ -230,6 +239,8 @@ Windows에서는 같은 일을 하는 PowerShell 스크립트를 쓸 수 있습�
 npm ci --prefix functions            # 서버 의존성 설치 (Node 22.12 이상)
 npm test --prefix functions          # 서버 테스트
 ```
+
+<br>
 
 ## 🤝 같이 작업할 때
 
