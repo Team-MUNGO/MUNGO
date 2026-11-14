@@ -1,19 +1,20 @@
 # POCO 텍스트 음성 AI 서버
 
-앱의 Pleos SpeechToText 결과 텍스트 → HTTPS Cloud Functions → Gemini 텍스트 generateContent → 앱 화면 및 Pleos TextToSpeech. Gemini 오디오/Live API, Pleos LLM, Android 음성 인식·합성·직접 마이크 캡처는 사용하지 않는다. 앱에는 Firebase SDK나 Gemini 키가 필요하지 않다.
+앱의 Pleos SpeechToText 결과 텍스트 → HTTPS Cloud Functions → Gemini 텍스트 generateContent → 앱 화면 및 Pleos TextToSpeech. 같은 함수가 음성 질문 답변(`/assist`, 구 `/answer`), 휴식 장소 추천(`/assist`, Google Maps), 주행 요약(`/summary`)을 맡는다. Gemini 오디오/Live API, Pleos LLM, Android 음성 인식·합성·직접 마이크 캡처는 사용하지 않는다. 앱에는 Firebase SDK나 Gemini 키가 필요하지 않다.
 
-Firebase 프로젝트 `mungo-8be3c`의 `asia-northeast3`에 배포되어 있다(함수 URL: `https://asia-northeast3-mungo-8be3c.cloudfunctions.net/assistantApi`, 런타임 계정 `poco-assistant-runtime`). 휴게소 카탈로그는 비어 있으므로 휴게소 안내는 CATALOG_UNAVAILABLE로 종료한다. 오류를 가짜 응답으로 대체하지 않는다.
+Firebase 프로젝트 `mungo-8be3c`의 `asia-northeast3`에 배포되어 있다(함수 URL: `https://asia-northeast3-mungo-8be3c.cloudfunctions.net/assistantApi`, 런타임 계정 `poco-assistant-runtime`). 휴식 장소 추천은 Google Maps 검색 결과를 쓴다. 예전 `/answer`의 휴게소 카탈로그 경로는 카탈로그가 비어 있어 CATALOG_UNAVAILABLE로 종료한다. 오류를 가짜 응답으로 대체하지 않는다.
 
 ## 심사위원 설치 방법 (개발팀 도움 불필요)
 
-1. 배포용 APK를 Pleos 기기/에뮬레이터에 설치한다: `adb install -r app-debug.apk`.
-2. 앱 실행 → 우측 상단 **주행 시작** → 반려견 이름·탑승 위치·허용 온도 입력 → 위치 권한 허용.
-3. P단 정차 상태에서 **AI 연결** → "위 정보 전송에 동의합니다" 체크 → **연결**. 연결 코드는 필요 없다. 앱이 Firebase 익명 인증으로 자동 로그인한다.
+1. GitHub Release의 APK를 운전자 계정에 설치한다: `adb install -r --user 10 app-debug.apk`. 화면 아래 독의 mungo 아이콘으로 연다.
+2. 반려견 프로필 입력 → 홈 → **탑승 준비** → 주행 시작.
+3. AI 연결은 따로 할 필요가 없다. 앱이 Firebase 익명 인증으로 자동 로그인하고, 연결 코드도 필요 없다. 정보 전송 동의는 개발 단계라 기본으로 켜져 있다(`AssistantRepositoryImpl.consented`, 출시 전 동의 화면으로 되돌릴 항목).
 4. **음성으로 질문** → Pleos STT로 질문 → 서버가 Gemini로 차량 상태 기반 답변 생성 → 주행 화면 답변 카드 표시 → Pleos TTS 출력.
+5. 휴식 장소 추천은 휴식 20분 전에 자동으로 뜬다. 기다리지 않으려면 주행 중에 `adb shell am broadcast --user 10 -p com.example.poco -a com.example.poco.DEBUG_REST`로 바로 띄운다(디버그 APK만). 주행 요약은 주행을 마치면 나온다.
 
-APK 빌드(개발팀): 함수 URL은 루트 `gradle.properties`의 `POCO_ASSISTANT_URL`에 들어 있어 `./gradlew :app:assembleDebug`(Android Studio 실행 포함)만으로 연결된다. 다른 서버로 붙을 때만 `-PPOCO_ASSISTANT_URL=...` 또는 `~/.gradle/gradle.properties`로 덮어쓴다. Firebase Web API 키는 `local.properties`의 `POCO_FIREBASE_API_KEY=` 또는 `-PPOCO_FIREBASE_API_KEY=`로 주입한다(Firebase 앱 `POCO Android`, `firebase apps:sdkconfig ANDROID 1:899311377531:android:ddce974a0ff8163d9216de`). 이 키는 공개 프로젝트 식별자이며 비밀이 아니다. Gemini 키는 APK에 들어가지 않는다.
+APK 빌드(개발팀): 함수 URL은 루트 `gradle.properties`의 `POCO_ASSISTANT_URL`에 들어 있어 `./gradlew :app:assembleDebug`(Android Studio 실행 포함)만으로 연결된다. 다른 서버로 붙을 때만 `-PPOCO_ASSISTANT_URL=...` 또는 `~/.gradle/gradle.properties`로 덮어쓴다. Firebase Web API 키는 `local.properties`의 `POCO_FIREBASE_API_KEY=` 또는 `-PPOCO_FIREBASE_API_KEY=`로 주입한다(Firebase 앱 `POCO Android`, `firebase apps:sdkconfig ANDROID 1:899311377531:android:ddce974a0ff8163d9216de`). 이 키는 저장소·README에 적지 않고 팀에 따로 요청해 받는다. GitHub Release APK에는 이미 들어 있어 심사위원은 받을 필요가 없다. Gemini·Maps 키는 APK에 들어가지 않는다.
 
-에뮬레이터 주의: 확인한 `Pleos_Connect_v2.1.0` 에뮬레이터 이미지에서는 Pleos 온디바이스 STT/TTS 엔진의 모델 로딩이 실패한다(STT `KenLMWrapper: unk is not defined`, TTS `Failed to load MetaSpace byte pair encoder` → `ON_DEVICE_ENGINE_ERROR`). SERVER 모드는 Pleos 클라이언트 자격 증명이 없는 앱에서 `Client credentials missing`으로 실패한다. 이 환경에서는 음성 질문을 시작할 수 없다. 앱 결함이 아닌 엔진/이미지 상태이며 실제 Pleos 기기 또는 정상 모델이 설치된 이미지에서 확인해야 한다.
+에뮬레이터 주의: 확인한 `Pleos_Connect_v2.1.0` 에뮬레이터 이미지에서는 Pleos 온디바이스 STT/TTS 엔진의 모델 로딩이 실패한다(STT `KenLMWrapper: unk is not defined`, TTS `Failed to load MetaSpace byte pair encoder` → `ON_DEVICE_ENGINE_ERROR`). SERVER 모드는 Pleos 클라이언트 자격 증명이 없는 앱에서 `Client credentials missing`으로 실패한다. 이 환경에서는 음성 질문을 시작할 수 없다. 앱 결함이 아닌 엔진/이미지 상태이며 실제 Pleos 기기 또는 정상 모델이 설치된 이미지에서 확인해야 한다. 휴식 장소 추천과 주행 요약은 음성 엔진 없이 에뮬레이터에서도 확인할 수 있다.
 
 ## 구조화 AI 엔드포인트 `/assist` (Gemini + Google Maps)
 
@@ -48,14 +49,14 @@ Play Integrity 공급자는 Google Play 서비스와 Play 배포/인증 기기�
 ## 배포 전 준비
 
 1. 운영자가 Firebase/Google Cloud 프로젝트, 결제(Functions에 필요), Firestore Native database를 준비한다. 적절한 지역·IAM·개인정보 정책을 검토한다. 이 저장소는 계정/결제/프로젝트를 자동 생성하지 않는다.
-2. 지원되는 최신 Node 22 LTS를 사용한다. 로컬 Node 22.9에서는 jwks-rsa의 ESM 의존성 로딩이 실패하므로 22.12 이상을 사용한다. Node 22.23.5에서 실제 함수 진입점 로딩과 서버 테스트 13개를 확인했다. `npm ci --prefix functions`로 lockfile 의존성을 설치한다. Firebase CLI는 운영자 환경에서 설치·인증한다. 서비스 계정 JSON을 앱이나 저장소에 넣지 않는다.
+2. 지원되는 최신 Node 22 LTS를 사용한다. 로컬 Node 22.9에서는 jwks-rsa의 ESM 의존성 로딩이 실패하므로 22.12 이상을 사용한다. Node 22.23.5에서 실제 함수 진입점 로딩과 서버 테스트 37개 통과를 확인했다(2026-11-14). `npm ci --prefix functions`로 lockfile 의존성을 설치한다. Firebase CLI는 운영자 환경에서 설치·인증한다. 서비스 계정 JSON을 앱이나 저장소에 넣지 않는다.
 3. 루트에서 명시적인 `--project PROJECT_ID`를 사용한다. `firebase functions:secrets:set GEMINI_API_KEY --project PROJECT_ID`와 `firebase functions:secrets:set ASSISTANT_IP_SALT --project PROJECT_ID`로 각각 Gemini 키와 충분히 긴 난수 salt를 Secret Manager에 등록한다. 키는 명령 인자·채팅·CI 로그로 전달하지 않는다. 키는 Gemini API만 허용하고 프로젝트 예산/할당량도 설정한다.
 4. `functions/.env.PROJECT_ID`에 `GEMINI_MODEL=현재_계정에서_지원되는_텍스트_모델_ID`를 지정한다. 모델 지원은 계정에서 확인한다. 같은 파일에 `ASSISTANT_SERVICE_ACCOUNT=전용런타임계정@PROJECT_ID.iam.gserviceaccount.com`을 설정한다. 해당 계정에는 Firestore 데이터 접근과 두 secret의 accessor 권한만 부여하고 기본 Editor 계정 사용을 피한다. 배포자는 이 계정을 사용할 권한과 Functions 배포 권한이 필요하다. `.env*`와 `.secret.local`은 git에서 제외된다. API 키는 이 파일에 저장하지 않는다.
 5. 휴게소 데이터가 필요하면 아래 카탈로그를 준비한다. 비어 있으면 주변 검색은 CATALOG_UNAVAILABLE로 종료한다.
 6. `npm test --prefix functions`, `npm run check --prefix functions` 후 Firestore 규칙은 `firebase deploy --only firestore:rules --project PROJECT_ID`로 별도 적용한다. 함수만 배포할 때는 현재 codebase 이름까지 지정해 `firebase deploy --only functions:poco-assistant:assistantApi --project PROJECT_ID`를 사용한다. Firestore rules는 모든 클라이언트 직접 접근을 차단한다. 기존 프로젝트에 적용할 때 기존 rules와 통합해야 한다. Functions만 배포하는 명령은 Firestore 규칙을 적용하지 않는다.
 7. Firebase CLI가 출력하는 **실제 함수 HTTPS URL**을 앱에 설정한다. URL을 추측하지 않는다. 예: `./gradlew :app:assembleDebug -PPOCO_ASSISTANT_URL=https://실제함수호스트/assistantApi`. URL은 공개 설정이며 비밀 키가 아니다. HTTP/cleartext URL은 빌드에서 거부한다.
 8. (개발용, 선택) 운영자 개발환경 ADC(`gcloud auth application-default login`) 또는 최소 권한 런타임 자격증명으로 `GOOGLE_CLOUD_PROJECT=PROJECT_ID node functions/scripts/create-invitation.js`를 실행한다. 출력은 비밀 일회용 코드이므로 운영자 터미널에서만 확인하고 로그/저장소에 남기지 않는다. 차량 앱에서 주행 세션을 시작하고 P단에서 AI 연결·정보 전송 동의 후 입력한다. 코드 유효시간 30분, 1회 사용, 발급 세션 1시간. 앱 재시작 시 재연결한다. 공개 상용 배포용 계정 관리·기기 attestation 대신 공모전의 제한된 기기 프로비저닝을 위한 방식이다.
-9. 실제 Pleos 기기에서 STT → 서버 → Gemini → TTS, 권한 거부, 네트워크 단절, 세션 만료, 위치 최신성, Navi 결과를 검증한다. 심사팀에 연결 코드 발급 절차를 제공한다. 개인정보 처리방침에는 전송 목적·항목·수신자·보관·국외이전 및 Gemini 운영 계정의 실제 데이터 처리 조건을 명시한다.
+9. 실제 Pleos 기기에서 STT → 서버 → Gemini → TTS, 권한 거부, 네트워크 단절, 세션 만료, 위치 최신성, Navi 결과를 검증한다. 심사 경로는 익명 인증이라 연결 코드가 필요 없다. 개인정보 처리방침에는 전송 목적·항목·수신자·보관·국외이전 및 Gemini 운영 계정의 실제 데이터 처리 조건을 명시한다.
 
 `assistantInvitations`, `assistantSessions`, `assistantLimits`, `assistantBootstrap` 컬렉션의 `expiresAt`에 Firestore TTL을 설정한다. TTL은 삭제 지연이 있으므로 접근 허용 판단에는 사용하지 않으며 코드가 만료시각을 직접 검사한다. 서버 운영자는 세션 문서의 `revoked=true`로 세션을 폐기할 수 있다. 서비스 중단은 함수 비활성화 또는 Gemini 키 회수로 수행한다. HTTP 진입점은 공개지만 검증된 Firebase ID 토큰 또는 유효한 초대 세션 없이는 Gemini를 호출하지 못한다. 초대 발급은 Admin IAM만 가능하다.
 
@@ -84,7 +85,9 @@ JSON 필드:
 
 ## 검증 범위
 
-`functions/test`는 입력 검증, 모델 응답 검증, 비밀/좌표 미전달, 카탈로그 미지원, 초대 1회 사용·만료·동시 요청·예산 정책을 fake fetch/transaction store로 검증한다. 실제 Gemini·Firestore transaction·Secret Manager·IAM·Functions 배포 성공을 입증하지 않는다. 클라우드 E2E는 프로젝트가 준비된 후 수행한다.
+`functions/test`는 입력 검증, 모델 응답 검증, 비밀/좌표 미전달, 카탈로그 미지원, 초대 1회 사용·만료·동시 요청·예산 정책을 fake fetch/transaction store로 검증한다. 실제 Gemini·Firestore transaction·Secret Manager·IAM·Functions 배포 성공을 입증하지 않는다.
+
+배포된 서버의 실제 E2E는 2026-11-14에 확인했다: 익명 로그인 200, `/assist` 음성 질문 200, `/assist` 휴식 추천 200(Maps 장소 5곳, 모두 경유지 가능), `/summary` 200. 키와 토큰은 출력하지 않았다.
 
 Pleos FusedLocation 1.1.3 소스는 timestampMillis의 시간 기준을 명시하지 않아 앱은 최근 Unix milliseconds로 검증 가능한 값만 수용한다. 다른 기준이면 위치 unavailable로 종료하며 현재 시각으로 덮어쓰지 않는다. 실제 서비스의 시간 기준은 기기 검증 항목이다.
 
