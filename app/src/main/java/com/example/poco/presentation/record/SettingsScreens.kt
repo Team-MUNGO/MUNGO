@@ -47,8 +47,10 @@ import com.example.poco.data.vehicle.VehicleIdentity
 import com.example.poco.data.vehicle.VehicleLinkState
 import com.example.poco.presentation.design.DesignCanvas
 import com.example.poco.presentation.design.Mg
+import com.example.poco.presentation.design.MgDialogCard
 import com.example.poco.presentation.design.MgIcon
 import com.example.poco.presentation.design.MgIcons
+import com.example.poco.presentation.design.PopupScrim
 import com.example.poco.presentation.session.component.intervalText
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -162,7 +164,7 @@ internal fun SettingsScreen(
         toast?.let { SettingsToast(it, Modifier.align(Alignment.TopCenter).offset(y = 548.dp)) }
         dialog?.let { show ->
             Box(
-                Modifier.fillMaxSize().background(Mg.Scrim).clickable(enabled = false) {
+                Modifier.fillMaxSize().background(PopupScrim).clickable(enabled = false) {
                 },
                 contentAlignment = Alignment.Center
             ) { show() }
@@ -524,44 +526,26 @@ private fun Chip(
 /** 차량 연동 해지 확인 (Figma 470:56472) */
 @Composable
 private fun UnlinkDialog(onCancel: () -> Unit, onConfirm: () -> Unit) {
-    Column(
-        Modifier.width(
-            857.dp
-        ).clip(
-            RoundedCornerShape(33.dp)
-        ).background(Color.White).padding(horizontal = 53.dp, vertical = 48.dp)
+    // 공통 팝업 스타일 (뒷배경 회색은 설정 화면 dialog 자리에서 깐다)
+    MgDialogCard(
+        title = "차량 연동을 해지할까요?",
+        message = "멍고가 차량 데이터를 더 이상 읽지 않아요.",
+        icon = MgIcons.Car,
+        dismissText = "취소",
+        onDismiss = onCancel,
+        confirmText = "해지하기",
+        onConfirm = onConfirm
     ) {
-        Badge(MgIcons.Car, size = 73.dp)
-        Spacer(Modifier.height(28.dp))
-        Text("차량 연동을 해지할까요?", style = Mg.bold(35, 46), color = Mg.Ink)
-        Spacer(Modifier.height(10.dp))
-        Text("멍고가 차량 데이터를 더 이상 읽지 않아요.", style = Mg.regular(23, 31), color = Mg.Muted)
-        Spacer(Modifier.height(32.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        Column(
+            Modifier
+                .fillMaxWidth()
+                .background(Mg.Bg, RoundedCornerShape(20.dp))
+                .padding(horizontal = 28.dp, vertical = 24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
             Bullet(MgIcons.Close, Mg.OrangeText, "주행 케어 · 창문 알림 · 휴식 제안이 멈춰요", strong = true)
             Bullet(MgIcons.Check, Mg.Muted, "이동 기록과 반려견 프로필은 그대로 남아요")
             Bullet(MgIcons.Check, Mg.Muted, "다시 연결하면 바로 이어서 쓸 수 있어요")
-        }
-        Spacer(Modifier.height(48.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(18.dp)) {
-            Box(
-                Modifier.weight(
-                    1f
-                ).height(
-                    103.dp
-                ).clip(
-                    CircleShape
-                ).border(2.dp, Mg.Line, CircleShape).clickable(onClick = onCancel),
-                contentAlignment = Alignment.Center
-            ) { Text("취소", style = Mg.bold(27, 36), color = Mg.Ink) }
-            Box(
-                Modifier.weight(
-                    1f
-                ).height(
-                    103.dp
-                ).clip(CircleShape).background(Mg.Orange).clickable(onClick = onConfirm),
-                contentAlignment = Alignment.Center
-            ) { Text("해지하기", style = Mg.bold(27, 36), color = Color.White) }
         }
     }
 }

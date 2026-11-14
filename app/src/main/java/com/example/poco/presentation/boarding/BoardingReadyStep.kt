@@ -50,6 +50,7 @@ import com.example.poco.data.model.PetSeat
 import com.example.poco.data.model.Restraint
 import com.example.poco.presentation.design.DrawableIcon
 import com.example.poco.presentation.design.Mg
+import com.example.poco.presentation.design.MgDialogStyle
 import com.example.poco.presentation.design.ScrimDialog
 import com.example.poco.presentation.petprofile.label
 import kotlin.math.roundToInt
@@ -269,7 +270,8 @@ internal fun DriveLayoutDialog(onDismiss: () -> Unit, onConfirm: (hideNextTime: 
         Column(
             modifier = Modifier
                 .width(1150.dp)
-                .background(colors.bgSurface, RoundedCornerShape(43.dp))
+                // 공통 팝업 카드 (흰색 · 라운드 32)
+                .background(Color.White, MgDialogStyle.Shape)
                 .padding(start = 53.dp, end = 53.dp, top = 37.dp, bottom = 35.dp)
         ) {
             Row(verticalAlignment = Alignment.Top) {

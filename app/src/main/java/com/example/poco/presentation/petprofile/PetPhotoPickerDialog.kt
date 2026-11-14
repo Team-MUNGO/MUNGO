@@ -42,14 +42,13 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.core.content.ContextCompat
 import com.example.poco.R
 import com.example.poco.core.designsystem.MungoBaseIcon
@@ -60,6 +59,8 @@ import com.example.poco.core.theme.MungoBaseRadius
 import com.example.poco.core.theme.MungoBaseSize
 import com.example.poco.core.theme.MungoSpacing
 import com.example.poco.core.theme.MungoTheme
+import com.example.poco.presentation.design.MgDialogStyle
+import com.example.poco.presentation.design.ScrimDialog
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
@@ -87,16 +88,14 @@ fun PetPhotoPickerDialog(
         if (!hasPermission) permissionLauncher.launch(imagePermission())
     }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
+    // 다른 팝업과 같은 회색 뒷배경 · 흰 카드(라운드 32)
+    ScrimDialog(onDismiss = onDismiss) {
         val colors = MungoTheme.colors
         Column(
             modifier = Modifier
                 .fillMaxWidth(0.86f)
                 .fillMaxSize(0.88f)
-                .background(colors.backgroundCard, RoundedCornerShape(MungoBaseRadius.r36))
+                .background(Color.White, MgDialogStyle.Shape)
                 .padding(MungoSpacing.space48)
         ) {
             Row(verticalAlignment = Alignment.CenterVertically) {
@@ -134,7 +133,7 @@ private fun PhotoGrid(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val sample = remember { context.samplePhotoUri() }
+    val samples = remember { context.samplePhotoUris() }
     val photos by produceState<List<Uri>?>(initialValue = null, hasPermission) {
         value = if (hasPermission) {
             withContext(Dispatchers.IO) { context.queryRecentImages() }
@@ -164,8 +163,8 @@ private fun PhotoGrid(
             horizontalArrangement = Arrangement.spacedBy(MungoSpacing.space24),
             verticalArrangement = Arrangement.spacedBy(MungoSpacing.space24)
         ) {
-            item(key = "sample") {
-                PhotoTile(uri = sample, label = "예시 사진", onClick = { onPicked(sample.toString()) })
+            items(samples, key = { "sample:${it.second}" }) { (uri, label) ->
+                PhotoTile(uri = uri, label = label, onClick = { onPicked(uri.toString()) })
             }
             items(photos.orEmpty(), key = { it.toString() }) { uri ->
                 PhotoTile(uri = uri, onClick = { onPicked(uri.toString()) })
@@ -212,9 +211,14 @@ private fun PhotoTile(uri: Uri, onClick: () -> Unit, label: String? = null) {
     }
 }
 
-/** 앱에 들어 있는 예시 펫 사진 (res/raw) - 사진이 없는 차에서도 바로 해 볼 수 있게 */
-private fun Context.samplePhotoUri(): Uri =
-    Uri.parse("android.resource://$packageName/${R.raw.sample_pet_profile}")
+/**
+ * 앱에 들어 있는 예시 펫 사진 (res/raw) - 사진이 없는 차에서도 바로 해 볼 수 있게.
+ * 시츄 사진: Wikimedia Commons "Shih Tzu Iran Mashhad City Mostafa Meraji.jpg" (CC0)
+ */
+private fun Context.samplePhotoUris(): List<Pair<Uri, String>> = listOf(
+    Uri.parse("android.resource://$packageName/${R.raw.sample_pet_shihtzu}") to "예시 · 시츄",
+    Uri.parse("android.resource://$packageName/${R.raw.sample_pet_profile}") to "예시 사진"
+)
 
 @Composable
 private fun EmptyMessage(title: String, description: String) {
