@@ -277,13 +277,10 @@ class BoardingViewModel @Inject constructor(
                 val matched = matchPetsByVoice(heard, state.pets)
                 if (matched.isNotEmpty()) {
                     _uiState.update { s ->
-                        s.copy(
-                            selectedIds = s.pets.map { it.id }.filter {
-                                it in
-                                    matched
-                            }
-                        )
+                        s.copy(selectedIds = s.pets.map { it.id }.filter { it in matched })
                     }
+                    // 말로 답하면 '다음'까지 눌러 준 것처럼 넘어간다 (주행 전 화면 조작 줄이기)
+                    next()
                 }
             }
             state.step == BoardingStep.CHECKLIST && isAllCheckedReply(heard) ->

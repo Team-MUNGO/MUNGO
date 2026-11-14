@@ -41,8 +41,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.window.Dialog
-import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
@@ -57,6 +55,7 @@ import com.example.poco.data.model.DrivingSessionState
 import com.example.poco.presentation.design.DesignCanvas
 import com.example.poco.presentation.design.DrawableIcon
 import com.example.poco.presentation.design.Mg
+import com.example.poco.presentation.design.MgAlertDialog
 import com.example.poco.presentation.design.MgIcon
 import com.example.poco.presentation.design.MgIcons
 import com.example.poco.presentation.design.Pill
@@ -146,6 +145,9 @@ fun SessionRoute(
     }
     var autoStarted by rememberSaveable { mutableStateOf(false) }
     LaunchedEffect(autoStart, profile, state.session.active) {
+        // 이미 주행 중에 들어온 화면(내비 보고 돌아옴 등)은 자동 시작을 한 것으로 본다.
+        // 안 그러면 주행을 끝내는 순간 active=false가 되면서 새 주행이 바로 시작된다
+        if (state.session.active) autoStarted = true
         if (autoStart && !autoStarted && !state.session.active && profile is SessionProfile.Ready) {
             autoStarted = true
             start()
@@ -562,43 +564,24 @@ private fun WindowWarningDialog(
     onClose: () -> Unit
 ) {
     val busy = windowWarningBusy(state)
-    Dialog(
-        onDismissRequest = { if (!busy) onDismiss() },
-        properties = DialogProperties(usePlatformDefaultWidth = false)
-    ) {
+    // 다른 팝업과 같은 회색 뒷배경 (플랫폼 기본 dim은 차량 화면에서 약하거나 꺼져 있다)
+    ScrimDialog(onDismiss = { if (!busy) onDismiss() }) {
         WindowWarningPopup(state, onDismiss, onClose)
     }
 }
 
-/** 주행 종료 확인: 피그마에 없는 화면이라 창문 경고 팝업과 같은 멍고 카드 · 버튼 스타일로 맞춘다. */
+/** 주행 종료 확인: 창문 경고 팝업과 같은 공통 팝업 스타일 */
 @Composable
 private fun EndConfirmDialog(onDismiss: () -> Unit, onEnd: () -> Unit) {
-    ScrimDialog(onDismiss) {
-        Column(
-            Modifier.width(
-                620.dp
-            ).background(Color.White, RoundedCornerShape(Mg.Radius)).padding(40.dp)
-        ) {
-            Text("주행을 종료할까요?", style = Mg.bold(33, 44), color = Mg.Ink)
-            Spacer(Modifier.height(12.dp))
-            Text("이번 주행 기록을 저장하고 요약을 보여 드려요.", style = Mg.regular(25, 34), color = Mg.Muted)
-            Spacer(Modifier.height(36.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                SecondaryButton(
-                    "계속 주행",
-                    onDismiss,
-                    Modifier.weight(1f).height(84.dp),
-                    style = Mg.bold(27, 36)
-                )
-                PrimaryButton(
-                    "주행 종료",
-                    onEnd,
-                    Modifier.weight(1f).height(84.dp),
-                    style = Mg.bold(27, 36)
-                )
-            }
-        }
-    }
+    MgAlertDialog(
+        title = "주행을 종료할까요?",
+        message = "이번 주행 기록을 저장하고 요약을 보여 드려요.",
+        icon = MgIcons.Flag,
+        dismissText = "계속 주행",
+        confirmText = "주행 종료",
+        onDismiss = onDismiss,
+        onConfirm = onEnd
+    )
 }
 
 /** Idle driving slot: start a trip, or open history/settings (no session values are invented). */

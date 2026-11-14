@@ -7,6 +7,7 @@ import com.example.poco.data.model.NaviEvent
 import com.example.poco.data.model.Pet
 import com.example.poco.data.model.PetSeat
 import com.example.poco.data.repository.DepartureRepository
+import com.example.poco.data.repository.DrivingSessionRepository
 import com.example.poco.data.repository.GearRepository
 import com.example.poco.data.repository.HvacRepository
 import com.example.poco.data.repository.NaviRepository
@@ -50,7 +51,8 @@ class HomeViewModel @Inject constructor(
     private val naviRepository: NaviRepository,
     private val toastMessenger: ToastMessenger,
     private val vehicleLink: VehicleLinkRepository,
-    private val userSettings: UserSettingsRepository
+    private val userSettings: UserSettingsRepository,
+    private val drivingSession: DrivingSessionRepository
 ) : ViewModel() {
     private val linked = vehicleLink.state.map { it.linked }.distinctUntilChanged()
 
@@ -218,7 +220,12 @@ class HomeViewModel @Inject constructor(
     /** 홈 화면이 보이는지 (RESUMED). 다른 화면 뒤에 있을 때 쌓인 주행 시작 신호는 버린다 */
     fun onScreenVisible(visible: Boolean) {
         screenVisible = visible
-        if (!visible) _uiState.update { it.copy(shouldStartDriving = false) }
+        if (!visible) {
+            _uiState.update { it.copy(shouldStartDriving = false) }
+        } else if (drivingSession.state.value.active) {
+            // 주행 중에 내비(경유지 추가 등)를 보고 앱을 다시 열면 홈이 아니라 주행 화면으로 돌아간다
+            _uiState.update { it.copy(shouldStartDriving = true) }
+        }
     }
 
     fun onDrivingStarted() {

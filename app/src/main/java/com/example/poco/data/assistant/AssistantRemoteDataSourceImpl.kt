@@ -17,6 +17,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
+import timber.log.Timber
 
 class AssistantRemoteDataSourceImpl @Inject constructor(
     private val anonymous: FirebaseAnonymousAuth
@@ -67,10 +68,21 @@ class AssistantRemoteDataSourceImpl @Inject constructor(
         }
         val response = post("assist", json.encodeToString(request), session!!.token)
         return try {
-            json.decodeFromString<AssistResponse>(response).validate(request)
-        } catch (
-            _: Exception
-        ) {
+            val parsed = json.decodeFromString<AssistResponse>(response)
+            runCatching { parsed.validate(request) }.onFailure {
+                // 위치 · 질문 내용 없이 어떤 규칙에 걸렸는지 볼 수 있는 값만 남긴다
+                Timber.w(
+                    "AI 응답 검증 실패: status=%s places=%d source=%s recommended=%s display=%d tts=%d",
+                    parsed.status,
+                    parsed.places.size,
+                    parsed.sources.places,
+                    parsed.recommendedPlaceId != null,
+                    parsed.displayText.length,
+                    parsed.ttsText.length
+                )
+            }.getOrThrow()
+        } catch (e: Exception) {
+            Timber.w("AI 응답 해석 실패: %s", e.toString().take(300))
             throw AssistantException("INVALID_RESPONSE", "답변을 확인하지 못했어요. 다시 질문해 주세요.")
         }
     }
@@ -110,6 +122,7 @@ class AssistantRemoteDataSourceImpl @Inject constructor(
             continuation.invokeOnCancellation { call.cancel() }
             call.enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
+                    Timber.w("AI 서버 네트워크 실패 (%s): %s", path, e.toString())
                     if (continuation.isActive) {
                         continuation.resumeWithException(
                             AssistantException(

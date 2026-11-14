@@ -27,6 +27,7 @@ import okhttp3.Request
 import okhttp3.RequestBody
 import okhttp3.RequestBody.Companion.toRequestBody
 import okhttp3.Response
+import timber.log.Timber
 
 /** Short-lived Firebase ID token used as the Bearer credential for the mungo server. */
 data class AuthToken(val idToken: String, val expiresAt: Long)
@@ -104,6 +105,8 @@ class FirebaseAnonymousAuth @Inject constructor(@ApplicationContext context: Con
             continuation.invokeOnCancellation { call.cancel() }
             call.enqueue(object : Callback {
                 override fun onFailure(call: Call, e: IOException) {
+                    // 원인만 남긴다 (주소의 API 키 · 응답 본문은 남기지 않음)
+                    Timber.w("Firebase 익명 인증 네트워크 실패: %s", e.toString())
                     if (continuation.isActive) continuation.resumeWithException(NetworkFailure())
                 }
                 override fun onResponse(call: Call, response: Response) {

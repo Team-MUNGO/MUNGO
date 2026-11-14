@@ -171,10 +171,15 @@ fun Float.toCelsius(): String = if (this % 1f ==
 /** "현댕이랑 초코 같이 탈거야" → 이름이 들어 있는 펫들. 띄어쓰기는 무시 */
 fun matchPetsByVoice(heard: String?, pets: List<Pet>): Set<Long> {
     val text = heard?.replace(" ", "") ?: return emptySet()
-    return pets.filter { it.name.isNotBlank() && text.contains(it.name.replace(" ", "")) }
+    val byName = pets.filter { it.name.isNotBlank() && text.contains(it.name.replace(" ", "")) }
         .map { it.id }
         .toSet()
+    if (byName.isNotEmpty()) return byName
+    // 이름은 잘못 알아들어도("현댕이랑" → "그거랑") "같이 탈 거야"처럼 함께 간다는 뜻이면 등록된 펫 모두
+    return if (TOGETHER_WORDS.any { text.contains(it) }) pets.map { it.id }.toSet() else emptySet()
 }
+
+private val TOGETHER_WORDS = listOf("같이탈", "같이타", "같이갈", "같이가", "함께탈", "함께타", "함께가", "다같이", "모두")
 
 /** "mungo, 다 확인했어" → true */
 fun isAllCheckedReply(heard: String?): Boolean {
