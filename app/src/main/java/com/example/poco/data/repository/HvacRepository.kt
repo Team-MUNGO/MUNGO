@@ -17,4 +17,10 @@ interface HvacRepository {
 
     /** 주행 세션용 실내 온도 (Reading으로 미지원/오류를 구분) */
     fun observeInteriorTemperature(seat: SessionSeat): Flow<Reading<Float>>
+
+    /** 공기 청정 켜짐/꺼짐 (미지원 · 오류는 Unavailable) */
+    fun observeAirCleaner(): Flow<Reading<Boolean>>
+
+    /** 공기 청정 켜기/끄기. 차가 적용한 값을 돌려준다 */
+    suspend fun setAirCleaner(on: Boolean): Result<Boolean?>
 }

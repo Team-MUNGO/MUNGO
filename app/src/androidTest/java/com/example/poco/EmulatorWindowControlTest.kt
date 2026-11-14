@@ -65,6 +65,8 @@ class EmulatorWindowControlTest {
                     seat: com.example.poco.data.model.PetSeat,
                     celsius: Float
                 ) = Result.success<Float?>(null)
+                override fun observeAirCleaner() = emptyFlow<Reading<Boolean>>()
+                override suspend fun setAirCleaner(on: Boolean) = Result.success<Boolean?>(on)
             },
             windows,
             object : NaviRepository {

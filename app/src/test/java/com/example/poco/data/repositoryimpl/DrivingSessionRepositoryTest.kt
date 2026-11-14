@@ -96,6 +96,9 @@ class DrivingSessionRepositoryTest {
                     seat: com.example.poco.data.model.PetSeat,
                     celsius: Float
                 ) = Result.success<Float?>(null)
+                override fun observeAirCleaner() =
+                    kotlinx.coroutines.flow.emptyFlow<Reading<Boolean>>()
+                override suspend fun setAirCleaner(on: Boolean) = Result.success<Boolean?>(on)
             },
             object : WindowRepository {
                 override suspend fun getSupportedWindows() = Result.success(

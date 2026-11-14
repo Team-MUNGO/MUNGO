@@ -10,6 +10,8 @@
     <uses-permission android:name="pleos.car.permission.CAR_WINDOWS" />
     <uses-permission android:name="pleos.car.permission.CONTROL_CAR_WINDOWS" />
     <uses-permission android:name="pleos.car.permission.CAR_CLIMATE" />
+    <!-- 공조 SDK: 홈 '공기 청정' 칸에서 공기 청정 켜기 · 끄기 (setHvacAirCleaner) -->
+    <uses-permission android:name="pleos.car.permission.CONTROL_CAR_CLIMATE" />
 
     <!-- Vehicle SDK: 조향각(SteeringWheel) · 브레이크 페달(Brake) · 주행거리(Odometer) 읽기 -->
     <uses-permission android:name="pleos.car.permission.CAR_DRIVE" />

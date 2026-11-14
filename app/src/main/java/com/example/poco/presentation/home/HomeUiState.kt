@@ -18,6 +18,10 @@ data class HomeUiState(
     val seatTemperature: Float? = null,
     /** 모든 창문이 닫혔는지. 못 읽으면 null */
     val isAllWindowsClosed: Boolean? = null,
+    /** 공기 청정 켜짐/꺼짐. 차가 지원하지 않거나 못 읽으면 null */
+    val isAirCleanerOn: Boolean? = null,
+    /** 공기 청정 켜기/끄기 요청을 보내고 차의 응답을 기다리는 중 */
+    val isAirCleanerChanging: Boolean = false,
     val lastTrip: TripSummary? = null,
     /** 이번 주(월~일) 요일별 이동 횟수. 7칸 */
     val weekTripCounts: List<Int> = List(7) { 0 },

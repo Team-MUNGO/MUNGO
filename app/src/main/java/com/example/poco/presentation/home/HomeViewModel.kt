@@ -3,6 +3,8 @@ package com.example.poco.presentation.home
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.poco.core.common.ToastMessenger
+import com.example.poco.core.driving.Reading
+import com.example.poco.core.driving.valueOrNull
 import com.example.poco.data.model.NaviEvent
 import com.example.poco.data.model.Pet
 import com.example.poco.data.model.PetSeat
@@ -34,6 +36,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -69,7 +72,39 @@ class HomeViewModel @Inject constructor(
         observeLastTrip()
         observeWeekTrips()
         observeRestInterval()
+        observeAirCleaner()
         checkWindows()
+    }
+
+    /** 공기 청정 켜짐/꺼짐을 차에서 계속 읽는다. 연동을 해지하면 '–'로 비운다 */
+    private fun observeAirCleaner() {
+        viewModelScope.launch {
+            linked.flatMapLatest { if (it) hvacRepository.observeAirCleaner() else flowOf(null) }
+                .catch { Timber.w(it, "공기 청정 관찰 실패") }
+                .collect { reading ->
+                    if (reading is Reading.Unavailable) Timber.w("공기 청정: ${reading.reason}")
+                    _uiState.update { it.copy(isAirCleanerOn = reading?.valueOrNull()) }
+                }
+        }
+    }
+
+    /** 공기 청정 칸을 누르면 켜고 끈다. 화면 값은 차가 알려 준 상태로만 바꾼다 */
+    fun toggleAirCleaner() {
+        val current = _uiState.value
+        val on = current.isAirCleanerOn ?: return
+        if (!current.isVehicleLinked || current.isAirCleanerChanging) return
+        _uiState.update { it.copy(isAirCleanerChanging = true) }
+        viewModelScope.launch {
+            hvacRepository.setAirCleaner(!on)
+                .onSuccess { applied ->
+                    applied?.let { value -> _uiState.update { it.copy(isAirCleanerOn = value) } }
+                }
+                .onFailure {
+                    Timber.w(it, "공기 청정 변경 실패")
+                    toastMessenger.show("공기 청정을 바꾸지 못했어요. 차량에서 직접 확인해 주세요")
+                }
+            _uiState.update { it.copy(isAirCleanerChanging = false) }
+        }
     }
 
     private fun observeRestInterval() {
@@ -105,6 +140,7 @@ class HomeViewModel @Inject constructor(
                             isParked = null,
                             seatTemperature = null,
                             isAllWindowsClosed = null,
+                            isAirCleanerOn = null,
                             shouldStartDriving = false
                         )
                     }

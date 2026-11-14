@@ -61,7 +61,10 @@ enum class PermissionGroup(
         title = "공조 온도",
         description = "뒷좌석이 덥거나 추우면 알려요",
         requiredTitle = "공조 온도는 꼭 필요해요",
-        permissions = listOf("pleos.car.permission.CAR_CLIMATE")
+        permissions = listOf(
+            "pleos.car.permission.CAR_CLIMATE",
+            "pleos.car.permission.CONTROL_CAR_CLIMATE"
+        )
     ),
     VOICE(
         icon = MungoBaseIcon.SPEAKER,

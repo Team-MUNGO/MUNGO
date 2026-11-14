@@ -70,7 +70,7 @@ import kotlin.math.roundToInt
 /*
  * 홈 (Figma 페이지 4 · Home 510:38 · 1700×1184)
  * [메뉴 레일 | 펫 · 차량 상태 패널 | 드라이브 카드 + 최근 이동 · 이번 주 이동 · 휴식 추천 간격]
- * - 아직 차량에서 못 읽는 값(공기 청정 · 날씨)은 '—' 또는 생략
+ * - 공기 청정은 공조 SDK에서 읽고 누르면 켜고 끈다. 지원하지 않는 차 · 못 읽는 값은 '—'
  * - 연동을 해지해도 배치는 같고, 아래 카드는 회색 면 · 회색 값이 되며 눌리지 않는다
  */
 
@@ -104,7 +104,8 @@ fun HomeRoute(
         onStartDrive = navigateToBoarding,
         onRelink = viewModel::relinkVehicle,
         onOpenRecentTrip = navigateToRecords,
-        onOpenWeekTrips = navigateToWeeklyRecords
+        onOpenWeekTrips = navigateToWeeklyRecords,
+        onToggleAirCleaner = viewModel::toggleAirCleaner
     )
 }
 
@@ -116,7 +117,8 @@ private fun HomeScreen(
     modifier: Modifier = Modifier,
     onRelink: () -> Unit = {},
     onOpenRecentTrip: () -> Unit = {},
-    onOpenWeekTrips: () -> Unit = {}
+    onOpenWeekTrips: () -> Unit = {},
+    onToggleAirCleaner: () -> Unit = {}
 ) {
     val colors = MungoTheme.colors
     val linked = uiState.isVehicleLinked
@@ -133,7 +135,8 @@ private fun HomeScreen(
             onOpenPet = onOpenPet,
             modifier = Modifier
                 .width(PET_PANEL_WIDTH)
-                .fillMaxHeight()
+                .fillMaxHeight(),
+            onToggleAirCleaner = onToggleAirCleaner
         )
         VerticalLine()
         Column(
@@ -189,7 +192,12 @@ private fun RowScope.cell(): Modifier = Modifier.weight(1f).fillMaxHeight()
 
 /** 연동 중 · 해지 모두 같은 배치. 해지하면 차량 값은 '—', 강조 칸은 회색 */
 @Composable
-private fun PetPanel(uiState: HomeUiState, onOpenPet: () -> Unit, modifier: Modifier = Modifier) {
+private fun PetPanel(
+    uiState: HomeUiState,
+    onOpenPet: () -> Unit,
+    modifier: Modifier = Modifier,
+    onToggleAirCleaner: () -> Unit = {}
+) {
     val colors = MungoTheme.colors
     val typography = MungoTheme.typography
     val pet = uiState.pet
@@ -313,8 +321,24 @@ private fun PetPanel(uiState: HomeUiState, onOpenPet: () -> Unit, modifier: Modi
                 )
             }
             Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(17.dp)) {
-                // 공기 청정은 아직 차량 SDK에서 읽지 않는다
-                StatusTile(icon = MungoIcon.FAN, label = "공기 청정", value = "–")
+                // 공기 청정: 차(공조 SDK)에서 읽은 켜짐/꺼짐. 누르면 켜고 끈다. 지원하지 않는 차는 '–'
+                val airCleaner = uiState.isAirCleanerOn.takeIf { linked }
+                StatusTile(
+                    icon = MungoIcon.FAN,
+                    label = if (airCleaner != null) "공기 청정 · 눌러서 바꾸기" else "공기 청정",
+                    value = when {
+                        airCleaner == null -> "–"
+                        uiState.isAirCleanerChanging -> "바꾸는 중"
+                        airCleaner -> "켜짐"
+                        else -> "꺼짐"
+                    },
+                    highlighted = airCleaner == true,
+                    onClick = if (airCleaner != null && !uiState.isAirCleanerChanging) {
+                        onToggleAirCleaner
+                    } else {
+                        null
+                    }
+                )
             }
         }
     }
@@ -358,7 +382,8 @@ private fun RowScope.StatusTile(
     label: String,
     value: String,
     highlighted: Boolean = false,
-    alert: Boolean = false
+    alert: Boolean = false,
+    onClick: (() -> Unit)? = null
 ) {
     val colors = MungoTheme.colors
     val shape = RoundedCornerShape(MungoRadius.lg)
@@ -368,6 +393,7 @@ private fun RowScope.StatusTile(
         modifier = Modifier
             .weight(1f)
             .fillMaxHeight()
+            .pressable(shape, onClick = onClick)
             .background(if (accent) colors.bgAccentSubtle else colors.bgSurfaceSunken, shape)
             .then(
                 if (accent) {

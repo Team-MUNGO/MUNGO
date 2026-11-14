@@ -6,6 +6,7 @@ import ai.pleos.playground.vehicle.api.model.capability.AccessType
 import ai.pleos.playground.vehicle.api.model.capability.CapabilityConfig
 import ai.pleos.playground.vehicle.constant.area.SeatValue
 import ai.pleos.playground.vehicle.constant.unit.TemperatureUnit
+import ai.pleos.playground.vehicle.listener.HvacAirCleanerStateListener
 import ai.pleos.playground.vehicle.listener.HvacTemperatureListener
 import com.example.poco.core.driving.PetSeat
 import com.example.poco.core.driving.Reading
@@ -126,5 +127,61 @@ class HvacDataSourceImpl @Inject constructor(
         } finally {
             hvac.unregisterHvacTemperatureCurrent(area, listener)
         }
+    }
+
+    override fun observeAirCleaner(): Flow<Reading<Boolean>> = callbackFlow {
+        sdkManager.ensureVehicle()
+        val (config, area) = airCleanerCapability()
+        if (config.accessType != AccessType.READ && config.accessType != AccessType.READ_WRITE) {
+            trySend(Reading.Unavailable("공기 청정 상태 읽기 미지원"))
+            awaitClose { }
+            return@callbackFlow
+        }
+        val received = AtomicBoolean(false)
+        fun publish(state: Boolean?) {
+            trySend(state?.let { Reading.Value(it) } ?: Reading.Unavailable("공기 청정 데이터 없음"))
+        }
+        val listener = object : HvacAirCleanerStateListener {
+            override fun onHvacAirCleanerStateUpdated(state: Boolean?) {
+                received.set(true)
+                publish(state)
+            }
+
+            override fun onFailed(e: Exception) {
+                close(e)
+            }
+        }
+        try {
+            hvac.registerHvacAirCleanerState(area, listener)
+            val initial = awaitPleos<Boolean?> { success, error ->
+                hvac.getHvacAirCleanerState(area, success, error)
+            }
+            if (!received.get()) publish(initial)
+            awaitClose { }
+        } finally {
+            hvac.unregisterHvacAirCleanerState(area, listener)
+        }
+    }
+
+    override suspend fun setAirCleaner(on: Boolean): Boolean? {
+        sdkManager.ensureVehicle()
+        val (config, area) = airCleanerCapability()
+        check(config.accessType == AccessType.WRITE || config.accessType == AccessType.READ_WRITE) {
+            "공기 청정 조작 미지원"
+        }
+        return awaitPleos { success, error ->
+            hvac.setHvacAirCleaner(area, on, { _, applied -> success(applied) }, error)
+        }
+    }
+
+    /** 공기 청정은 차 전체에 하나인 경우가 많아, 차가 알려 준 첫 영역을 쓴다 */
+    private suspend fun airCleanerCapability(): Pair<CapabilityConfig, SeatArea> {
+        val (config, areas) = awaitPleos<Pair<CapabilityConfig, List<SeatArea>>> { success, error ->
+            hvac.checkHvacAirCleanerCapabilities({ config, areas ->
+                success(config to areas)
+            }, error)
+        }
+        val area = areas.firstOrNull() ?: error("공기 청정 미지원")
+        return config to area
     }
 }

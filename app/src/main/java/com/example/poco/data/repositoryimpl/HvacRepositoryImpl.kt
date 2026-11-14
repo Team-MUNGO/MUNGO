@@ -39,6 +39,12 @@ class HvacRepositoryImpl @Inject constructor(private val hvacDataSource: HvacDat
                 .catch { emit(Reading.Unavailable(it.message ?: "실내 온도 수신 실패")) }
         ) { Reading.Value(it) }
 
+    override fun observeAirCleaner(): Flow<Reading<Boolean>> = hvacDataSource.observeAirCleaner()
+        .catch { emit(Reading.Unavailable(it.message ?: "공기 청정 상태 수신 실패")) }
+
+    override suspend fun setAirCleaner(on: Boolean): Result<Boolean?> =
+        suspendRunCatching { hvacDataSource.setAirCleaner(on) }
+
     /** 뒷좌석 독립 공조가 없는 차(듀얼 존)도 있으므로 가까운 존부터 차례로 시도한다 */
     private suspend fun firstWorkingZone(
         seat: PetSeat,
