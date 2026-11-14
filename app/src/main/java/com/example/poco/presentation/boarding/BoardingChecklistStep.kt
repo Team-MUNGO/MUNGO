@@ -229,14 +229,18 @@ private fun CheckItem.texts(state: BoardingUiState): Pair<String, String> {
             }
         }
         CheckItem.TEMPERATURE -> {
-            val title = state.seatTemperature
-                ?.let { "실내 온도가 ${it.roundToInt()}°C로 설정 되어 있나요?" }
-                ?: "실내 온도가 알맞게 설정 되어 있나요?"
-            val comfort = state.temperatureStandard.comfort
+            // 제목 = 이 반려견의 기준 온도로 묻는다. 아래 줄 = 차에서 잰 실제 실내 온도 (에어컨 설정 온도가 아님)
+            val measured = state.seatTemperature
+            val standard = state.temperatureStandard
+            val comfort = standard.comfort
             val range = "${comfort.start.toCelsius()}~${comfort.endInclusive.toCelsius()}°C"
-            title to when (auto) {
-                true -> "${name.ege} 알맞은 온도예요"
-                false -> "${name.ege} 조금 덥거나 추워요 · $range 추천"
+            val now = measured?.let { "지금 ${it.roundToInt()}°C" }
+            "실내 온도가 ${range}로 설정되어 있나요?" to when (auto) {
+                true -> listOfNotNull(now, "${name.ege} 알맞은 온도예요").joinToString(" · ")
+                false -> {
+                    val feel = if (measured != null && standard.isHot(measured)) "더워요" else "추워요"
+                    listOfNotNull(now, "${name.ege} 조금 $feel").joinToString(" · ")
+                }
                 null -> unknown
             }
         }
